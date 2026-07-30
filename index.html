@@ -6519,9 +6519,25 @@ ${isOffline
         }
 
         function showStickerMenu(stickerId) {
+            const cur = state.stickers.find(s => s.id === stickerId);
+            const curName = cur ? cur.name : '';
             showModal('表情操作',
-                `<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;color:#ff6b6b;" id="stickerDel">🗑️ 删除</div>`,
+                `<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;color:var(--text-primary);margin-bottom:8px;" id="stickerRename">✏️ 改名字</div>
+                 <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;color:#ff6b6b;" id="stickerDel">🗑️ 删除</div>`,
                 '取消', null, true);
+            document.querySelector('#stickerRename')?.addEventListener('click', () => {
+                closeModal();
+                showModal('修改表情名字',
+                    `<div class="setting-row"><input type="text" id="renameStickerInput" value="${escapeHtml(curName)}" placeholder="表情名称" style="width:100%;box-sizing:border-box;"></div>`,
+                    '保存', async () => {
+                        const nv = document.querySelector('#renameStickerInput')?.value.trim();
+                        if (!nv) { showModal('提示', '名字不能为空', '好的'); return; }
+                        const s = state.stickers.find(x => x.id === stickerId);
+                        if (s) { s.name = nv; try { await db.stickers.put(s); } catch (e) {} }
+                        renderStickers();
+                    }, true);
+                setTimeout(() => { document.querySelector('#renameStickerInput')?.focus(); }, 60);
+            });
             document.querySelector('#stickerDel')?.addEventListener('click', () => {
                 closeModal();
                 showModal('确认删除', '确定要删除这个表情吗？', '确定', async () => {
@@ -6532,36 +6548,99 @@ ${isOffline
             });
         }
 
-        $('newStickerBtn').addEventListener('click', () => {
-            const body =
-                `<div class="setting-row"><label>名称</label><input type="text" id="newStickerName" placeholder="表情名称"></div><div class="setting-row"><label>图片 URL</label><input type="text" id="newStickerUrl" placeholder="https://..."></div><div style="text-align:center;font-size:13px;color:var(--text-secondary);">或</div><div style="text-align:center;"><input type="file" id="newStickerFile" accept="image/*" style="display:none;"><button class="btn-secondary" id="stickerUploadBtn">📁 上传图片</button></div>`;
-            showModal('添加表情 😊', body, '取消', null, true);
-            document.querySelector('#stickerUploadBtn')?.addEventListener('click', () => { document.querySelector(
-                    '#newStickerFile').click(); });
-            document.querySelector('#newStickerFile')?.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    // 自动用文件名（去扩展名）填充名称，未改动则沿用
-                    const nameInput = document.querySelector('#newStickerName');
-                    if (nameInput && !nameInput.value.trim()) {
-                        nameInput.value = (file.name || '表情').replace(/\.[^.]+$/, '').slice(0, 20);
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (ev) => { document.querySelector('#newStickerUrl').value = ev.target.result; };
-                    reader.readAsDataURL(file);
-                }
+        // 待添加的表情暂存区（多选上传后逐个命名用）
+        let pendingStickers = [];
+
+        function renderPendingStickers() {
+            const list = document.querySelector('#pendingStickerList');
+            const hint = document.querySelector('#pendingStickerHint');
+            if (!list) return;
+            if (!pendingStickers.length) {
+                list.innerHTML = '';
+                if (hint) hint.style.display = '';
+                return;
+            }
+            if (hint) hint.style.display = 'none';
+            list.innerHTML = pendingStickers.map((p, i) => `
+                <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:10px;background:rgba(255,255,255,0.35);margin-bottom:8px;">
+                    <img src="${p.url}" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;">
+                    <input type="text" data-pidx="${i}" value="${escapeHtml(p.name)}" placeholder="表情名称" style="flex:1;min-width:0;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:var(--font);background:rgba(255,255,255,0.7);color:var(--text-primary);">
+                    <button data-pdel="${i}" style="flex-shrink:0;border:none;background:rgba(255,107,107,0.16);color:#ff6b6b;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:15px;">✕</button>
+                </div>`).join('');
+            // 名字输入同步进暂存区
+            list.querySelectorAll('[data-pidx]').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const i = parseInt(e.target.getAttribute('data-pidx'), 10);
+                    if (pendingStickers[i]) pendingStickers[i].name = e.target.value;
+                });
             });
+            // 单个删除
+            list.querySelectorAll('[data-pdel]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const i = parseInt(e.currentTarget.getAttribute('data-pdel'), 10);
+                    pendingStickers.splice(i, 1);
+                    renderPendingStickers();
+                });
+            });
+        }
+
+        $('newStickerBtn').addEventListener('click', () => {
+            pendingStickers = [];
+            const body =
+                `<div style="text-align:center;margin-bottom:12px;">
+                    <input type="file" id="newStickerFile" accept="image/*" multiple style="display:none;">
+                    <button class="btn-secondary" id="stickerUploadBtn">📁 选择图片（可多选）</button>
+                 </div>
+                 <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">或粘贴单张图片链接：</div>
+                 <div class="setting-row" style="margin-bottom:12px;"><input type="text" id="newStickerUrl" placeholder="https://..." style="width:100%;box-sizing:border-box;"></div>
+                 <div id="pendingStickerHint" style="text-align:center;font-size:13px;color:var(--text-secondary);padding:14px 0;">选好图片后，可在下面逐个给它们改名字</div>
+                 <div id="pendingStickerList" style="max-height:300px;overflow-y:auto;"></div>`;
+            showModal('添加表情 😊', body, '取消', null, true);
+
+            document.querySelector('#stickerUploadBtn')?.addEventListener('click', () => {
+                document.querySelector('#newStickerFile').click();
+            });
+            document.querySelector('#newStickerFile')?.addEventListener('change', (e) => {
+                const files = [...(e.target.files || [])];
+                if (!files.length) return;
+                let remaining = files.length;
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        pendingStickers.push({
+                            name: (file.name || '表情').replace(/\.[^.]+$/, '').slice(0, 20),
+                            url: ev.target.result
+                        });
+                        remaining--;
+                        if (remaining === 0) renderPendingStickers();
+                    };
+                    reader.onerror = () => { remaining--; if (remaining === 0) renderPendingStickers(); };
+                    reader.readAsDataURL(file);
+                });
+                e.target.value = '';
+            });
+
             const confirmBtn = document.querySelector('#genericModalConfirm');
             confirmBtn.textContent = '添加';
             confirmBtn.onclick = async () => {
-                const name = document.querySelector('#newStickerName').value.trim();
-                const url = document.querySelector('#newStickerUrl').value.trim();
-                if (!name || !url) { showModal('提示', '请填写名称和图片 URL', '好的'); return; }
-                const sticker = { id: uid(), name, url };
-                state.stickers.push(sticker);
-                await db.stickers.put(sticker);
+                // 优先用暂存的多张；否则回落到单个 URL 输入
+                let toAdd = pendingStickers.filter(p => p.url);
+                if (!toAdd.length) {
+                    const url = document.querySelector('#newStickerUrl')?.value.trim();
+                    if (url) toAdd = [{ name: '表情', url }];
+                }
+                if (!toAdd.length) { showModal('提示', '请先选择图片或填写图片链接', '好的'); return; }
+                let added = 0;
+                for (const p of toAdd) {
+                    const sticker = { id: uid(), name: (p.name || '').trim() || '表情', url: p.url };
+                    state.stickers.push(sticker);
+                    try { await db.stickers.put(sticker); } catch (err) {}
+                    added++;
+                }
+                pendingStickers = [];
                 closeModal();
                 renderStickers();
+                showModal('完成', `已添加 ${added} 个表情 ✅`, '好的');
             };
         });
 
@@ -20353,7 +20432,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       var base = ''; try { base = window.buildSystemPrompt ? window.buildSystemPrompt(char, { type: 'single', charId: char.id }, {}) : ''; } catch (e) {}
       var sys = base + '\n\n## 📩 你收到一条短信\n发信人：' + (identity === '匿名' ? '一个陌生/匿名号码（你不知道是谁）' : ('「' + identity + '」')) + '。\n完全按你的人设和你跟对方的关系，真实决定怎么回——不要讨好、不要都热情。可以：正常回两句 / 只回「？」 / 冷幽默敷衍（如「TD」「嗯」「哦」「勿扰」「谁啊」）/ 不耐烦或开骂（符合性格时）/ 被匿名骚扰且你是会拉黑的人，就在最后单独一行输出 [拉黑]。像真人发短信，简短，一到三条，每条一行，不要旁白动作。\n\n## 最近对话\n' + convo;
       try {
-        var res = await fetch(a.url + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key }, body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: '(按你的性格回这条短信)' }], temperature: 0.95, max_tokens: 400 }) });
+        var res = await fetch(a.url + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key }, body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: '(按你的性格回这条短信)' }], temperature: 0.95, max_tokens: 1200 }) });
         var out = ''; if (res.ok) { var d = await res.json(); out = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim(); }
         out = (window.__smsClean ? window.__smsClean(out) : out);
         if (!out) out = '？';
@@ -20898,7 +20977,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           : '- 结合你和ta的关系与当前剧情时间点来回：关系好就自然亲近，闹别扭就冷或呛，真被激怒且你性格如此，就在最后单独一行输出 [拉黑]。\n') +
         '\n## 最近这条短信的往来\n' + convo;
       try {
-        var res = await fetch(a.url + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key }, body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: '(按你的性格回这条短信)' }], temperature: 0.95, max_tokens: 400 }) });
+        var res = await fetch(a.url + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key }, body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: '(按你的性格回这条短信)' }], temperature: 0.95, max_tokens: 1200 }) });
         var out = ''; if (res.ok) { var d = await res.json(); out = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim(); }
         out = (window.__smsClean ? window.__smsClean(out) : out);        if (!out) out = '？';
         var block = /\[拉黑\]/.test(out); out = out.replace(/\[拉黑\]/g, '').trim();
