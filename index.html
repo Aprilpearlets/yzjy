@@ -304,6 +304,7 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             background: #eceef1;
             padding: 50px 20px 20px;
             justify-content: flex-start;
+            overflow: visible;
         }
         .home-clock {
             text-align: center;
@@ -11944,9 +11945,8 @@ ${isOffline
                 el.style.display = ((it.page || 0) === cur) ? '' : 'none';
                 el.innerHTML = '<div class="v22-inner" style="width:100%;height:100%;transform:rotate(' + (it.rot || 0) + 'deg);transition:transform 0.25s;"><img src="' + it.src + '" alt="" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></div><div class="v22-hint">移动中</div>';
                 home.appendChild(el);
-                bindDrag(el, it, home);
-                bindTapRotate(el.querySelector('.v22-inner') || el, it);
             });
+            ensureHomeGestures(home);
             bindPagerSync();
         }
 
@@ -11965,80 +11965,105 @@ ${isOffline
             });
         }
 
-        // 长按拖动
-        function bindDrag(el, it, container) {
-            var pressTimer = null, dragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+        // 桌面照片手势：home 上只绑一次总监听，按下时遍历所有可见照片做落点命中，
+        // 命中才接管（长按拖动 / 轻点旋转）；没命中就放行，交给 deskPager 正常翻页。
+        // 这样空白处上滑下滑都能翻页，照片仍可长按拖、轻点转。
+        function ensureHomeGestures(home) {
+            if (!home || home.__v22Gestures) return;
+            home.__v22Gestures = true;
+
+            var pressTimer = null, dragging = false;
+            var startX = 0, startY = 0, origX = 0, origY = 0, moved = false, downT = 0;
+            var target = null;   // 当前命中的照片外层元素
+            var itemOf = null;   // 命中照片对应的数据项
+
             function point(e) { var t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+            function findHit(p) {
+                var list = home.querySelectorAll('.v22-photo');
+                // 逆序：后渲染（视觉更靠上）的先命中
+                for (var i = list.length - 1; i >= 0; i--) {
+                    var el = list[i];
+                    if (el.style.display === 'none') continue;
+                    var r = el.getBoundingClientRect();
+                    if (p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom) {
+                        return el;
+                    }
+                }
+                return null;
+            }
+            function itFor(el) {
+                var id = el && el.dataset ? el.dataset.id : null;
+                if (!id) return null;
+                return (data.items || []).filter(function (x) { return String(x.id) === String(id); })[0] || null;
+            }
+
             function begin(e) {
                 var p = point(e);
-                startX = p.x; startY = p.y; origX = parseFloat(el.style.left) || 0; origY = parseFloat(el.style.top) || 0;
-                pressTimer = setTimeout(function () { dragging = true; el.classList.add('dragging'); }, 350);
+                var el = findHit(p);
+                if (!el) { target = null; return; }   // 没按在照片上，放行翻页
+                target = el; itemOf = itFor(el);
+                startX = p.x; startY = p.y;
+                origX = parseFloat(el.style.left) || 0;
+                origY = parseFloat(el.style.top) || 0;
+                moved = false; downT = Date.now();
+                pressTimer = setTimeout(function () {
+                    dragging = true; target.classList.add('dragging');
+                }, 350);
             }
             function move(e) {
-                if (!dragging) { // 若手指移动过多，取消长按判定
+                if (!target) return;
+                if (!dragging) {
                     var p0 = point(e);
-                    if (Math.abs(p0.x - startX) > 8 || Math.abs(p0.y - startY) > 8) { clearTimeout(pressTimer); }
+                    if (Math.abs(p0.x - startX) > 8 || Math.abs(p0.y - startY) > 8) {
+                        moved = true;
+                        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                    }
                     return;
                 }
                 e.preventDefault();
                 var p = point(e);
                 var nx = origX + (p.x - startX);
                 var ny = origY + (p.y - startY);
-                var maxX = container.clientWidth - el.offsetWidth;
-                var maxY = container.clientHeight - el.offsetHeight;
+                var maxX = home.clientWidth - target.offsetWidth;
+                var maxY = home.clientHeight - target.offsetHeight;
                 nx = Math.max(0, Math.min(nx, Math.max(0, maxX)));
                 ny = Math.max(0, Math.min(ny, Math.max(0, maxY)));
-                el.style.left = nx + 'px'; el.style.top = ny + 'px';
+                target.style.left = nx + 'px'; target.style.top = ny + 'px';
             }
             function end() {
-                clearTimeout(pressTimer);
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                if (!target) return;
                 if (dragging) {
-                    dragging = false; el.classList.remove('dragging');
-                    it.x = parseFloat(el.style.left) || 0;
-                    it.y = parseFloat(el.style.top) || 0;
-                    save(data);
-                }
-            }
-            el.addEventListener('touchstart', begin, { passive: true });
-            el.addEventListener('touchmove', move, { passive: false });
-            el.addEventListener('touchend', end);
-            el.addEventListener('touchcancel', end);
-            el.addEventListener('mousedown', function (e) { begin(e); var mm = function (ev) { move(ev); }; var mu = function () { end(); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); }; document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); });
-        }
-
-        // 去白底：canvas 把接近白色的像素透明化
-        function removeWhiteBg(src, cb) {
-            var img = new Image();
-            img.onload = function () {
-                try {
-                    var c = document.createElement('canvas');
-                    c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
-                    var ctx = c.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    var d = ctx.getImageData(0, 0, c.width, c.height);
-                    var p = d.data;
-                    for (var i = 0; i < p.length; i += 4) {
-                        if (p[i] > 235 && p[i + 1] > 235 && p[i + 2] > 235) p[i + 3] = 0;
+                    dragging = false; target.classList.remove('dragging');
+                    if (itemOf) {
+                        itemOf.x = parseFloat(target.style.left) || 0;
+                        itemOf.y = parseFloat(target.style.top) || 0;
+                        save(data);
                     }
-                    ctx.putImageData(d, 0, 0);
-                    cb(c.toDataURL('image/png'));
-                } catch (e) { cb(src); }
-            };
-            img.onerror = function () { cb(src); };
-            img.src = src;
-        }
-        // 点击照片旋转 45°
-        function bindTapRotate(el, it) {
-            var sx = 0, sy = 0, st = 0, moved = false;
-            function down(e) { var t = e.touches ? e.touches[0] : e; sx = t.clientX; sy = t.clientY; st = Date.now(); moved = false; }
-            function mv(e) { var t = e.touches ? e.touches[0] : e; if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) moved = true; }
-            function up() { if (moved || Date.now() - st > 320) return; it.rot = ((it.rot || 0) + 45) % 360; el.style.transform = 'rotate(' + it.rot + 'deg)'; save(data); }
-            el.addEventListener('touchstart', down, { passive: true });
-            el.addEventListener('touchmove', mv, { passive: true });
-            el.addEventListener('touchend', up);
-            el.addEventListener('mousedown', down);
-            el.addEventListener('mousemove', mv);
-            el.addEventListener('mouseup', up);
+                } else if (!moved && Date.now() - downT <= 320) {
+                    // 轻点：旋转 45°
+                    if (itemOf) {
+                        itemOf.rot = ((itemOf.rot || 0) + 45) % 360;
+                        var inner = target.querySelector('.v22-inner');
+                        if (inner) inner.style.transform = 'rotate(' + itemOf.rot + 'deg)';
+                        save(data);
+                    }
+                }
+                target = null; itemOf = null;
+            }
+
+            home.addEventListener('touchstart', begin, { passive: true });
+            home.addEventListener('touchmove', move, { passive: false });
+            home.addEventListener('touchend', end);
+            home.addEventListener('touchcancel', end);
+            home.addEventListener('mousedown', function (e) {
+                begin(e);
+                if (!target) return;
+                var mm = function (ev) { move(ev); };
+                var mu = function () { end(); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+                document.addEventListener('mousemove', mm);
+                document.addEventListener('mouseup', mu);
+            });
         }
 
         // ---------- 管理面板 ----------
@@ -25675,12 +25700,12 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
 <!-- ============ 小手机 v6-29：单个图标大小(边角手柄拖拽·下拉变大/上拉变小) + 桌面图片垫在应用下面 ============ -->
 <style id="phoneV629Css">
-    /* 1) 桌面图片重叠时默认在应用图标下面：图片层级压到最低，图标层抬到其上 */
-    .v22-photo { z-index: 1 !important; }
-    .v22-photo.dragging { z-index: 2 !important; }
+    /* 1) 桌面图片重叠时默认在应用图标下面：图片视觉压在图标下，事件由 home 层统一分发 */
+    .v22-photo { z-index: 1 !important; pointer-events: none; }
+    .v22-photo.dragging { z-index: 6 !important; }
     #deskRoot { position: relative; z-index: 4; }
-    /* 桌面容器空白处不拦截触摸，让下层照片仍可长按拖动；只有图标本体接收事件 */
-    #deskPager, #deskPager .desk-page { pointer-events: none; }
+    /* 翻页容器与页面正常接收触摸：空白处上下滑都能翻页；照片拖动由 home 层判定落点接管 */
+    #deskPager, #deskPager .desk-page { pointer-events: auto; }
     #deskRoot .desk-icon { pointer-events: auto; }
 
     /* 2) 图标缩放边角手柄（仅编辑态出现，位于图标右下角） */
@@ -31410,7 +31435,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       if (!box) return;
       var rules = listFor(chat);
       if (!rules.length) {
-        box.innerHTML = '<div class="rgx-empty">还没有正则规则。<br>点下面「新建正则」加一条，命中就替换，绝对执行。</div>';
+        box.innerHTML = '<div class="rgx-empty">还没有正则规则。<br>点下面「新建正则」加一条，效果和酒馆的正则一样：命中就替换，绝对执行。</div>';
         return;
       }
       var CARET = '<svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"></polyline></svg>';
@@ -31490,7 +31515,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           '<option value="display"' + (r.phase === 'display' ? ' selected' : '') + '>仅气泡显示（不影响AI理解）</option>' +
           '<option value="prompt"' + (r.phase === 'prompt' ? ' selected' : '') + '>仅发给AI（不影响显示）</option>' +
         '</select>' +
-        '<label>配套指令 / 使用说明 </label>' +
+        '<label>配套指令 / 使用说明（可留空）</label>' +
         '<textarea id="rgxNote" rows="3" placeholder="像世界书那样，写这条正则是干嘛的、给AI的示例或提示；填了会作为设定注入给角色，留空则不注入">' + esc(r.note || '') + '</textarea>' +
         '<div class="rgx-hint">这里写的内容会像世界书一样，附加到发给角色的系统提示里，指导它配合这条正则。不填也能用。</div>' +
         '<label class="rgx-check"><input type="checkbox" id="rgxEnabled"' + (r.enabled === false ? '' : ' checked') + '> 启用这条正则</label>' +
@@ -31645,3 +31670,72 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 })();
 </script>
 <!-- ============ 角色正则功能 结束 ============ -->
+
+
+<!-- ============ 小手机：全屏幕横滑翻页（顶部时钟区/底部dock区也能滑动翻页） ============ -->
+<script id="phoneFullSwipePagerJs">
+(function () {
+  function boot() {
+    var home = document.getElementById('home-page');
+    if (!home) { setTimeout(boot, 400); return; }
+    if (home.__fullSwipePager) return;
+    home.__fullSwipePager = true;
+
+    function pager() { return document.getElementById('deskPager'); }
+    function pageW(p) { return p.clientWidth || 1; }
+    function curPage(p) { return Math.round(p.scrollLeft / pageW(p)); }
+    function maxPage(p) { return Math.max(0, Math.round((p.scrollWidth - p.clientWidth) / pageW(p))); }
+
+    var startX = 0, startY = 0, tracking = false, decided = false, isSwipe = false, startT = 0;
+
+    function pt(e) { var t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+
+    function down(e) {
+      // 编辑态（图标整理/自由摆放）不接管，交给原有拖拽
+      if (document.querySelector('#home-page.dk-free-host') || document.querySelector('#deskRoot.dk-free')) { tracking = false; return; }
+      var p = pt(e);
+      startX = p.x; startY = p.y; startT = Date.now();
+      tracking = true; decided = false; isSwipe = false;
+    }
+    function move(e) {
+      if (!tracking) return;
+      var p = pt(e);
+      var dx = p.x - startX, dy = p.y - startY;
+      if (!decided) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        // 横向位移明显大于纵向 → 认定为翻页横滑
+        decided = true;
+        isSwipe = Math.abs(dx) > Math.abs(dy) * 1.2;
+      }
+    }
+    function up(e) {
+      if (!tracking) { return; }
+      tracking = false;
+      if (!isSwipe) return;
+      var p = pager();
+      if (!p) return;
+      var endP = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : (e.touches && e.touches[0]) ? e.touches[0] : e;
+      var dx = (endP.clientX != null ? endP.clientX : startX) - startX;
+      var dt = Date.now() - startT;
+      // 位移够大、或快速轻扫，就翻一页
+      var trigger = Math.abs(dx) > pageW(p) * 0.18 || (dt < 300 && Math.abs(dx) > 40);
+      if (!trigger) return;
+      var cur = curPage(p);
+      var next = dx < 0 ? cur + 1 : cur - 1;
+      next = Math.max(0, Math.min(next, maxPage(p)));
+      if (next === cur) return;
+      p.scrollTo({ left: next * pageW(p), behavior: 'smooth' });
+    }
+
+    // 用捕获阶段监听，保证顶部时钟、底部 dock 等任何区域的横滑都能拿到；
+    // 图标点击（无滑动）和照片长按拖动（350ms）不会被误判为翻页。
+    home.addEventListener('touchstart', down, { passive: true, capture: true });
+    home.addEventListener('touchmove', move, { passive: true, capture: true });
+    home.addEventListener('touchend', up, { passive: true, capture: true });
+    home.addEventListener('touchcancel', function () { tracking = false; }, { passive: true, capture: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+<!-- ============ 全屏幕横滑翻页 结束 ============ -->
