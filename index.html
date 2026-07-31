@@ -2248,6 +2248,8 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
                         <div class="setting-row" id="editUserTimeZonePreviewRow" style="margin-top:-6px;"><label></label><div id="editUserTimeZonePreview" style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;">　</div></div>
                         <div class="setting-row"><label>绑定用户身份</label><select id="editCharUser"><option value="">-- 不绑定 --</option></select></div>
                         <div class="setting-row"><label>记忆条数</label><input type="number" id="editCharMemory" value="15" min="1" max="100"></div>
+                        <div class="setting-row"><label>主动来电冷却</label><input type="number" id="editCharCallCd" value="5" min="0" max="1440" title="角色主动打视频/语音电话的最短间隔（分钟），0=不限制"></div>
+                        <div class="setting-row" style="margin-top:-6px;"><label></label><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">角色主动打视频/语音电话的最短间隔（分钟）。想让 TA 打得勤就调小，嫌太吵就调大，0 = 不限制。</div></div>
                         <div class="setting-row">
                             <label>拉黑状态</label>
                             <select id="editCharBlocked"><option value="0">✅ 正常</option><option value="1">🚫 已拉黑</option></select>
@@ -2600,7 +2602,7 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
 
         function getChat(id) { return state.chats.find(c => c.id === id); }
 
-        function getMessages(chatId) { return state.messages.filter(m => m.chatId === chatId && !m.isDeleted).sort((a, b) => a
+        function getMessages(chatId) { return state.messages.filter(m => m.chatId === chatId && !m.isDeleted && !m.recalled).sort((a, b) => a
                 .timestamp - b.timestamp); }
 
         function getApi(id) { return state.apiConfigs.find(a => a.id === id); }
@@ -2711,6 +2713,30 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
 3. 反应符合当下情境和你们的关系与亲密度：该保持距离就保持距离，该靠近就靠近，不越过人设该有的边界。
 4. 节奏可快可慢，允许沉默、停顿、欲言又止、动作代替语言，不用每个瞬间都填满对话。
 5. 只描写此刻真实发生的、你自己能做到的事，不替对方决定反应，不推进对方的动作，把选择留给对方。`
+            },
+            {
+                id: '__default_online_narration__', isDefault: true, name: '🎬 线上旁白描写(默认)',
+                content: `这是角色在"线上聊天"场景里【穿插旁白描写】的准则。目的：让线上聊天不只是干巴巴的对话气泡，而是能看到对方此刻的状态、动作、环境和情绪。
+
+## 什么时候插旁白
+- 场景/状态有变化时：比如你正在做某件事、换了地方、天气变了、被什么打断。
+- 情绪有起伏时：收到某条消息后的反应、犹豫、心动、生气、走神。
+- 需要交代"你这边正在发生什么"时：让对方感觉你是个活人，而不是随时待命的聊天机器。
+- 不要每条消息都配旁白，普通对话该干脆就干脆；只在确实有画面感或情绪张力时插。
+
+## 旁白怎么写
+- 用【旁白：……】的格式单独发一条，方括号里写此刻的动作、神态、环境或心理，一条建议 20~60 字。
+- 旁白是第三人称的场景描写，像镜头扫过你这边：例如
+  【旁白：她盯着屏幕上那行字看了很久，指尖悬在键盘上，最后还是把打好的一长串删掉了。】
+  【旁白：窗外的雨还在下，手机屏幕的光映在他脸上，消息提示音响起时，他几乎是立刻点开的。】
+- 旁白和正常聊天气泡可以交替：先来一条旁白铺垫状态，再发正常的聊天消息，节奏更真。
+- 旁白里只描写"你自己这边"真实发生的、你能感知到的事，不要替对方写反应、不要替对方做决定。
+
+## 注意
+1. 旁白必须用【旁白：……】包起来，系统会把它渲染成居中的场景描写，而不是普通聊天气泡。
+2. 一次回复里旁白最多 1~2 条，别刷屏，别让旁白盖过对话本身。
+3. 旁白之外的正常说话，仍然按线上聊天的习惯：短句、分条、像真人发微信。
+4. 不要把设定、规则、系统提示写进旁白。旁白只写此刻的画面和情绪。`
             },
             {
                 id: '__default_style_jianzhen__', isDefault: true, folderId: '__default_folder_style__', name: '简媜风格',
@@ -3613,6 +3639,26 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
         }
 
         function createMsgElement(msg) {
+            if (msg && msg.type === 'beautify') {
+                const box = document.createElement('div');
+                box.className = 'beautify-msg';
+                box.dataset.msgId = msg.id;
+                box.innerHTML = msg.content || '';
+                return box;
+            }
+            // 角色撤回提示：居中一条灰字，点开可看被撤回的内容
+            if (msg && msg.type === 'recall_tip') {
+                const tip = document.createElement('div');
+                tip.className = 'recall-tip';
+                tip.dataset.msgId = msg.id;
+                tip.textContent = msg.content || '对方撤回了一条消息';
+                tip.addEventListener('click', function () {
+                    const body = '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">' + escapeHtml(msg.recalledFrom || '对方') + ' 撤回的消息：</div>' +
+                        '<div style="font-size:15px;line-height:1.7;color:var(--text-primary);background:rgba(140,212,240,0.12);border-radius:12px;padding:12px 14px;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(msg.recalledContent || '（内容已丢失）') + '</div>';
+                    showModal('撤回的消息', body, '确定');
+                });
+                return tip;
+            }
             const chat = getChat(msg.chatId);
             if (!chat) return null;
             const char = getChar(msg.charId || chat.charId);
@@ -4194,7 +4240,11 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
         function clearImagePreview() { $('imagePreviewBar').style.display = 'none'; $('imagePreviewThumb').src = ''; }
         $('imagePreviewCancel').addEventListener('click', () => { state.pendingImage = null; clearImagePreview(); });
 
-        function openStickerPicker() {
+        async function openStickerPicker() {
+            // 兜底：内存空但库里还有，先补回来，避免“表情明明在却提示没有”
+            if ((!state.stickers || !state.stickers.length) && db && db.stickers) {
+                try { const list = await db.stickers.toArray(); if (list && list.length) state.stickers = list; } catch (e) {}
+            }
             const stickers = state.stickers;
             if (stickers.length === 0) { showModal('提示', '还没有表情 😊\n去「表情」页面添加吧', '好的'); return; }
             const body = stickers.map(s =>
@@ -4498,6 +4548,7 @@ ${isGroup ? '- 这是群聊：只有和你相关、被提到、或你确实有�
 - 转发一篇真实存在的文章给对方(只能从下面文章库里选，绝不能编): [分享文章: 关键词或此刻的心情]
 - 把你和某人真实发生过的聊天记录转发给对方看(适合吵架翻旧账、八卦、佐证观点等场景): [转发记录: 对方的名字]
 - 发一条朋友圈，自己判断要不要发、发什么: 纯文字用 [朋友圈: 文字内容]，图文用 [朋友圈图: 文字内容 | 图片描述]
+- 撤回你刚发出的某条消息: 单独一行输出 [撤回: 你想撤回的那条消息的原文]。撤回是很克制、不常见的动作，别频繁用（大多数消息都不该撤回）。只在你像真人一样"话说出口又后悔了"时才撤回——比如没过脑子冲动说出来的话、暴露了不想让对方知道的心事、发错了对象、太肉麻/太重的话让你突然觉得难为情、或者说重了想收回。撤回的必须是你自己这一轮或上一轮刚发出的原话，原文要和你发过的那条基本一致。撤回之后对方会看到"你撤回了一条消息"，也可以点开看到你撤回的内容，所以别把它当成消息删除器乱用。
 ${buildForwardLibraryPrompt()}
 ## 输出格式
 ${isOffline
@@ -4726,7 +4777,7 @@ ${isOffline
         function isLeakedInstructionLine(s, char) {
             if (!s) return true;
             // 功能标签放行（[语音:] [转账:] 等真功能）
-            if (/^\s*\[(表情|图片|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|SKIP)/i.test(s)) return false;
+            if (/^\s*\[(表情|图片|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|撤回|SKIP)/i.test(s)) return false;
             // 箭头/标记类指令：-> Start output. / >> ... / ``` 之类
             if (/^\s*([-=>*#`]{1,4}\s*)?(start|end|begin|stop)\s+(output|response|reply|message)/i.test(s)) return true;
             if (/^\s*(->|=>|>>|<<|\/\/|```)/.test(s)) return true;
@@ -4765,11 +4816,39 @@ ${isOffline
             const recordMatch = trimmed.match(/\[转发记录[:：]\s*(.+?)\]/);
             const momentImgMatch = trimmed.match(/\[朋友圈图[:：]\s*(.+?)\]/);
             const momentMatch = !momentImgMatch && trimmed.match(/\[朋友圈[:：]\s*(.+?)\]/);
+            const recallMatch = trimmed.match(/^\[撤回[:：]\s*([\s\S]+?)\]$/);
 
             const base = { id: uid(), chatId, sender: 'ai', timestamp: ts, charId: char.id };
 
             if (momentImgMatch) { createCharMoment(char, momentImgMatch[1], true); return null; }
             if (momentMatch) { createCharMoment(char, momentMatch[1], false); return null; }
+
+            // 角色撤回消息：把 ta 自己最近发出的、内容最接近的一条文字消息标记为已撤回，并生成一条居中的"撤回提示"
+            if (recallMatch) {
+                const want = (recallMatch[1] || '').trim().replace(/^["'“”]|["'“”]$/g, '');
+                const norm = (x) => (x || '').replace(/\s+/g, '').replace(/[。，、！？!?.~…]/g, '');
+                const wantN = norm(want);
+                const mine = state.messages
+                    .filter(m => m.chatId === chatId && m.sender === 'ai' && m.charId === char.id && m.type === 'text' && !m.recalled && (m.content || '').trim())
+                    .sort((a, b) => b.timestamp - a.timestamp);
+                let target = null;
+                if (wantN) {
+                    target = mine.find(m => { const c = norm(m.content); return c && (c === wantN || c.indexOf(wantN) >= 0 || wantN.indexOf(c) >= 0); });
+                }
+                if (!target) target = mine[0]; // 兜底：撤回最近一条
+                if (target) {
+                    target.recalled = true;
+                    target.recalledContent = target.content;
+                    try { await db.messages.put(JSON.parse(JSON.stringify(target))); } catch (e) {}
+                    // 把已渲染的那条气泡从聊天里移除
+                    if (state.currentChatId === chatId) {
+                        const oldEl = document.querySelector('#msgArea [data-msg-id="' + target.id + '"]');
+                        if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+                    }
+                    return { ...base, type: 'recall_tip', sender: 'system', content: (char.name || '对方') + ' 撤回了一条消息', recalledContent: target.recalledContent, recalledFrom: char.name || '对方' };
+                }
+                return null;
+            }
 
             if (stickerMatch) {
                 const name = stickerMatch[1].trim();
@@ -4868,7 +4947,14 @@ ${isOffline
             updateTypingIndicator();
             try {
                 const reply = await generateReplyForChar(chatId, char);
-                let lines = (reply || '').split('\n').map(l => l.trim()).filter(Boolean);
+                // 先把【美化开始】…【美化结束】整块抽出来，用占位符顶在原位，避免被 split('\n') 拆成碎片
+                const beautyBlocks = [];
+                const protectedReply = (reply || '').replace(/【\s*美化开始\s*】\s*([\s\S]*?)\s*【\s*美化结束\s*】/g, function (m, inner) {
+                    const i = beautyBlocks.length;
+                    beautyBlocks.push((inner || '').trim());
+                    return '\n\u0001BEAUTY:' + i + '\u0001\n';
+                });
+                let lines = protectedReply.split('\n').map(l => l.trim()).filter(Boolean);
                 // 兜底：如果这一轮全是表情、没有任何文字，只保留第一个表情，避免角色只刷表情包
                 (function () {
                     const isStickerLine = (l) => /^\[表情[:：]/.test(l);
@@ -4892,6 +4978,36 @@ ${isOffline
                 };
                 let first = true;
                 for (const line of lines) {
+                    // 命中美化占位符：整块 HTML 作为一条 beautify 消息渲染（旁白式居中卡片）
+                    const __bm = line.match(/^\u0001BEAUTY:(\d+)\u0001$/);
+                    if (__bm) {
+                        const rawHtml = beautyBlocks[+__bm[1]] || '';
+                        const safe = rawHtml
+                            .replace(/<script[\s\S]*?<\/script>/gi, '')
+                            .replace(/\son\w+\s*=/gi, ' data-off=');
+                        if (safe.trim()) {
+                            const bmsg = { id: uid(), chatId, sender: 'ai', type: 'beautify', content: safe, timestamp: ts, charId: char.id };
+                            ts += 500;
+                            showTyping();
+                            await sleep(360);
+                            first = false;
+                            state.messages.push(bmsg);
+                            db.messages.put(bmsg).catch(() => {});
+                            const onThisChat = state.currentChatId === chatId && !document.hidden
+                                && document.getElementById('chat-page') && document.getElementById('chat-page').classList.contains('active');
+                            if (onThisChat) {
+                                const area = $('msgArea');
+                                const typing = $('typingIndicator');
+                                const el = createMsgElement(bmsg);
+                                if (el && area) {
+                                    if (typing && typing.parentNode === area) area.insertBefore(el, typing);
+                                    else area.appendChild(el);
+                                    jellyScrollToBottom(el);
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     // 每条消息之间：先「装作在打字」停顿一下，字越多打得越久（封顶 1.5s）
                     const plain = line.replace(/\[[^\]]*\]/g, '').trim();
                     const typeMs = Math.min(1500, Math.max(first ? 260 : 520, plain.length * 55));
@@ -5383,6 +5499,7 @@ ${isOffline
             $('editCharPersona').value = '';
             $('editCharOnline').value = '1';
             $('editCharMemory').value = state.settings.globalMemory || 15;
+            if ($('editCharCallCd')) $('editCharCallCd').value = 5;
             $('editCharBlocked').value = '0';
             $('charEditorTitle').textContent = '新建人设';
             renderRelList(null);
@@ -5412,6 +5529,7 @@ ${isOffline
             $('editCharPersona').value = c.persona || '';
             $('editCharOnline').value = c.online ? '1' : '0';
             $('editCharMemory').value = c.memoryCount || state.settings.globalMemory || 15;
+            if ($('editCharCallCd')) $('editCharCallCd').value = (c.callCooldownMin != null ? c.callCooldownMin : 5);
             $('editCharBlocked').value = c.isBlocked ? '1' : '0';
             $('charEditorTitle').textContent = `编辑 ${c.name}`;
             renderRelList(charId);
@@ -5625,6 +5743,7 @@ ${isOffline
             const persona = $('editCharPersona').value.trim();
             const online = $('editCharOnline').value === '1';
             const memoryCount = parseInt($('editCharMemory').value) || state.settings.globalMemory || 15;
+            const callCooldownMin = $('editCharCallCd') ? (Math.max(0, parseInt($('editCharCallCd').value, 10) || 0)) : 5;
             const isBlocked = $('editCharBlocked').value === '1';
             const worldBookId = $('editCharWorldBook').value || null;
             const userId = $('editCharUser').value || null;
@@ -5638,13 +5757,14 @@ ${isOffline
                 char.persona = persona;
                 char.online = online;
                 char.memoryCount = memoryCount;
+                char.callCooldownMin = callCooldownMin;
                 char.isBlocked = isBlocked;
                 char.worldBookId = worldBookId;
                 char.userId = userId;
                 // lockface 保留
                 await db.characters.put(char);
             } else {
-                char = { id: uid(), name, avatar, persona, online, memoryCount, isBlocked, worldBookId, userId,
+                char = { id: uid(), name, avatar, persona, online, memoryCount, callCooldownMin, isBlocked, worldBookId, userId,
                     relationships: [], lockface: [...tempLockfaceForNewChar], createdAt: Date.now() };
                 state.characters.push(char);
                 await db.characters.put(char);
@@ -6443,6 +6563,17 @@ ${isOffline
         function renderStickers() {
             const container = $('stickerGridContainer');
             container.innerHTML = '';
+            // 兜底：内存里的 stickers 为空但数据库里其实还在（表情“看起来没了但没被删”），从库里重新同步一次再渲染
+            if (state.stickers.length === 0 && db && db.stickers) {
+                container.innerHTML = `<div class="text-secondary" style="grid-column:1/-1;text-align:center;padding:30px 0;">加载表情中…</div>`;
+                db.stickers.toArray().then(list => {
+                    if (list && list.length) { state.stickers = list; renderStickers(); }
+                    else container.innerHTML = `<div class="text-secondary" style="grid-column:1/-1;text-align:center;padding:30px 0;">还没有表情<br>点击右上角「+」添加</div>`;
+                }).catch(() => {
+                    container.innerHTML = `<div class="text-secondary" style="grid-column:1/-1;text-align:center;padding:30px 0;">还没有表情<br>点击右上角「+」添加</div>`;
+                });
+                return;
+            }
             if (state.stickers.length === 0) {
                 container.innerHTML =
                     `<div class="text-secondary" style="grid-column:1/-1;text-align:center;padding:30px 0;">还没有表情<br>点击右上角「+」添加</div>`;
@@ -7254,6 +7385,10 @@ ${isOffline
 
     /* ---------- 12. 系统提示（红包领取等） ---------- */
     .sys-tip { align-self: center; font-size: 11px; color: var(--text-secondary); background: rgba(249,160,63,0.14); padding: 4px 14px; border-radius: 20px; margin: 6px 0 2px; text-align: center; max-width: 90%; }
+    /* 角色撤回消息提示：居中灰字，可点开看内容 */
+    .recall-tip { align-self: center; font-size: 11px; color: var(--text-secondary); background: rgba(120,120,130,0.12); padding: 4px 14px; border-radius: 20px; margin: 6px auto 2px; text-align: center; max-width: 90%; cursor: pointer; transition: background .2s; }
+    .recall-tip:active { background: rgba(120,120,130,0.22); }
+    html.phone-night .recall-tip { background: rgba(255,255,255,0.08); color: #9aa0a8; }
     /* ---------- 线下模式·旁白 ---------- */
     .narration-tip {
         align-self: center; max-width: 82%;
@@ -7270,6 +7405,10 @@ ${isOffline
     }
     .narration-tip::before { left: -4px; transform: translateX(-100%); }
     .narration-tip::after { right: -4px; transform: translateX(100%); }
+    /* ---------- 美化卡片（【美化开始】…【美化结束】渲染） ---------- */
+    .beautify-msg { align-self: stretch; width: 100%; margin: 10px 0; box-sizing: border-box; }
+    .beautify-msg > * { max-width: 100%; box-sizing: border-box; }
+    .beautify-msg img { max-width: 100%; height: auto; }
 
     /* ---------- 13. 引用 ---------- */
     .quote-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(182,237,255,0.32); border-top: 1px solid rgba(0,0,0,0.05); }
@@ -7730,9 +7869,13 @@ ${isOffline
             window.__memAutoPatched = true;
             var origTrigger = window.triggerAiReply;
             window.triggerAiReply = async function (chatId) {
-                var r = await origTrigger(chatId);
-                try { await maybeAutoSummarize(chatId || (window.__state && window.__state.currentChatId)); } catch (e) {}
-                return r;
+                // 一次「响应」= 一次计费：不再在响应链里连带跑自动记忆总结（那是额外的一次 AI 请求）。
+                // 记忆总结改为按需触发，见 window.__manualSummarize（记忆面板手动总结仍可用）。
+                return await origTrigger(chatId);
+            };
+            // 保留能力：需要时手动总结，不占用「响应」这次计费。
+            window.__manualSummarize = function (chatId) {
+                try { return maybeAutoSummarize(chatId || (window.__state && window.__state.currentChatId)); } catch (e) {}
             };
         }
         if (typeof window.buildSystemPrompt === 'function' && !window.__memPromptPatched) {
@@ -10023,10 +10166,13 @@ ${isOffline
         window.__peekWrapped = true;
         var orig = window.triggerAiReply;
         window.triggerAiReply = async function (chatId) {
+            // 一次「响应」= 一次计费：不再在响应链里连带跑「偷看玩家朋友圈并互动」（那是额外的 AI 请求）。
+            // 保留能力，改为按需触发，见 window.__manualPeekMoments。
+            return await orig(chatId);
+        };
+        window.__manualPeekMoments = function (chatId) {
             var id = chatId || (S() && S().currentChatId);
-            var r = await orig(chatId);
-            try { await maybePeekUserMoments(id); } catch (e) { console.warn('peek', e); }
-            return r;
+            try { return maybePeekUserMoments(id); } catch (e) { console.warn('peek', e); }
         };
     }
 
@@ -11309,6 +11455,24 @@ ${isOffline
     .v16-wp-actions { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 120px; }
     .v16-wp-actions input[type="file"] { display: none; }
     .v16-wp-tip { font-size: 12px; color: var(--m-ink-soft, #9a9089); line-height: 1.6; }
+    .v16-wp-night-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+    .v16-wp-night-info { flex: 1; min-width: 0; }
+    .v16-wp-night-name { font-size: 14px; color: var(--m-ink, #4a4038); font-weight: 600; }
+    .v16-wp-night-sub { font-size: 12px; color: var(--m-ink-soft, #9a9089); line-height: 1.6; margin-top: 3px; }
+    .v16-switch { position: relative; flex-shrink: 0; width: 46px; height: 27px; cursor: pointer; }
+    .v16-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .v16-switch .v16-switch-track {
+        position: absolute; inset: 0; border-radius: 27px; background: rgba(140,125,110,0.28);
+        transition: background .25s ease;
+    }
+    .v16-switch .v16-switch-track::before {
+        content: ''; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%;
+        background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: transform .25s ease;
+    }
+    .v16-switch input:checked + .v16-switch-track { background: #8fae87; }
+    .v16-switch input:checked + .v16-switch-track::before { transform: translateX(19px); }
+    html.phone-night .v16-wp-night-name { color: #dfe2e7; }
+    html.phone-night .v16-wp-night-sub { color: #9aa0a8; }
 </style>
 <script id="phoneWallpaperJs">
 (function () {
@@ -11336,14 +11500,24 @@ ${isOffline
             var chat = getChat(chatId);
             var char = chat && chat.type !== 'group' ? getChar(chat.charId) : null;
             var wp = char ? (char.wallpaper || '') : (chat ? (chat.wallpaper || '') : '');
+            // 夜间模式是否显示壁纸：默认显示（未设置过的老角色也当作显示，修复反馈的“夜里壁纸不见了”）
+            var wpNight = char ? (char.wpNight !== false) : (chat ? (chat.wpNight !== false) : true);
             var style = document.getElementById('chatWallpaperStyle');
             if (!style) { style = document.createElement('style'); style.id = 'chatWallpaperStyle'; document.head.appendChild(style); }
             if (wp) {
+                var url = JSON.stringify(wp);
                 // 内层用重复类名把特异性提到 (0,3,1)，压过 pure 皮肤 / 夜间模式对 .scroll-content 的底色覆盖
-                style.textContent = 'html #chat-page{background-image:url(' + JSON.stringify(wp) + ') !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;}' +
+                var css = 'html #chat-page{background-image:url(' + url + ') !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;}' +
                     'html #chat-page .scroll-content.scroll-content.scroll-content,html #chat-page .msg-area.msg-area.msg-area{background:transparent !important;background-image:none !important;}' +
                     'html #chat-page .app-header.app-header{background:rgba(255,255,255,0.34) !important;}' +
                     'html #chat-page .chat-input-bar.chat-input-bar{background:rgba(255,255,255,0.42) !important;}';
+                if (wpNight) {
+                    // 夜间模式的 html.phone-night #chat-page{background:#14161a} 特异性 (1,1,1) 会盖掉壁纸，
+                    // 这里用重复的 .phone-night/.phone-dark 把特异性抬到更高，让壁纸在夜里也能显示。
+                    css += 'html.phone-night.phone-night #chat-page,html.phone-dark.phone-dark #chat-page{background-image:url(' + url + ') !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important;background-color:transparent !important;}' +
+                        'html.phone-night.phone-night #chat-page .scroll-content.scroll-content.scroll-content,html.phone-dark.phone-dark #chat-page .scroll-content.scroll-content.scroll-content,html.phone-night.phone-night #chat-page .msg-area.msg-area.msg-area,html.phone-dark.phone-dark #chat-page .msg-area.msg-area.msg-area{background:transparent !important;background-image:none !important;}';
+                }
+                style.textContent = css;
             } else {
                 style.textContent = '';
             }
@@ -11415,6 +11589,7 @@ ${isOffline
 
         // ---------- 4. 人设编辑器：专属壁纸上传 ----------
         var charWp = '';
+        var charWpNight = true; // 夜间模式是否显示聊天背景，默认显示
         function injectCharWp() {
             var page = document.querySelector('#char-editor-page .scroll-content');
             if (!page || document.getElementById('v16CharWpGroup')) return;
@@ -11429,7 +11604,8 @@ ${isOffline
                 '<button class="btn-secondary" id="v16CharWpClear" type="button">清除壁纸</button>' +
                 '<div class="v16-wp-tip">和这个角色聊天时会用这张壁纸，覆盖全局壁纸</div>' +
                 '<input type="file" id="v16CharWpInput" accept="image/*"></div>' +
-                '</div></div>';
+                '</div>' +
+                '<div class="setting-row v16-wp-night-row"><div class="v16-wp-night-info"><div class="v16-wp-night-name">夜间模式显示聊天背景</div><div class="v16-wp-night-sub">关掉后，切到夜间模式时这个角色的聊天页会用纯深色底，不显示壁纸</div></div><label class="v16-switch"><input type="checkbox" id="v16CharWpNight" checked><span class="v16-switch-track"></span></label></div>';
             // 插到锁脸 group 之前（若找不到就放末尾）
             var lockGrid = document.getElementById('lockfaceGrid');
             var lockGroup = lockGrid ? lockGrid.closest('.setting-group') : null;
@@ -11441,10 +11617,14 @@ ${isOffline
                 e.target.value = '';
             });
             document.getElementById('v16CharWpClear').addEventListener('click', function () { charWp = ''; refreshCharWpPreview(); });
+            var nightEl = document.getElementById('v16CharWpNight');
+            if (nightEl) nightEl.addEventListener('change', function () { charWpNight = nightEl.checked; });
         }
         function refreshCharWpPreview() {
             var p = document.getElementById('v16CharWpPreview');
             if (p) p.innerHTML = charWp ? '<img src="' + charWp + '" alt="">' : '未设置';
+            var nightEl = document.getElementById('v16CharWpNight');
+            if (nightEl) nightEl.checked = charWpNight;
         }
 
         // 打开已有角色：回填壁纸
@@ -11453,6 +11633,7 @@ ${isOffline
             var r = origOCE.apply(this, arguments);
             var c = getChar(id);
             charWp = (c && c.wallpaper) || '';
+            charWpNight = c ? (c.wpNight !== false) : true;
             injectCharWp();
             refreshCharWpPreview();
             return r;
@@ -11461,6 +11642,7 @@ ${isOffline
         document.addEventListener('click', function (e) {
             if (e.target.closest && e.target.closest('#newCharBtn')) {
                 charWp = '';
+                charWpNight = true;
                 setTimeout(function () { injectCharWp(); refreshCharWpPreview(); }, 60);
             }
         }, true);
@@ -11470,12 +11652,14 @@ ${isOffline
             var beforeId = document.getElementById('editCharId').value;
             var beforeName = (document.getElementById('editCharName').value || '').trim();
             var snap = charWp;
+            var snapNight = charWpNight;
             setTimeout(async function () {
                 var char = null;
                 if (beforeId) char = getChar(beforeId);
                 else char = (S().characters || []).filter(function (c) { return c.name === beforeName; }).sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); })[0];
                 if (!char) return;
                 char.wallpaper = snap || '';
+                char.wpNight = snapNight !== false;
                 try { await DB().characters.put(char); } catch (err) {}
             }, 280);
         }, true);
@@ -14767,7 +14951,7 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
                 '<div id="fApiBox" style="' + (cfg.mode === 'custom' ? '' : 'display:none;') + '">' +
                 '<div class="setting-row"><label>接口地址</label><input type="text" id="fApiUrl" value="' + esc(cfg.url || '') + '" placeholder="https://api.openai.com/v1"></div>' +
                 '<div class="setting-row"><label>密钥</label><input type="password" id="fApiKey" value="' + esc(cfg.key || '') + '" placeholder="sk-..."></div>' +
-                '<div class="setting-row"><label>模型</label><div style="display:flex;gap:8px;"><input type="text" id="fApiModel" value="' + esc(cfg.model || '') + '" placeholder="gpt-3.5-turbo" style="flex:1;"><button class="btn-secondary" id="fApiFetch" type="button" style="flex-shrink:0;">拉取</button></div><select id="fApiModelSel" style="margin-top:6px;display:none;"></select></div>' +
+                '<div class="setting-row"><label>模型</label><div style="display:flex;gap:8px;"><input type="text" id="fApiModel" value="' + esc(cfg.model || '') + '" placeholder="gpt-3.5-turbo" style="flex:1;"><button class="btn-secondary" id="fApiFetch" type="button" style="flex-shrink:0;">拉取</button></div><select id="fApiModelSel" style="margin-top:6px;display:none;"></select><div id="fApiFetchTip" style="font-size:12px;color:#9aa4ac;margin-top:6px;line-height:1.5;"></div></div>' +
                 '</div>' +
                 '<div style="font-size:12px;color:#9aa4ac;margin-top:4px;line-height:1.6;">论坛的帖子刷新、评论、NPC 回应都会用这里选定的 API。</div>';
             window.showModal('论坛 API', body, '保存', function () {
@@ -14782,11 +14966,16 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
                     r.addEventListener('change', function () { var box = document.getElementById('fApiBox'); if (box) box.style.display = (r.value === 'custom' && r.checked) ? 'block' : 'none'; });
                 });
                 var fetchBtn = document.getElementById('fApiFetch');
-                if (fetchBtn) fetchBtn.addEventListener('click', async function () {
+                // 拉取结果只写进行内提示区，绝不再调用 window.showModal——否则会顶掉当前这个「论坛 API」弹窗（就是之前一拉取就闪退的原因）
+                var tipEl = function () { return document.getElementById('fApiFetchTip'); };
+                var setTip = function (msg, color) { var t = tipEl(); if (t) { t.textContent = msg; t.style.color = color || '#9aa4ac'; } };
+                if (fetchBtn) fetchBtn.addEventListener('click', async function (ev) {
+                    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
                     var url = (document.getElementById('fApiUrl').value || '').trim().replace(/\/+$/, '');
                     var key = (document.getElementById('fApiKey').value || '').trim();
-                    if (!url || !key) { window.showModal('提示', '请先填接口地址和密钥', '好的'); return; }
+                    if (!url || !key) { setTip('请先填接口地址和密钥', '#e5484d'); return; }
                     fetchBtn.textContent = '拉取中'; fetchBtn.disabled = true;
+                    setTip('正在拉取模型列表…');
                     try {
                         var cands = url.endsWith('/v1') ? [url] : [url, url + '/v1'];
                         var models = [];
@@ -14794,9 +14983,16 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
                             try { var res = await fetch(cands[i] + '/models', { headers: { 'Authorization': 'Bearer ' + key } }); if (res.ok) { var da = await res.json(); models = da.data || da.models || []; if (models.length) break; } } catch (e) {}
                         }
                         var sel = document.getElementById('fApiModelSel');
-                        if (models.length && sel) { sel.style.display = 'block'; sel.innerHTML = models.map(function (m) { return '<option value="' + m.id + '">' + m.id + '</option>'; }).join(''); sel.addEventListener('change', function () { document.getElementById('fApiModel').value = sel.value; }); document.getElementById('fApiModel').value = models[0].id; window.showModal('成功', '拉取到 ' + models.length + ' 个模型，已在下拉里选择', '好的'); }
-                        else window.showModal('提示', '没拉到模型，可手动填写模型名', '好的');
-                    } catch (e) { window.showModal('错误', '拉取失败：' + e.message, '好的'); }
+                        if (models.length && sel) {
+                            sel.style.display = 'block';
+                            sel.innerHTML = models.map(function (m) { return '<option value="' + m.id + '">' + m.id + '</option>'; }).join('');
+                            sel.addEventListener('change', function () { document.getElementById('fApiModel').value = sel.value; });
+                            document.getElementById('fApiModel').value = models[0].id;
+                            setTip('✅ 拉取到 ' + models.length + ' 个模型，已在下拉里选择', '#2e7d5b');
+                        } else {
+                            setTip('没拉到模型，可手动在上面填写模型名', '#e5484d');
+                        }
+                    } catch (e) { setTip('拉取失败：' + (e && e.message || e), '#e5484d'); }
                     finally { fetchBtn.textContent = '拉取'; fetchBtn.disabled = false; }
                 });
             }, 40);
@@ -15291,6 +15487,8 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
 <style id="phoneV61Css">
 #forum-page .forum-header #forumRefreshCm{background:rgba(140,212,240,0.22);}
 .fdetail .fd-cm-refresh{width:100%;margin:4px 0 14px;}
+.fdetail .fd-del-post{width:100%;margin:0 0 14px;padding:11px 0;border:1px solid rgba(229,72,77,0.35);border-radius:12px;background:rgba(255,107,107,0.10);color:#e5484d;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);}
+.fdetail .fd-del-post:active{background:rgba(255,107,107,0.2);}
 .fcm.mine-cm{background:rgba(140,212,240,0.10);border-radius:10px;padding:11px 10px;}
 .fcm .c-me{display:inline-block;font-size:10px;color:#2f6ea5;background:rgba(58,134,201,0.14);padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:600;vertical-align:middle;}
 .fcm .c-reply-btn{margin-top:7px;font-size:12px;color:#8a97a0;background:none;border:none;padding:2px 0;cursor:pointer;font-family:var(--font);}
@@ -15372,8 +15570,9 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
       var api=F.api();
       if(!api){window.showModal('提示','请先配置论坛 API（右上角 API）或聊天 API','好的');return;}
       var posts=F.FD().posts.slice();
-      if(!posts.length){window.showModal('提示','还没有帖子，先刷新论坛帖子吧','好的');return;}
-      window.showModal('刷新评论中','正在为全部 '+posts.length+' 个帖子生成新评论（会新增到已有评论后面）…','',null,false);
+      if(!posts.length){cmToast('还没有帖子，先刷新论坛帖子吧');return;}
+      // 用会自动淡出的顶部小提示，而不是挡住返回键的居中弹窗
+      var tip=cmToast('⏳ 正在为 '+posts.length+' 个帖子刷新评论…', true);
       var added=0;
       await Promise.allSettled(posts.map(async function(p){
         var more=await F.genMoreComments(p);
@@ -15381,10 +15580,31 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
         var dd=F.FD();var tp=dd.posts.find(function(x){return x.id===p.id;});
         if(tp){tp.comments=(tp.comments||[]).concat(more);F.saveFD(dd);added+=more.length;}
       }));
-      if(window.closeModal)window.closeModal();
       if(F.state.tab==='home'&&F.renderFeed)F.renderFeed();
       if(F._curDetail&&onDetail(F._curDetail))F.openDetailPost(F._curDetail);
-      window.showModal('刷新完成','为全部帖子新增了 '+added+' 条评论。','好的');
+      if(tip)cmToastClose(tip);
+      cmToast('✅ 刷新完成，新增了 '+added+' 条评论');
+    }
+
+    // 论坛「刷新评论」专用轻提示：顶部居中、不挡返回键、几秒后自动淡出
+    // sticky=true 时不自动消失（用于「进行中」，完成后由 cmToastClose 手动关掉）
+    function cmToast(text, sticky){
+      var host=document.getElementById('screen')||document.body;
+      if(!host)return null;
+      var t=document.createElement('div');
+      t.textContent=text;
+      t.style.cssText='position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:9999;background:rgba(0,0,0,0.82);color:#fff;font-size:13px;line-height:1.6;padding:10px 16px;border-radius:16px;max-width:78%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.28);animation:forumToastIn .3s ease;pointer-events:none;';
+      host.appendChild(t);
+      if(!sticky){
+        setTimeout(function(){ t.style.transition='opacity .5s'; t.style.opacity='0'; },2200);
+        setTimeout(function(){ if(t.parentNode)t.parentNode.removeChild(t); },2800);
+      }
+      return t;
+    }
+    function cmToastClose(t){
+      if(!t)return;
+      t.style.transition='opacity .4s'; t.style.opacity='0';
+      setTimeout(function(){ if(t.parentNode)t.parentNode.removeChild(t); },450);
     }
 
     // 在首页 header 注入「刷新评论」按钮
@@ -15440,11 +15660,20 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
           (p.tags&&p.tags.length?('<div class="fd-tags">'+p.tags.map(function(t){return '<span class="fp-tag">#'+esc(t)+'</span>';}).join('')+'</div>'):'')+
           '<div class="fd-stat"><span>♡ 点赞 '+(p.likes||0)+'</span><span>💬 评论 '+((p.comments&&p.comments.length)||0)+'</span></div>'+
           '<button class="btn-secondary fd-cm-refresh" id="fRefreshCm">刷新本帖评论（新增）</button>'+
+          '<button class="fd-del-post" id="fDelPost">🗑️ 删除这个帖子</button>'+
           '<div class="fcm-title">评论区</div><div id="fcmList"></div>'+
           '<div class="fd-reply-box"><textarea id="fdReplyTa" rows="2" placeholder="回复帖子，说点什么…"></textarea><button class="fd-reply-send" id="fdReplySend">发送</button></div>'+
           '</div>';
         body.innerHTML=html;
         var bk=document.getElementById('fhBack');if(bk)bk.addEventListener('click',function(){F._curDetail=null;F.render('home');});
+        var dp=document.getElementById('fDelPost');
+        if(dp)dp.addEventListener('click',function(){
+          window.showModal('删除帖子','确定删除「'+esc(p.title||'这个帖子')+'」吗？删除后无法恢复。','删除',function(){
+            var dd=F.FD();dd.posts=dd.posts.filter(function(x){return x.id!==pid;});F.saveFD(dd);
+            F._curDetail=null;
+            F.render(p.mine?'mine':'home');
+          },true);
+        });
         var rf=document.getElementById('fRefreshCm');
         if(rf)rf.addEventListener('click',async function(){
           rf.disabled=true;rf.textContent='刷新中…';
@@ -15986,9 +16215,10 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
         var r=await origTrigger.apply(this,arguments);
         try{
           var id=chatId||S().currentChatId;var chat=getChat(id);
-          if(chat&&chat.type!=='group'&&!VC.session){
+          // 「要不要主动打视频」已合并进主回复思考（见 mergedThink 的 [主动视频] 标签），不再额外发判断请求。
+          if(false&&chat&&chat.type!=='group'&&!VC.session){
             var char=getChar(chat.charId);
-            if(char&&!char.isBlocked&&!char.blockedByChar&&Math.random()<0.22){
+            if(char&&!char.isBlocked&&!char.blockedByChar&&(!window.__charCallCdOk||window.__charCallCdOk(char))&&Math.random()<0.22){
               maybeCharCall(char,chat);
             }
           }
@@ -16057,7 +16287,8 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
       var r=await origTrigger.apply(this,arguments);
       try{
         var id=chatId||S().currentChatId;var chat=getChat(id);
-        if(chat&&chat.type!=='group'&&!VC.session){
+        // 「主动打视频」判定已合并进主回复思考（mergedThink 的 [主动视频] 标签），不再额外发判断请求。
+        if(false&&chat&&chat.type!=='group'&&!VC.session){
           var char=getChar(chat.charId);
           if(char&&!char.isBlocked&&!char.blockedByChar&&S().currentChatId===id){
             judgeCall(char,chat);
@@ -16230,9 +16461,10 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
         var r=await origTrigger.apply(this,arguments);
         try{
           var id=chatId||S().currentChatId;var chat=getChat(id);
-          if(chat&&chat.type!=='group'&&!VC.session){
+          // 「主动打视频」判定已合并进主回复思考（mergedThink 的 [主动视频] 标签），不再额外发判断请求。
+          if(false&&chat&&chat.type!=='group'&&!VC.session){
             var char=getChar(chat.charId);
-            if(char&&!char.isBlocked&&!char.blockedByChar&&S().currentChatId===id)judge(char,chat);
+            if(char&&!char.isBlocked&&!char.blockedByChar&&S().currentChatId===id&&(!window.__charCallCdOk||window.__charCallCdOk(char)))judge(char,chat);
           }
         }catch(e){}
         return r;
@@ -16541,6 +16773,7 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
         var chatLang=$('editCharLang')?($('editCharLang').value||'zh'):'zh';
         var bilingual=$('editCharBilingual')?$('editCharBilingual').value==='1':false;
         var memoryCount=parseInt(($('editCharMemory')||{}).value,10)||(S().settings.globalMemory||15);
+        var callCooldownMin=$('editCharCallCd')?Math.max(0,parseInt($('editCharCallCd').value,10)||0):5;
         var isBlocked=$('editCharBlocked')?$('editCharBlocked').value==='1':false;
         var worldBookId=($('editCharWorldBook')||{}).value||null;
         var userId=($('editCharUser')||{}).value||null;
@@ -16551,10 +16784,10 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
           char=getChar(id);
           if(!char){window.showModal('提示','找不到该人设','好的');return;}
           char.name=name;char.avatar=avatar;char.persona=persona;char.online=online;char.timeAware=timeAware;char.timeZone=timeZone;char.userTimeZone=userTimeZone;char.chatLang=chatLang;char.bilingual=bilingual;
-          char.memoryCount=memoryCount;char.isBlocked=isBlocked;char.worldBookId=worldBookId;char.userId=userId;
+          char.memoryCount=memoryCount;char.callCooldownMin=callCooldownMin;char.isBlocked=isBlocked;char.worldBookId=worldBookId;char.userId=userId;
           char.lockface=lockface;
         }else{
-          char={id:uid(),name:name,avatar:avatar,persona:persona,online:online,timeAware:timeAware,timeZone:timeZone,userTimeZone:userTimeZone,chatLang:chatLang,bilingual:bilingual,memoryCount:memoryCount,isBlocked:isBlocked,worldBookId:worldBookId,userId:userId,relationships:[],lockface:lockface,createdAt:Date.now()};
+          char={id:uid(),name:name,avatar:avatar,persona:persona,online:online,timeAware:timeAware,timeZone:timeZone,userTimeZone:userTimeZone,chatLang:chatLang,bilingual:bilingual,memoryCount:memoryCount,callCooldownMin:callCooldownMin,isBlocked:isBlocked,worldBookId:worldBookId,userId:userId,relationships:[],lockface:lockface,createdAt:Date.now()};
           S().characters.push(char);
         }
 
@@ -16920,17 +17153,28 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
       var gm=document.getElementById('genericModal');
       if(gm&&gm.classList.contains('visible'))return;
 
-      var bubble=e.target.closest&&e.target.closest('.msg-bubble');
-      if(!bubble)return;
-      var wrapper=bubble.closest('.msg-wrapper');
-      if(!wrapper||wrapper.classList.contains('user'))return;           // 只翻译角色（AI）消息
       // 气泡里的可交互元素不触发翻译
       if(e.target.closest('a,img,button,.voice-msg,.transfer-card,.daifu-card,.share-card,.forward-context'))return;
 
-      var msgId=wrapper.dataset.msgId;
+      // 承载翻译的容器：普通气泡是 .msg-bubble；线下旁白/动作是 .narration-tip 本身
+      var bubble=e.target.closest&&e.target.closest('.msg-bubble');
+      var narr=e.target.closest&&e.target.closest('.narration-tip');
+      var host=bubble||narr;
+      if(!host)return;
+
+      var wrapper, msgId;
+      if(narr){
+        // 旁白就是它自己带 msgId；旁白没有 user/ai 之分，一律可译
+        msgId=narr.dataset.msgId;
+      }else{
+        wrapper=bubble.closest('.msg-wrapper');
+        if(!wrapper||wrapper.classList.contains('user'))return;         // 气泡只翻译角色（AI）消息
+        msgId=wrapper.dataset.msgId;
+      }
       if(!msgId)return;
       var msg=getMsg(msgId);
-      if(!msg||msg.type!=='text'||!msg.content)return;
+      // 允许文本气泡和旁白（旁白含动作/神态/环境描写）
+      if(!msg||!msg.content||(msg.type!=='text'&&msg.type!=='narration'))return;
 
       var chat=getChat(msg.chatId);
       var char=getChar(msg.charId||(chat&&chat.charId));
@@ -16938,12 +17182,12 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
       if(!char.chatLang||char.chatLang==='zh')return;                   // 中文角色无需翻译
 
       // 再点一次收起
-      var existing=bubble.querySelector('.msg-translation');
+      var existing=host.querySelector('.msg-translation');
       if(existing){existing.remove();return;}
 
       var box=document.createElement('div');
       box.className='msg-translation';
-      bubble.appendChild(box);
+      host.appendChild(box);
 
       if(msg.translation){
         box.innerHTML='<span class="mt-label">译</span>'+esc(msg.translation);
@@ -20212,9 +20456,10 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var r=await origTrigger.apply(this,arguments);
         try{
           var id=chatId||S().currentChatId;var chat=getChat(id);
-          if(chat&&chat.type!=='group'&&!VC.session){
+          // 「要不要主动打语音」已合并进主回复思考（见 mergedThink 的 [主动语音] 标签），不再额外发判断请求。
+          if(false&&chat&&chat.type!=='group'&&!VC.session){
             var char=getChar(chat.charId);
-            if(char&&!char.isBlocked&&!char.blockedByChar&&Math.random()<0.18){
+            if(char&&!char.isBlocked&&!char.blockedByChar&&(!window.__charCallCdOk||window.__charCallCdOk(char))&&Math.random()<0.18){
               maybeCharCall(char,chat);
             }
           }
@@ -20255,6 +20500,89 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     injectBtn();setTimeout(injectBtn,1500);
   }
   boot();
+})();
+</script>
+
+<!-- ============ 玩家旁白：句子前加 <旁白> 就输出成系统旁白样式 ============ -->
+<script id="phonePlayerNarrationJs">
+(function () {
+  function boot() {
+    if (typeof window.sendMessage !== 'function') { setTimeout(boot, 400); return; }
+    if (window.__playerNarr) return; window.__playerNarr = true;
+    function mkId() { return window.uid ? window.uid() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 7)); }
+    // 匹配句首的旁白前缀：<旁白>、〈旁白〉、【旁白】、[旁白]、旁白：等，后面跟正文
+    var NARR_RE = /^\s*(?:[<〈［\[【]\s*旁白\s*[>〉］\]】]|旁白)\s*[:：]?\s*([\s\S]+)$/;
+    var orig = window.sendMessage;
+    window.sendMessage = async function (content, type, extra) {
+      try {
+        if ((type === 'text' || !type) && typeof content === 'string') {
+          var m = content.match(NARR_RE);
+          if (m && m[1].trim()) {
+            // 直接落一条玩家旁白消息（type=narration，sender=user），走和角色旁白一样的居中渲染
+            var S = window.__state;
+            if (S && S.currentChatId) {
+              var chatId = S.currentChatId;
+              var msg = { id: mkId(), chatId: chatId, sender: 'user', type: 'narration', content: m[1].trim(), timestamp: Date.now() };
+              S.messages.push(msg);
+              try { window.__db && window.__db.messages.put(msg); } catch (e) {}
+              // 增量渲染这条旁白
+              var area = document.getElementById('msgArea');
+              if (area && window.createMsgElement) {
+                var typing = document.getElementById('typingIndicator');
+                var el = window.createMsgElement(msg);
+                if (el) {
+                  if (typing && typing.parentNode === area) area.insertBefore(el, typing);
+                  else area.appendChild(el);
+                  if (window.jellyScrollToBottom) window.jellyScrollToBottom(el);
+                }
+              }
+              try { if (window.renderChatList) window.renderChatList(); } catch (e) {}
+              return msg;
+            }
+          }
+        }
+      } catch (e) {}
+      return orig.apply(this, arguments);
+    };
+  }
+  boot();
+})();
+</script>
+
+<!-- ============ 主动来电冷却（玩家在编辑人设里自定义，视频/语音共用） ============ -->
+<script id="phoneCallCooldownJs">
+(function(){
+  // 每个角色上次主动来电的时间戳，按 charId 记
+  window.__charCallAt = window.__charCallAt || {};
+  // 判断这个角色现在是否过了冷却期（可以再主动打）
+  window.__charCallCdOk = function(char){
+    try{
+      if(!char) return true;
+      var min = (char.callCooldownMin != null) ? Number(char.callCooldownMin) : 5;
+      if(!(min > 0)) return true;                       // 0 或非法 = 不限制
+      var last = window.__charCallAt[char.id] || 0;
+      return (Date.now() - last) >= min * 60000;
+    }catch(e){ return true; }
+  };
+  // 记一次「这个角色刚主动来电」
+  window.__charCallMark = function(charId){
+    try{ if(charId) window.__charCallAt[charId] = Date.now(); }catch(e){}
+  };
+  // 兜底：所有 VC.showIncoming（角色打给玩家）触发时都盖一次时间戳，覆盖各种触发路径
+  function hook(){
+    var VC = window.__vc;
+    if(VC && VC.showIncoming && !VC.showIncoming.__cdMark){
+      var orig = VC.showIncoming;
+      VC.showIncoming = function(charId, chatId){
+        window.__charCallMark(charId);
+        return orig.apply(this, arguments);
+      };
+      VC.showIncoming.__cdMark = true;
+    }
+    // 语音通话模块可能是独立的 __vc，稍后重挂一次
+    setTimeout(hook, 2000);
+  }
+  hook();
 })();
 </script>
 
@@ -20423,11 +20751,13 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
     async function charRespond(t) {
       var char = getChar(t.charId); if (!char) return;
-      if (char.blockedByChar) { t.msgs.push({ sys: true, text: '对方已把你拉黑，消息发不出去' }); t.ts = Date.now(); await save(); return; }
-      var a = api();
-      var convo = t.msgs.slice(-12).map(function (m) { return (m.from === 'me' ? '对方' : char.name) + '：' + (m.text || ''); }).join('\n');
       var lastMe = t.msgs.slice().reverse().find(function (m) { return m.from === 'me'; });
       var identity = lastMe ? (lastMe.identity || '') : '';
+      var idKey = identity || '本人';
+      // 短信拉黑只作用于短信本身，且区分发信身份，不再串到微信 char.blockedByChar
+      if (t.smsBlocked && t.smsBlocked[idKey]) { t.msgs.push({ sys: true, text: '对方已把这个号码拉黑，消息发不出去' }); t.ts = Date.now(); await save(); return; }
+      var a = api();
+      var convo = t.msgs.slice(-12).map(function (m) { return (m.from === 'me' ? '对方' : char.name) + '：' + (m.text || ''); }).join('\n');
       if (!a) { t.msgs.push({ from: 'them', text: '？', ts: Date.now() }); t.ts = Date.now(); t.unread = (t.unread || 0) + 1; await save(); return; }
       var base = ''; try { base = window.buildSystemPrompt ? window.buildSystemPrompt(char, { type: 'single', charId: char.id }, {}) : ''; } catch (e) {}
       var sys = base + '\n\n## 📩 你收到一条短信\n发信人：' + (identity === '匿名' ? '一个陌生/匿名号码（你不知道是谁）' : ('「' + identity + '」')) + '。\n完全按你的人设和你跟对方的关系，真实决定怎么回——不要讨好、不要都热情。可以：正常回两句 / 只回「？」 / 冷幽默敷衍（如「TD」「嗯」「哦」「勿扰」「谁啊」）/ 不耐烦或开骂（符合性格时）/ 被匿名骚扰且你是会拉黑的人，就在最后单独一行输出 [拉黑]。像真人发短信，简短，一到三条，每条一行，不要旁白动作。\n\n## 最近对话\n' + convo;
@@ -20439,7 +20769,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var block = /\[拉黑\]/.test(out); out = out.replace(/\[拉黑\]/g, '').trim();
         var lines = out.split('\n').map(function (l) { return l.trim(); }).filter(Boolean); if (!lines.length && !block) lines = ['？'];
         var ts = Date.now(); lines.forEach(function (l) { t.msgs.push({ from: 'them', text: l, ts: ts }); ts += 300; });
-        if (block) { char.blockedByChar = true; try { await DB().characters.put(JSON.parse(JSON.stringify(char))); } catch (e) {} t.msgs.push({ sys: true, text: char.name + ' 把你拉黑了' }); }
+        // 短信里的拉黑只拉黑当前发信身份的短信通道，不动微信 char.blockedByChar
+        if (block) { t.smsBlocked = t.smsBlocked || {}; t.smsBlocked[idKey] = true; t.msgs.push({ sys: true, text: char.name + ' 把这个号码拉黑了' }); }
         t.ts = Date.now(); t.unread = (t.unread || 0) + 1; await save();
       } catch (e) { t.msgs.push({ from: 'them', text: '(没发出去)', ts: Date.now() }); await save(); }
     }
@@ -20940,11 +21271,13 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
     async function charRespond(t) {
       var char = getChar(t.charId); if (!char) return;
-      if (char.blockedByChar) { t.msgs.push({ sys: true, text: '对方已把你拉黑，消息发不出去' }); t.ts = Date.now(); await save(); return; }
-      var a = apiCfg();
-      var convo = t.msgs.slice(-12).map(function (m) { return (m.from === 'me' ? '对方' : char.name) + '：' + (m.text || ''); }).join('\n');
       var lastMe = t.msgs.slice().reverse().find(function (m) { return m.from === 'me'; });
       var identity = lastMe ? (lastMe.identity || '') : '';
+      var idKey = identity || '本人';
+      // 短信拉黑只作用于短信、且只作用于当前这个发信身份（匿名/实名分开），不再串台到微信的 char.blockedByChar
+      if (t.smsBlocked && t.smsBlocked[idKey]) { t.msgs.push({ sys: true, text: '对方已把这个号码拉黑，消息发不出去' }); t.ts = Date.now(); await save(); return; }
+      var a = apiCfg();
+      var convo = t.msgs.slice(-12).map(function (m) { return (m.from === 'me' ? '对方' : char.name) + '：' + (m.text || ''); }).join('\n');
       if (!a) { t.msgs.push({ from: 'them', text: '？', ts: Date.now() }); t.ts = Date.now(); t.unread = (t.unread || 0) + 1; await save(); return; }
       var base = ''; try { base = window.buildSystemPrompt ? window.buildSystemPrompt(char, { type: 'single', charId: char.id }, {}) : ''; } catch (e) {}
       // 取该角色在微信单聊里的最近剧情，让短信回复能贴合"此刻剧情发展/时间点"
@@ -20983,7 +21316,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var block = /\[拉黑\]/.test(out); out = out.replace(/\[拉黑\]/g, '').trim();
         var lines = out.split('\n').map(function (l) { return l.trim(); }).filter(Boolean); if (!lines.length && !block) lines = ['？'];
         var ts = Date.now(); lines.forEach(function (l) { t.msgs.push({ from: 'them', text: l, ts: ts }); ts += 300; });
-        if (block) { char.blockedByChar = true; try { await DB().characters.put(JSON.parse(JSON.stringify(char))); } catch (e) {} t.msgs.push({ sys: true, text: char.name + ' 把你拉黑了' }); }
+        // 短信里的拉黑只拉黑当前这个发信身份的短信通道，不动微信 char.blockedByChar
+        if (block) { t.smsBlocked = t.smsBlocked || {}; t.smsBlocked[idKey] = true; t.msgs.push({ sys: true, text: char.name + ' 把这个号码拉黑了' }); }
         t.ts = Date.now(); t.unread = (t.unread || 0) + 1; await save();
       } catch (e) { t.msgs.push({ from: 'them', text: '(没发出去)', ts: Date.now() }); await save(); }
     }
@@ -24140,6 +24474,17 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
                 { key: 'deskIcon', label: '📲 应用图标', html: '<div data-prev="deskIcon" style="width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,0.6);box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;color:#4A6A7A;font-size:12px;font-weight:600;">App</div>' }
             ];
         }
+        // 从「属性块」或「完整规则」里抽出可内联的属性串
+        function extractProps(body) {
+            var s = String(body || '').trim();
+            if (!s) return '';
+            if (s.indexOf('{') >= 0) {
+                var m = s.match(/\{([^}]*)\}/);
+                s = m ? m[1] : s;
+            }
+            // 去掉每条属性里的 !important，内联时不需要
+            return s.replace(/!important/gi, '').trim();
+        }
         function openPreview(data) {
             var rows = bpItems().map(function (it) {
                 var mark = (data[it.key] && String(data[it.key]).trim()) ? ' · 已自定义' : ' · 默认';
@@ -24147,14 +24492,17 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             }).join('');
             var body = '<div id="btPreviewWrap"><div id="bpStage">' + rows + '</div><div class="bp-note">预览仅供参考，实际效果以聊天 / 桌面中为准</div></div>';
             if (window.showModal) window.showModal('👁 预览美化效果', body, '关闭', null, false);
+            // 直接把用户写的样式内联到示例元素上，比注入 <style> 更稳，不受作用域/优先级/时序影响
             setTimeout(function () {
                 var host = document.getElementById('bpStage');
                 if (!host) return;
-                var st = document.createElement('style');
-                st.id = 'bpPreviewStyle';
-                st.textContent = buildPreviewCss(data);
-                host.appendChild(st);
-            }, 30);
+                bpItems().forEach(function (it) {
+                    var props = extractProps(data[it.key]);
+                    if (!props) return;
+                    var el = host.querySelector('[data-prev="' + it.key + '"]');
+                    if (el) { el.style.cssText += ';' + props; }
+                });
+            }, 50);
         }
         g.querySelector('#btPreviewBtn').addEventListener('click', function () {
             var cur = {};
@@ -27210,6 +27558,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var isl = document.getElementById('ltIslandToggle');
         if (isl) isl.addEventListener('change', function () {
             try { localStorage.setItem('phone_lt_island', isl.checked ? '1' : '0'); } catch (e) {}
+            // 关掉开关时立即把桌面胶囊藏起来，别等下一次轮询
+            if (!isl.checked && window.__ltIslandHide) window.__ltIslandHide();
             if (window.__ltIslandSync) window.__ltIslandSync();
         });
     }
@@ -27518,6 +27868,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         (function () {
             var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0, screenEl = document.getElementById('screen') || document.body;
             function down(e) {
+                // 点在播放/关闭按钮上时，不进入拖动，也不触发松手打开 App，交给按钮自己的 click
+                if (e.target && e.target.closest && e.target.closest('.li-pp, .li-close')) return;
                 var t = e.touches ? e.touches[0] : e;
                 dragging = true; moved = false; sx = t.clientX; sy = t.clientY;
                 var r = el.getBoundingClientRect(), pr = screenEl.getBoundingClientRect();
@@ -27558,7 +27910,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         });
         return el;
     }
-    function hideIsland() { if (islandEl) islandEl.classList.remove('show'); }
+    function hideIsland() { if (islandEl) { islandEl.classList.remove('show'); islandEl.style.display = 'none'; } }
+    // 供设置里关掉开关时立即隐藏胶囊
+    window.__ltIslandHide = hideIsland;
     // 是否此刻该显示：开关开 + 有歌 + 不在一起听界面里（即在桌面等其它页）+ 未被手动关掉
     function islandShouldShow() {
         if (!islandOn() || !state.playing || islandDismissed) return false;
@@ -31271,12 +31625,13 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   #regexMgr .rgx-item { border:1px solid rgba(0,0,0,0.09); border-radius:14px; background:rgba(255,255,255,0.62); overflow:hidden; transition:border-color .2s, box-shadow .2s; }
   #regexMgr .rgx-item.open { border-color:rgba(140,212,240,0.7); box-shadow:0 3px 14px rgba(140,212,240,0.22); }
   #regexMgr .rgx-item.off { opacity:0.6; }
-  #regexMgr .rgx-head { display:flex; align-items:center; gap:10px; padding:12px 13px; cursor:pointer; user-select:none; }
-  #regexMgr .rgx-caret { flex-shrink:0; width:16px; height:16px; color:var(--text-secondary); transition:transform .25s; display:flex; align-items:center; justify-content:center; }
-  #regexMgr .rgx-item.open .rgx-caret { transform:rotate(90deg); }
-  #regexMgr .rgx-caret svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
-  #regexMgr .rgx-name { font-weight:700; font-size:14px; color:var(--text-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #regexMgr .rgx-head { display:flex; align-items:center; gap:10px; padding:12px 13px; user-select:none; }
+  #regexMgr .rgx-name { font-weight:700; font-size:14px; color:var(--text-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
   #regexMgr .rgx-name .rgx-badge { font-weight:500; font-size:10.5px; color:var(--text-secondary); margin-left:7px; }
+  /* 删除小图标 */
+  #regexMgr .rgx-del-icon { flex-shrink:0; width:30px; height:30px; padding:0; border:none; border-radius:8px; background:rgba(255,107,107,0.14); color:#e5484d; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .18s; }
+  #regexMgr .rgx-del-icon:active { background:rgba(255,107,107,0.28); }
+  #regexMgr .rgx-del-icon svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   /* iOS 风格开关 */
   #regexMgr .rgx-toggle { flex-shrink:0; position:relative; display:inline-block; width:40px; height:23px; }
   #regexMgr .rgx-toggle input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:2; }
@@ -31284,17 +31639,12 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   #regexMgr .rgx-toggle .rgx-track::after { content:''; position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:transform .22s; }
   #regexMgr .rgx-toggle input:checked + .rgx-track { background:#34c759; }
   #regexMgr .rgx-toggle input:checked + .rgx-track::after { transform:translateX(17px); }
-  #regexMgr .rgx-detail { padding:0 13px; max-height:0; overflow:hidden; transition:max-height .28s ease, padding .28s ease; }
-  #regexMgr .rgx-item.open .rgx-detail { max-height:420px; padding:0 13px 13px; }
+  #regexMgr .rgx-detail { padding:0 13px 13px; cursor:pointer; }
   #regexMgr .rgx-kv { display:flex; gap:7px; margin-top:8px; align-items:flex-start; }
   #regexMgr .rgx-kv .rgx-k { flex-shrink:0; font-size:11px; color:var(--text-secondary); width:34px; padding-top:3px; }
   #regexMgr .rgx-find { flex:1; font-family:monospace; font-size:11.5px; color:#c0392b; word-break:break-all; background:rgba(192,57,43,0.07); padding:4px 8px; border-radius:7px; }
   #regexMgr .rgx-rep { flex:1; font-family:monospace; font-size:11.5px; color:#2e7d5b; word-break:break-all; background:rgba(46,125,91,0.07); padding:4px 8px; border-radius:7px; }
-  #regexMgr .rgx-scope { font-size:11px; color:var(--text-secondary); margin-top:8px; }
-  #regexMgr .rgx-acts { display:flex; gap:8px; margin-top:11px; }
-  #regexMgr .rgx-acts button { flex:1; border:none; border-radius:9px; padding:8px 0; font-size:12.5px; cursor:pointer; font-family:var(--font); }
-  #regexMgr .rgx-edit { background:rgba(140,212,240,0.5); color:#22303f; }
-  #regexMgr .rgx-del { background:rgba(255,107,107,0.18); color:#e5484d; }
+  #regexMgr .rgx-scope { font-size:11px; color:#3a97c9; margin-top:8px; }
   #regexMgr .rgx-add { width:100%; border:1px dashed rgba(0,0,0,0.25); border-radius:12px; padding:12px; background:transparent; color:var(--text-primary); font-size:14px; cursor:pointer; font-family:var(--font); margin-top:4px; }
   #regexMgr .rgx-io { display:flex; gap:8px; margin-top:8px; }
   #regexMgr .rgx-io button { flex:1; border:1px solid rgba(0,0,0,0.12); border-radius:12px; padding:10px; background:rgba(255,255,255,0.5); color:var(--text-primary); font-size:13px; cursor:pointer; font-family:var(--font); }
@@ -31517,30 +31867,28 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         box.innerHTML = '<div class="rgx-empty">还没有正则规则。<br>点下面「新建正则」加一条，效果和酒馆的正则一样：命中就替换，绝对执行。</div>';
         return;
       }
-      var CARET = '<svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"></polyline></svg>';
+      var TRASH = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
       box.innerHTML = rules.map(function (r, i) {
         var on = r.enabled !== false;
         var repText = String(r.replace || '').length ? esc(r.replace) : '（删除命中内容）';
         return '<div class="rgx-item' + (on ? '' : ' off') + '" data-i="' + i + '">' +
-          '<div class="rgx-head" data-hd="' + i + '">' +
-            '<span class="rgx-caret">' + CARET + '</span>' +
-            '<span class="rgx-name">' + esc(r.name || ('规则 ' + (i + 1))) + '<span class="rgx-badge">' + (TARGET_NAME[r.target || 'both']) + '</span></span>' +
+          '<div class="rgx-head">' +
+            '<span class="rgx-name" data-ed="' + i + '">' + esc(r.name || ('规则 ' + (i + 1))) + '<span class="rgx-badge">' + (TARGET_NAME[r.target || 'both']) + '</span></span>' +
+            '<button class="rgx-del-icon" data-de="' + i + '" title="删除这条正则">' + TRASH + '</button>' +
             '<label class="rgx-toggle"><input type="checkbox" data-tg="' + i + '"' + (on ? ' checked' : '') + '><span class="rgx-track"></span></label>' +
           '</div>' +
-          '<div class="rgx-detail">' +
+          '<div class="rgx-detail" data-ed2="' + i + '">' +
             '<div class="rgx-kv"><span class="rgx-k">查找</span><span class="rgx-find">' + esc(r.find || '') + '</span></div>' +
             '<div class="rgx-kv"><span class="rgx-k">替换</span><span class="rgx-rep">' + repText + '</span></div>' +
-            '<div class="rgx-scope">作用：' + (TARGET_NAME[r.target || 'both']) + ' · ' + (PHASE_NAME[r.phase || 'both']) + '</div>' +
-            '<div class="rgx-acts"><button class="rgx-edit" data-ed="' + i + '">编辑</button><button class="rgx-del" data-de="' + i + '">删除</button></div>' +
+            '<div class="rgx-scope">作用：' + (TARGET_NAME[r.target || 'both']) + ' · ' + (PHASE_NAME[r.phase || 'both']) + ' · 点这里修改</div>' +
           '</div>' +
         '</div>';
       }).join('');
-      // 点标题栏展开/收起（点开关不触发）
-      box.querySelectorAll('[data-hd]').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-          if (e.target.closest('.rgx-toggle')) return;
-          var item = el.closest('.rgx-item');
-          if (item) item.classList.toggle('open');
+      // 点名字 / 点详情区 → 直接进入编辑
+      box.querySelectorAll('[data-ed], [data-ed2]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var i = parseInt(el.getAttribute('data-ed') || el.getAttribute('data-ed2'), 10);
+          openEditor(chat, i);
         });
       });
       box.querySelectorAll('[data-tg]').forEach(function (el) {
@@ -31552,14 +31900,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           if (item) item.classList.toggle('off', !el.checked);
         });
       });
-      box.querySelectorAll('[data-ed]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          var i = parseInt(el.getAttribute('data-ed'), 10);
-          openEditor(chat, i);
-        });
-      });
       box.querySelectorAll('[data-de]').forEach(function (el) {
-        el.addEventListener('click', function () {
+        el.addEventListener('click', function (e) {
+          e.stopPropagation();
           var i = parseInt(el.getAttribute('data-de'), 10);
           var arr = listFor(chat);
           var nm = (arr[i] && arr[i].name) || ('规则 ' + (i + 1));
@@ -31708,15 +32051,38 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           var target = (msg.sender === 'user') ? 'user' : 'ai';
           if (!window.__hasCharRegex(chat, target, 'display')) return el;
           // 找到承载正文的节点：文本气泡是 .msg-bubble 内的文本；narration 是 .narration-tip 本身
+          // 若正则替换结果是 HTML（例如把某段文字替换成美化卡片），就按 HTML 渲染成美化，而不是当纯文本转义显示
+          var looksHtml = function (s) { return /<[a-z][\s\S]*>/i.test(s || ''); };
+          var safeHtml = function (s) {
+            return String(s || '')
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/\son\w+\s*=/gi, ' data-off=');
+          };
           var applyOn = function (node) {
             if (!node) return;
             var raw = node.getAttribute('data-rgx-raw');
             var src = (raw != null) ? raw : node.textContent;
             node.setAttribute('data-rgx-raw', src);
-            node.textContent = window.__applyCharRegex(src, chat, target, 'display');
+            var out = window.__applyCharRegex(src, chat, target, 'display');
+            if (looksHtml(out)) {
+              node.innerHTML = safeHtml(out);
+            } else {
+              node.textContent = out;
+            }
           };
           if (el.classList && el.classList.contains('narration-tip')) {
-            applyOn(el);
+            // 旁白：正则替换后若产出 HTML，就让这条旁白变成美化卡片（撑满、不加分隔线）
+            var raw0 = el.getAttribute('data-rgx-raw');
+            var src0 = (raw0 != null) ? raw0 : el.textContent;
+            el.setAttribute('data-rgx-raw', src0);
+            var out0 = window.__applyCharRegex(src0, chat, target, 'display');
+            if (looksHtml(out0)) {
+              el.classList.remove('narration-tip');
+              el.classList.add('beautify-msg');
+              el.innerHTML = safeHtml(out0);
+            } else {
+              el.textContent = out0;
+            }
           } else {
             var bub = el.querySelector ? el.querySelector('.msg-bubble') : null;
             if (bub) {
@@ -31732,7 +32098,14 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
                 }
                 if (textNode) {
                   if (textNode.nodeType === 3) {
-                    textNode.textContent = window.__applyCharRegex(textNode.textContent, chat, target, 'display');
+                    var out2 = window.__applyCharRegex(textNode.textContent, chat, target, 'display');
+                    if (looksHtml(out2)) {
+                      var span = document.createElement('span');
+                      span.innerHTML = safeHtml(out2);
+                      textNode.parentNode.replaceChild(span, textNode);
+                    } else {
+                      textNode.textContent = out2;
+                    }
                   } else {
                     applyOn(textNode);
                   }
@@ -31818,3 +32191,593 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 })();
 </script>
 <!-- ============ 全屏幕横滑翻页 结束 ============ -->
+
+
+<!-- ============ 按压 / 轻触反馈（全局：图标 / 按钮点击时短促缩放+明暗） ============ -->
+<style id="pressTapFeedbackCss">
+  /* 作用域限定在 .motion-demo--press-tap-feedback（挂在手机屏幕根节点），只影响手机内部 */
+  .motion-demo--press-tap-feedback [data-press] {
+    /* 松手/结束后用 soft 曲线在 500ms 内平滑回弹 */
+    transition: transform 500ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                filter   500ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    transform-origin: center center;
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 按下瞬间：缩到 92% 并轻压暗，确认"输入已被接收"。按下用 soft 曲线较缓地收（260ms），回弹用 500ms，避免切页时急收导致卡顿 */
+  .motion-demo--press-tap-feedback [data-press].is-pressing {
+    transform: scale(0.92);
+    filter: brightness(0.9);
+    transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                filter   260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  /* 低动态方案：不缩放、不位移，只用不透明度+背景轻微反馈，等价确认输入 */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-demo--press-tap-feedback [data-press] {
+      transition: opacity 500ms ease, background-color 500ms ease;
+      transform: none !important;
+    }
+    .motion-demo--press-tap-feedback [data-press].is-pressing {
+      transform: none !important;
+      filter: none !important;
+      opacity: 0.6;
+      transition: opacity 120ms ease, background-color 120ms ease;
+    }
+  }
+  /* 手动强制低动态（.force-reduced-motion 加在根节点上时） */
+  .motion-demo--press-tap-feedback.force-reduced-motion [data-press],
+  .force-reduced-motion .motion-demo--press-tap-feedback [data-press] {
+    transition: opacity 500ms ease, background-color 500ms ease;
+    transform: none !important;
+  }
+  .motion-demo--press-tap-feedback.force-reduced-motion [data-press].is-pressing,
+  .force-reduced-motion .motion-demo--press-tap-feedback [data-press].is-pressing {
+    transform: none !important;
+    filter: none !important;
+    opacity: 0.6;
+    transition: opacity 120ms ease, background-color 120ms ease;
+  }
+</style>
+<script id="pressTapFeedbackJs">
+(function () {
+  function boot() {
+    var root = document.getElementById('screen') || document.body;
+    if (!root) { setTimeout(boot, 400); return; }
+    if (window.__pressTap) return; window.__pressTap = true;
+
+    // 作用域根：语义上这一整块就是"按压反馈演示/生效区"
+    root.classList.add('motion-demo--press-tap-feedback');
+
+    // 判定一个元素是不是"可点击、应该有按压反馈"的目标
+    var HIT = 'button, a[href], [role="button"], input[type="button"], input[type="submit"],' +
+      '.desk-icon, .btn-primary, .btn-secondary, .btn-danger, .popup-item, .fh-act, .fab,' +
+      '.send-btn, .receive-btn, .vcc-send, .vcc-hangup, .vcc-respond, .rgx-add, .rgx-del-icon,' +
+      '.bt-actions button, .chat-theme-swatch, .forum-acc, .sms-refresh-opt, .nav-item, .dock-item,' +
+      '.setting-row select, .modal-btn, [data-tool], [data-page]';
+
+    function pressTarget(el) {
+      if (!el || !el.closest) return null;
+      var t = el.closest(HIT);
+      if (t) return t;
+      // 兜底：鼠标手势是 pointer 且不是纯文本/输入框的，也当可点击
+      try {
+        var cs = getComputedStyle(el);
+        if (cs && cs.cursor === 'pointer') {
+          if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) return null;
+          return el;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    var current = null, releaseTimer = null;
+    function press(el) {
+      if (!el) return;
+      // 标记为反馈目标（供 CSS [data-press] 命中），并进入按下态
+      el.setAttribute('data-press', '');
+      // 强制一次重排，保证 transition 生效
+      void el.offsetWidth;
+      el.classList.add('is-pressing');
+      current = el;
+    }
+    function release() {
+      if (!current) return;
+      var el = current; current = null;
+      el.classList.remove('is-pressing');   // 触发 500ms soft 回弹
+      clearTimeout(releaseTimer);
+      // 回弹动画跑完后清掉临时属性，保持 DOM 干净
+      releaseTimer = setTimeout(function () {
+        if (!el.classList.contains('is-pressing')) el.removeAttribute('data-press');
+      }, 560);
+    }
+
+    // ---- 指针 / 触摸：按下即反馈，松手/移出/取消即回弹 ----
+    root.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button !== 0) return;   // 只响应主键
+      press(pressTarget(e.target));
+    }, true);
+    ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture', 'dragstart', 'scroll'].forEach(function (evt) {
+      root.addEventListener(evt, release, true);
+    });
+    // 触摸滑动离开也回弹
+    root.addEventListener('pointermove', function (e) {
+      if (current && pressTarget(e.target) !== current) release();
+    }, true);
+
+    // ---- 键盘：聚焦元素上按 Enter / 空格，等价一次按压 ----
+    root.addEventListener('keydown', function (e) {
+      if (e.repeat) return;
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var el = pressTarget(document.activeElement);
+      if (el) press(el);
+    }, true);
+    root.addEventListener('keyup', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') release();
+    }, true);
+    // 失焦兜底，避免卡在按下态
+    root.addEventListener('blur', release, true);
+    window.addEventListener('blur', release);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+
+
+<!-- ============ 通话心声悬浮球：视频/语音通话中点小球看角色此刻心声 ============ -->
+<style id="heartVoiceCss">
+  #heartBall{position:absolute;right:14px;top:120px;width:48px;height:48px;border-radius:50%;z-index:460;display:none;align-items:center;justify-content:center;cursor:pointer;
+    background:radial-gradient(circle at 32% 30%,rgba(255,255,255,0.35),rgba(255,145,175,0.9) 55%,rgba(214,90,130,0.95));
+    box-shadow:0 6px 20px rgba(200,70,110,0.45),inset 0 1px 2px rgba(255,255,255,0.6);
+    animation:heartFloat 3.2s ease-in-out infinite;touch-action:none;user-select:none;-webkit-user-select:none;}
+  #heartBall.show{display:flex;}
+  #heartBall .hb-ic{font-size:22px;line-height:1;filter:drop-shadow(0 1px 1px rgba(120,30,60,0.4));pointer-events:none;}
+  #heartBall.thinking{animation:heartPulse 0.9s ease-in-out infinite;}
+  @keyframes heartFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  @keyframes heartPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.12);opacity:0.7;}}
+  #heartVoiceOverlay{position:absolute;inset:0;z-index:520;display:none;align-items:center;justify-content:center;padding:26px;
+    background:rgba(20,14,24,0.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  #heartVoiceOverlay.show{display:flex;}
+  #heartVoiceOverlay .hv-card{width:100%;max-width:300px;border-radius:24px;padding:22px 20px 18px;position:relative;
+    background:linear-gradient(160deg,#fff5f8,#ffe9f0);box-shadow:0 18px 50px rgba(150,50,90,0.28);
+    border:1px solid rgba(255,255,255,0.7);animation:hvIn 0.42s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes hvIn{0%{opacity:0;transform:translateY(18px) scale(0.9);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  #heartVoiceOverlay .hv-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  #heartVoiceOverlay .hv-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+    background:radial-gradient(circle at 32% 30%,rgba(255,255,255,0.4),rgba(255,145,175,0.95) 60%,rgba(214,90,130,1));flex-shrink:0;}
+  #heartVoiceOverlay .hv-title{font-size:13px;font-weight:700;color:#b5486e;letter-spacing:0.5px;}
+  #heartVoiceOverlay .hv-sub{font-size:11px;color:#c98aa2;margin-top:1px;}
+  #heartVoiceOverlay .hv-body{font-size:14.5px;line-height:1.85;color:#6a4453;white-space:pre-wrap;word-break:break-word;min-height:40px;}
+  #heartVoiceOverlay .hv-body.load{color:#c98aa2;font-size:13px;}
+  #heartVoiceOverlay .hv-ok{margin-top:16px;width:100%;padding:11px;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;
+    background:linear-gradient(135deg,#ff90b0,#e0678c);box-shadow:0 6px 16px rgba(214,90,130,0.35);}
+  #heartVoiceOverlay .hv-ok:active{transform:scale(0.97);}
+</style>
+<script id="heartVoiceJs">
+(function(){
+  function boot(){
+    if(!window.__state||typeof window.buildSystemPrompt!=='function'){setTimeout(boot,600);return;}
+    if(window.__heartVoice)return;
+    var S=function(){return window.__state;};
+    function getChat(id){return (S().chats||[]).find(function(c){return c.id===id;});}
+    function getChar(id){return (S().characters||[]).find(function(c){return c.id===id;});}
+    function getUser(id){return (S().users||[]).find(function(u){return u.id===id;});}
+    function chatApi(){var s=S();var a=(s.apiConfigs||[]).find(function(x){return x.type==='chat'&&x.id===s.currentChatApiId;})||(s.apiConfigs||[]).find(function(x){return x.type==='chat';});return (a&&a.url&&a.key)?{url:a.url.replace(/\/+$/,''),key:a.key,model:a.model||'gpt-3.5-turbo'}:null;}
+    var SCREEN=document.getElementById('screen');if(!SCREEN){setTimeout(boot,600);return;}
+    window.__heartVoice=true;
+
+    // ---------- 小球 ----------
+    var ball=document.createElement('div');
+    ball.id='heartBall';ball.title='看看ta此刻的心声';
+    ball.innerHTML='<span class="hb-ic">💭</span>';
+    SCREEN.appendChild(ball);
+
+    // ---------- 弹窗 ----------
+    var ov=document.createElement('div');ov.id='heartVoiceOverlay';
+    ov.innerHTML='<div class="hv-card">'+
+      '<div class="hv-head"><div class="hv-dot">💗</div><div><div class="hv-title" id="hvTitle">此刻的心声</div><div class="hv-sub" id="hvSub"></div></div></div>'+
+      '<div class="hv-body" id="hvBody"></div>'+
+      '<button class="hv-ok" id="hvOk">收下这句话</button></div>';
+    SCREEN.appendChild(ov);
+    ov.addEventListener('click',function(e){if(e.target===ov)hide();});
+    document.getElementById('hvOk').addEventListener('click',hide);
+    function hide(){ov.classList.remove('show');}
+
+    // ---------- 判断当前哪个通话在进行 ----------
+    function activeCall(){
+      var vcEl=document.getElementById('vcCall');
+      var voiceEl=document.getElementById('voiceCallModal');
+      var vc=window.__vc,voice=window.__voiceCall;
+      if(vcEl&&vcEl.classList.contains('show')&&vc&&vc.session)return {sess:vc.session,kind:'video'};
+      if(voiceEl&&voiceEl.classList.contains('in-call')&&voice&&voice.session)return {sess:voice.session,kind:'voice'};
+      return null;
+    }
+
+    function transcriptText(sess){
+      var t=(sess&&sess.transcript)||[];
+      var chat=getChat(sess.chatId);
+      var uname=(getUser(chat&&chat.userId)||{}).name||'对方';
+      var cname=(getChar(sess.charId)||{}).name||'ta';
+      return t.map(function(x){
+        var w=x.who==='char'?cname:(x.who==='user'?uname:'旁白');
+        return w+'：'+x.text;
+      }).join('\n');
+    }
+
+    var HEART_STYLE='\n\n## 🫧 现在要输出的是【角色此刻内心真实的心声】\n'+
+      '你不是在对话，而是把此刻脑子里真实的、没说出口的念头直接写出来。\n'+
+      '- 第一人称，口语化，短，像脑内碎碎念，2~4 句就好。\n'+
+      '- 只写心里想的，不要写动作神态，不要写"角色名："前缀，不要加引号。\n'+
+      '- 紧贴刚才通话聊的内容和此刻的氛围来想；可以和你嘴上说的不一样（口是心非、嘴硬心软、慌、想靠近、走神、突然在意某句话，都行）。\n'+
+      '- 不要客套、不要总结陈词、不要升华金句，就是很自然很私密的一点真实想法。';
+
+    async function generate(){
+      var ac=activeCall();if(!ac)return;
+      var sess=ac.sess;
+      var char=getChar(sess.charId);var chat=getChat(sess.chatId);
+      if(!char){show(char,'（这会儿读不到ta的心思…）');return;}
+      show(char,null); // loading
+      ball.classList.add('thinking');
+      var api=chatApi();
+      if(!api){ball.classList.remove('thinking');fill('（还没配置聊天 API，暂时听不到ta的心声）');return;}
+      var kind=ac.kind==='video'?'视频通话':'语音通话';
+      var base='';try{base=window.buildSystemPrompt(char,chat,{});}catch(e){base='';}
+      var sys=base+HEART_STYLE+'\n\n## 当前正在进行的'+kind+'记录\n'+(transcriptText(sess)||'（通话刚开始，还没说几句）');
+      try{
+        var res=await fetch(api.url+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
+          body:JSON.stringify({model:api.model,messages:[{role:'system',content:sys},{role:'user',content:'（现在，把你此刻通话中真实的、没说出口的心声写出来）'}],temperature:0.95,max_tokens:400})});
+        var out='';
+        if(res.ok){var data=await res.json();var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';out=(window.__stripThink?window.__stripThink(raw):raw).trim();}
+        else{out='';}
+        ball.classList.remove('thinking');
+        fill(out||'（ta别过头去，什么都没让你听见…）');
+      }catch(e){
+        ball.classList.remove('thinking');
+        fill('（信号断了一下，没接住ta的心声…）');
+      }
+    }
+
+    function show(char,text){
+      document.getElementById('hvTitle').textContent=(char&&char.name?char.name:'ta')+' · 此刻的心声';
+      document.getElementById('hvSub').textContent='只有你能听见';
+      var body=document.getElementById('hvBody');
+      if(text===null){body.classList.add('load');body.textContent='正在听ta心里的声音…';}
+      else{body.classList.remove('load');body.textContent=text;}
+      ov.classList.add('show');
+    }
+    function fill(text){var body=document.getElementById('hvBody');body.classList.remove('load');body.textContent=text;}
+
+    // ---------- 拖动 + 点击 ----------
+    var dragging=false,moved=false,sx=0,sy=0,ox=0,oy=0;
+    ball.addEventListener('pointerdown',function(e){
+      dragging=true;moved=false;sx=e.clientX;sy=e.clientY;
+      var r=ball.getBoundingClientRect();var pr=SCREEN.getBoundingClientRect();
+      ox=r.left-pr.left;oy=r.top-pr.top;
+      ball.setPointerCapture&&ball.setPointerCapture(e.pointerId);
+    });
+    ball.addEventListener('pointermove',function(e){
+      if(!dragging)return;
+      var dx=e.clientX-sx,dy=e.clientY-sy;
+      if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;
+      var pr=SCREEN.getBoundingClientRect();
+      var nx=Math.max(4,Math.min(pr.width-52,ox+dx));
+      var ny=Math.max(60,Math.min(pr.height-56,oy+dy));
+      ball.style.left=nx+'px';ball.style.top=ny+'px';ball.style.right='auto';
+    });
+    ball.addEventListener('pointerup',function(e){
+      if(dragging&&!moved)generate();
+      dragging=false;
+    });
+
+    // ---------- 通话开关时显示/隐藏小球 ----------
+    function sync(){var on=!!activeCall();ball.classList.toggle('show',on);if(!on)hide();}
+    function watch(el){if(!el)return;new MutationObserver(sync).observe(el,{attributes:true,attributeFilter:['class']});}
+    (function waitEls(){
+      var vcEl=document.getElementById('vcCall');var voiceEl=document.getElementById('voiceCallModal');
+      if(vcEl&&voiceEl){watch(vcEl);watch(voiceEl);sync();}
+      else setTimeout(waitEls,600);
+    })();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+
+
+<!-- ============ 合并思考：一次响应里顺带决定「归档记忆 / 理会玩家新朋友圈」，不再额外发请求 ============ -->
+<script id="mergedThinkJs">
+(function () {
+  function boot() {
+    if (!window.__state || typeof window.buildSystemPrompt !== 'function' || typeof window.commitCharLine !== 'function') { setTimeout(boot, 400); return; }
+    if (window.__mergedThink) return;
+    window.__mergedThink = true;
+    var S = function () { return window.__state; };
+    function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+    function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
+    function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
+
+    // 本轮思考要顺带处理的附加任务，按 charId 暂存；由 buildSystemPrompt 写入、commitCharLine 消费。
+    window.__mergedCtx = {};
+
+    // —— 复用既有记忆存储与阈值判断 ——
+    function memKeyForChat(chat) { if (!chat) return null; return chat.type === 'group' ? ('group_' + chat.id) : chat.charId; }
+    function memGet(k) { try { return JSON.parse(localStorage.getItem('phone_mem_' + k) || '[]'); } catch (e) { return []; } }
+    function memSave(k, arr) { try { localStorage.setItem('phone_mem_' + k, JSON.stringify(arr)); } catch (e) {} }
+    function memEvery() { var n = parseInt(localStorage.getItem('phone_mem_every') || '20', 10); return (isNaN(n) || n < 4) ? 20 : n; }
+
+    // 本聊天累计了多少条、上次归档到哪 —— 用于决定这轮要不要顺带归档
+    function memPending(chatId, chat) {
+      var msgs = (S().messages || []).filter(function (m) { return m.chatId === chatId && !m.isDeleted && !m.isRecalled; })
+        .sort(function (a, b) { return a.timestamp - b.timestamp; });
+      var doneKey = 'phone_mem_done_' + chatId;
+      var done = parseInt(localStorage.getItem(doneKey) || '0', 10) || 0;
+      var every = memEvery();
+      if (msgs.length - done < every) return null;
+      return { doneKey: doneKey, done: done, every: every, slice: msgs.slice(done, done + every), total: msgs.length };
+    }
+
+    // 该角色可见、玩家发的、且该角色还没互动过的最新一条朋友圈
+    function pendingUserMoment(char, userId) {
+      var now = Date.now();
+      var list = (S().moments || []).filter(function (m) {
+        if (!m.isUser) return false;
+        if (userId && m.userId && m.userId !== userId) return false;
+        if ((m.blockedIds || []).indexOf(char.id) >= 0) return false;
+        if (now - m.timestamp > 3 * 24 * 3600 * 1000) return false;
+        var liked = (m.likes || []).indexOf(char.id) >= 0;
+        var commented = (m.comments || []).some(function (c) { return c.charId === char.id; });
+        var paid = m.collect && (m.collect.records || []).some(function (r) { return r.who === 'char' && r.id === char.id; });
+        return !(liked || commented || paid);
+      }).sort(function (a, b) { return b.timestamp - a.timestamp; });
+      return list[0] || null;
+    }
+
+    window.__mergedThinkHelpers = { memKeyForChat: memKeyForChat, memGet: memGet, memSave: memSave, memPending: memPending, pendingUserMoment: pendingUserMoment, getChat: getChat, getChar: getChar, getUser: getUser };
+
+    // ============================================================
+    // 1) 提示词注入：在这一轮回复里，顺带把「该不该归档记忆」「要不要理会玩家新朋友圈」一起交给模型思考
+    //    这些都写进同一个 system prompt，不再单独发请求。
+    // ============================================================
+    var origBSP = window.buildSystemPrompt;
+    window.buildSystemPrompt = function (char, chat, opts) {
+      var base = origBSP.apply(this, arguments) || '';
+      try {
+        // 视频/语音通话是另一套表达，不掺合
+        if (window.__vc && window.__vc.session) return base;
+        if (window.__voiceCall && window.__voiceCall.session) return base;
+        if (!char || !chat) return base;
+
+        var tasks = { charId: char.id, chatId: chat.id, mem: null, moment: null, call: false };
+        var extra = '';
+
+        // —— 附加任务 A：记忆归档（聊够一批就顺手总结一次）——
+        var mp = memPending(chat.id, chat);
+        if (mp) {
+          tasks.mem = { doneKey: mp.doneKey, done: mp.done, every: mp.every, total: mp.total };
+          extra += '\n\n## 🧠 顺带整理：这段对话的记忆归档\n' +
+            '你们已经聊了一段了。请你在这次回复的最后，用一段第三人称、简洁客观的话，把最近这批对话里「值得长期记住的事实/关系变化/约定/情绪节点」浓缩成 1~3 句，写成一行：\n' +
+            '格式 →  [归档记忆: 这里写要长期记住的要点]\n' +
+            '- 只挑真正重要、以后还用得上的；没什么好记的就输出 [归档记忆: 无]。\n' +
+            '- 这一行不会显示给对方，只进你的记忆本。';
+        }
+
+        // —— 附加任务 B：理会玩家发的新朋友圈（单聊场景）——
+        if (chat.type !== 'group') {
+          var mo = pendingUserMoment(char, chat.userId);
+          if (mo) {
+            tasks.moment = { id: mo.id, hasCollect: !!(mo.collect) };
+            var uname = (getUser(mo.userId) || getUser(chat.userId) || {}).name || '对方';
+            extra += '\n\n## 📸 顺带看一眼：' + uname + ' 发的新朋友圈\n' +
+              '你刚注意到 ' + uname + ' 发了条朋友圈：' + (mo.imageUrl ? '[配图]' : '') + '“' + (mo.content || '') + '”。\n' +
+              '像真人一样，你可以顺手理会一下（也可以不理），在这次回复最后按需各写一行：\n' +
+              '- 点赞：[朋友圈赞]\n' +
+              '- 评论：[朋友圈评论: 一句真实的人话]\n' +
+              (mo.collect ? '- 付款（ta发起了收款）：[朋友圈付款: 金额]\n' : '') +
+              '- 什么都不做：[朋友圈略过]\n' +
+              '这些标签不会当成聊天消息发出去，只作用在朋友圈上。';
+          }
+        }
+
+        // —— 附加任务 C：要不要主动发起视频/语音通话（单聊、当前没在通话、冷却已过）——
+        if (chat.type !== 'group' && !(window.__vc && window.__vc.session) && !(window.__voiceCall && window.__voiceCall.session)) {
+          var cdOk = (typeof window.__charCallCdOk !== 'function') || window.__charCallCdOk(char);
+          if (!char.isBlocked && !char.blockedByChar && cdOk) {
+            tasks.call = true;
+            extra += '\n\n## 📞 顺带想一下：现在要不要主动打电话给对方\n' +
+              '结合你的人设、你俩的关系、最近剧情和你此刻的情绪，判断你现在想不想主动给对方打过去（很想见到/很想听声音/情绪激动/撒娇吃醋想念等才打，平时别乱打）。在这次回复最后按需写一行：\n' +
+              '- 想打视频：[主动视频]\n' +
+              '- 想打语音：[主动语音]\n' +
+              '- 不打：[不打电话]（或什么都不写）\n' +
+              '不要每次都打，克制一点，只在情绪或剧情真的到了才打。';
+          }
+        }
+
+        if (extra) {
+          window.__mergedCtx[char.id] = tasks;
+          extra += '\n\n（以上「顺带处理」的标签都单独成行、写在你正常回复内容的最后，不要和说的话混在一起。）';
+          base += extra;
+        } else {
+          delete window.__mergedCtx[char.id];
+        }
+      } catch (e) { console.warn('[mergedThink] bsp', e); }
+      return base;
+    };
+
+    // ============================================================
+    // 2) 输出解析：从这一轮回复里把附加任务的标签消费掉（不发额外请求）
+    // ============================================================
+    function saveMoment(m) { try { window.__db && window.__db.moments && window.__db.moments.put(JSON.parse(JSON.stringify(m))); } catch (e) {} }
+    function getMoment(id) { return (S().moments || []).find(function (m) { return m.id === id; }); }
+    function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+
+    if (typeof window.commitCharLine === 'function') {
+      var origCommit = window.commitCharLine;
+      window.commitCharLine = async function (chatId, char, line, ts) {
+        var s = (line || '').trim();
+        var ctx = char && window.__mergedCtx[char.id];
+
+        // —— 归档记忆 ——
+        var arch = s.match(/^\[归档记忆[:：]\s*([\s\S]*?)\]$/);
+        if (arch) {
+          try {
+            var txt = (arch[1] || '').trim();
+            if (ctx && ctx.mem) {
+              // 无论有没有内容都推进计数，避免下轮反复要求
+              localStorage.setItem(ctx.mem.doneKey, String(ctx.mem.done + ctx.mem.every));
+              if (txt && !/^无$|^none$/i.test(txt)) {
+                var chatObj = getChat(chatId);
+                var key = memKeyForChat(chatObj) || (char && char.id);
+                if (key) { var arr = memGet(key); arr.push({ id: Date.now().toString(36), time: Date.now(), content: txt, auto: true }); memSave(key, arr); }
+              }
+            }
+          } catch (e) { console.warn('[mergedThink] archive', e); }
+          return null; // 不作为聊天气泡
+        }
+
+        // —— 朋友圈互动 ——
+        var mAll = s.match(/^\[朋友圈(赞|略过|评论[:：][\s\S]*|付款[:：][\s\S]*)\]$/);
+        if (mAll && ctx && ctx.moment) {
+          try {
+            var mo = getMoment(ctx.moment.id);
+            if (mo) {
+              var changed = false;
+              if (/^\[朋友圈赞\]$/.test(s)) {
+                mo.likes = mo.likes || []; if (mo.likes.indexOf(char.id) < 0) { mo.likes.push(char.id); changed = true; }
+              }
+              var cm = s.match(/^\[朋友圈评论[:：]\s*([\s\S]+?)\]$/);
+              if (cm) {
+                var c = cm[1].trim().replace(/[（(【「][^）)】」]{0,60}[）)】」]/g, '').replace(/[*＊]/g, '').trim();
+                if (c) { mo.comments = mo.comments || []; mo.comments.push({ id: uid(), charId: char.id, content: c, timestamp: Date.now() }); changed = true; }
+              }
+              var pm = s.match(/^\[朋友圈付款[:：]\s*([\d.]+)\]$/);
+              if (pm && mo.collect) {
+                var amt = parseFloat(pm[1]);
+                if (!isNaN(amt) && amt > 0) {
+                  mo.collect.records = mo.collect.records || [];
+                  if (!mo.collect.records.some(function (r) { return r.who === 'char' && r.id === char.id; })) {
+                    mo.collect.records.push({ who: 'char', id: char.id, name: char.name, amount: (mo.collect.amount || amt), ts: Date.now() });
+                    changed = true;
+                  }
+                }
+              }
+              // 略过 / 或没命中具体动作：留个"看过"痕迹，避免下轮反复挑同一条
+              if (!changed) { mo.likes = mo.likes || []; if (mo.likes.indexOf(char.id) < 0) mo.likes.push(char.id); changed = true; }
+              if (changed) { await saveMoment(mo); if (window.renderMoments) { try { window.renderMoments(); } catch (e) {} } }
+            }
+          } catch (e) { console.warn('[mergedThink] moment', e); }
+          return null; // 不作为聊天气泡
+        }
+
+        // —— 主动发起视频/语音通话 ——
+        var callM = s.match(/^\[(主动视频|主动语音|不打电话)\]$/);
+        if (callM && ctx && ctx.call) {
+          try {
+            var kind = callM[1];
+            if (kind !== '不打电话') {
+              var chatObj = getChat(chatId);
+              // 通话中 / 已离开该聊天则不打；冷却再判一次
+              var cdOk = (typeof window.__charCallCdOk !== 'function') || window.__charCallCdOk(char);
+              var busy = (window.__vc && window.__vc.session) || (window.__voiceCall && window.__voiceCall.session);
+              if (chatObj && S().currentChatId === chatId && !busy && cdOk) {
+                if (kind === '主动视频' && window.__vc && window.__vc.showIncoming) {
+                  setTimeout(function () { try { window.__vc.showIncoming(char.id, chatId); } catch (e) {} }, 600);
+                } else if (kind === '主动语音' && window.__voiceCall && window.__voiceCall.showIncoming) {
+                  setTimeout(function () { try { window.__voiceCall.showIncoming(char.id, chatId); } catch (e) {} }, 600);
+                }
+              }
+            }
+          } catch (e) { console.warn('[mergedThink] call', e); }
+          return null; // 不作为聊天气泡
+        }
+
+        return origCommit.apply(this, arguments);
+      };
+    }
+
+    console.log('[mergedThink] booted');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+
+<!-- ============ 编辑人设「从哪来回哪去」：从聊天界面进编辑，保存/返回直接回聊天 ============ -->
+<script id="charEditReturnJs">
+(function () {
+  function boot() {
+    if (!window.__state || typeof window.openChat !== 'function' || typeof window.showPage !== 'function' || typeof window.openCharEditor !== 'function') { setTimeout(boot, 400); return; }
+    if (window.__charEditReturn) return;
+    window.__charEditReturn = true;
+    var S = function () { return window.__state; };
+    function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+
+    // 1) 在聊天菜单点「编辑人设」的瞬间，记下当前聊天 id（捕获阶段先于菜单自身的 click 执行）
+    document.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest && e.target.closest('#menuEditChar');
+      if (t) { window.__pendingChatReturn = (S() && S().currentChatId) || null; }
+    }, true);
+
+    // 2) 每次打开编辑器时消费这个待定值：从聊天来的置上标记，从别处（人设列表等）来的清空标记
+    var origOCE = window.openCharEditor;
+    window.openCharEditor = function (id) {
+      window.__charEditFromChat = window.__pendingChatReturn || null;
+      window.__pendingChatReturn = null;
+      return origOCE.apply(this, arguments);
+    };
+
+    // 3) 拦截「回人设列表」：如果这次编辑是从聊天进来的、且编辑页还开着，就改成回到那个聊天
+    var origShow = window.showPage;
+    window.showPage = function (name) {
+      try {
+        if (name === 'characters' && window.__charEditFromChat) {
+          var ed = document.getElementById('char-editor-page');
+          if (ed && ed.classList.contains('active')) {
+            var cid = window.__charEditFromChat;
+            window.__charEditFromChat = null;
+            if (getChat(cid)) return window.openChat(cid);
+          }
+        }
+      } catch (e) { console.warn('[charEditReturn]', e); }
+      return origShow.apply(this, arguments);
+    };
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+
+<!-- ============ 功能栏指令收口：没画图API就让角色「用文字描述画面」，写进提示词 ============ -->
+<script id="imgFallbackPromptJs">
+(function () {
+  function boot() {
+    if (typeof window.buildSystemPrompt !== 'function') { setTimeout(boot, 400); return; }
+    if (window.__imgFallbackPrompt) return;
+    window.__imgFallbackPrompt = true;
+
+    function drawOn() {
+      try { return !!(window.__drawEnabled && window.__drawEnabled()); } catch (e) { return false; }
+    }
+
+    // 最外层再包一次：根据「画图API有没有启用/勾选」动态给出图片指令。
+    // 这样角色在同一次回复里就知道该发真图还是写文字描述，不用额外请求。
+    var origBSP = window.buildSystemPrompt;
+    window.buildSystemPrompt = function (char, chat, opts) {
+      var base = origBSP.apply(this, arguments) || '';
+      try {
+        if (drawOn()) {
+          base += '\n\n## 🖼️ 关于发图片\n你已接入画图能力，想发照片/自拍/画面时正常用 [图片: 详细画面描述] 标签，系统会把它画成真实图片。';
+        } else {
+          base += '\n\n## 🖼️ 关于发图片（重要·当前没有画图能力）\n' +
+            '玩家当前没有启用/勾选画图 API，你无法发出真实图片。\n' +
+            '- 因此不要再用 [图片: ...] 这个标签发图（发了也只会变成一段文字，不会有图）。\n' +
+            '- 当你想给对方看某个画面、自拍、照片时，改成用「文字描述」把这个画面直接讲出来，就像在跟对方口头描述你拍到/看到的东西：写清场景、你的样子或神态、光线氛围、正在做什么，让对方脑补出画面。\n' +
+            '- 用自然的说话口吻描述，别写成 [图片:...] 这种标签格式，也别写旁白，就当成你正在用文字告诉对方“我这边现在是这样的”。';
+        }
+      } catch (e) {}
+      return base;
+    };
+    console.log('[imgFallbackPrompt] booted, drawOn=' + drawOn());
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
