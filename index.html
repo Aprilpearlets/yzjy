@@ -265,6 +265,9 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             left: 0;
             background: #fff;
             overflow: hidden;
+            /* 页面自身画出和屏幕一致的圆角：这样即便 WebView 裁不住子元素，
+               .page 是纯色背景、自身圆角能正常渲染，四角不会冒出机身。 */
+            border-radius: 30px;
             animation: pageIn 0.2s ease-out;
         }
         .page.active {
@@ -412,15 +415,17 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             align-items: center;
             padding: 12px 16px;
             padding-top: 44px;
-            background: rgba(255, 255, 255, 0.7);
-            -webkit-backdrop-filter: blur(12px);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.94);
             border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             flex-shrink: 0;
             gap: 10px;
             min-height: 64px;
             position: relative;
             z-index: 10;
+            /* 安卓 WebView 上父级 overflow+圆角裁不住子元素，所以顶栏自己画出顶部圆角，
+               它的圆角是自身背景的圆角，任何 WebView 都能正常渲染，方角就不会冒出机身。 */
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
         }
         .app-header .back {
             font-size: 22px;
@@ -792,11 +797,12 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             align-items: flex-end;
             gap: 8px;
             padding: 10px 12px 12px;
-            background: rgba(255, 255, 255, 0.7);
-            -webkit-backdrop-filter: blur(12px);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.94);
             border-top: 1px solid rgba(0, 0, 0, 0.04);
             flex-shrink: 0;
+            /* 输入栏自己画出底部圆角，聊天页底部两角不冒出机身 */
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
         }
         .chat-input-bar .input-wrap {
             flex: 1;
@@ -1470,6 +1476,15 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             }
             #screen {
                 border-radius: 0;
+                -webkit-mask: none;
+                mask: none;
+            }
+            .page {
+                border-radius: 0;
+            }
+            .app-header {
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
             }
             #status-bar {
                 padding: 8px 16px 4px;
@@ -2392,6 +2407,15 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
                     </div>
 
                     <div class="setting-group"><div class="group-title">数据管理</div><div class="btn-row"><button class="btn-secondary" id="exportDataBtn">导出数据</button><button class="btn-secondary" id="importDataBtn">导入数据</button></div><input type="file" id="importDataInput" accept=".json" style="display:none;"></div>
+                    <!-- 福利额度 -->
+                    <div class="setting-group">
+                        <div class="group-title">福利额度</div>
+                        <div class="setting-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;margin:0;"><span>显示福利悬浮球<br><small style="color:var(--text-secondary);font-weight:400;">在聊天等界面右侧显示福利入口小球</small></span><input type="checkbox" id="wfShowBall" style="width:22px;height:22px;flex-shrink:0;"></label></div>
+                        <div class="setting-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;margin:0;"><span>用福利额度响应<br><small style="color:var(--text-secondary);font-weight:400;">余额&gt;0 时，聊天主回复改走福利通道，把多扣的次数补回来</small></span><input type="checkbox" id="wfEnable" style="width:22px;height:22px;flex-shrink:0;"></label></div>
+                        <div class="setting-row"><button class="btn-primary" id="wfOpenPanel" style="width:100%;">查看福利额度 / 检查多扣情况</button></div>
+                        <div class="setting-row"><small style="color:var(--text-secondary);">福利通道由作者提供并已加密，玩家无需配置。福利额度只从启用起记账，此前的扣费无法追溯。</small></div>
+                    </div>
+
                     <div class="setting-group">
                         <div class="group-title">主题</div>
                         <div class="setting-row"><label>主色</label><div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -11264,9 +11288,13 @@ ${isOffline
     html[data-morandi] .loading-dots span { background: var(--m-primary-deep) !important; }
 
     html[data-morandi] .app-header {
-        background: rgba(255,255,255,0.62) !important;
-        -webkit-backdrop-filter: blur(var(--m-glass-blur)) !important; backdrop-filter: blur(var(--m-glass-blur)) !important;
+        /* 去掉毛玻璃：WebView 上毛玻璃顶栏会无视圆角按方形铺背景，方角冒出机身。
+           改用高不透明纯色 + 顶部圆角，视觉接近且四角能收进机身。 */
+        background: color-mix(in srgb, var(--m-card-solid, #fbf9f6) 92%, transparent) !important;
+        -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
         border-bottom: 1px solid var(--m-line) !important;
+        border-top-left-radius: 30px !important;
+        border-top-right-radius: 30px !important;
     }
     html[data-morandi] .app-header .back,
     html[data-morandi] .app-header .action,
@@ -11848,9 +11876,12 @@ ${isOffline
 
     /* 顶栏：干净白 + 细线 */
     html[data-skin="pure"] .app-header {
-        background: rgba(255,255,255,0.82) !important;
-        -webkit-backdrop-filter: saturate(180%) blur(20px) !important; backdrop-filter: saturate(180%) blur(20px) !important;
+        /* 去毛玻璃改实色 + 顶部圆角：避免顶栏方角冒出机身圆角 */
+        background: rgba(255,255,255,0.96) !important;
+        -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
         border-bottom: 1px solid var(--p-line-soft) !important;
+        border-top-left-radius: 30px !important;
+        border-top-right-radius: 30px !important;
     }
     html[data-skin="pure"] .app-header .title { color: var(--p-ink) !important; font-weight: 600 !important; letter-spacing: 0.3px; }
     html[data-skin="pure"] .app-header .back,
@@ -12062,7 +12093,9 @@ ${isOffline
     }
     html[data-frameless] #phone::before,
     html[data-frameless] #phone::after { display: none !important; }
-    html[data-frameless] #screen { border-radius: 0 !important; }
+    html[data-frameless] #screen { border-radius: 0 !important; -webkit-mask: none !important; mask: none !important; }
+    html[data-frameless] .page { border-radius: 0 !important; }
+    html[data-frameless] .app-header { border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; }
 </style>
 <script id="phoneFrameToggleJs">
 (function () {
@@ -24223,6 +24256,11 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     // 各板块：key -> {标题, 作用目标说明, 包裹选择器(作用域), 示例}
     var SECTIONS = [
         {
+            key: 'overall', title: '🌈 总体美化（推荐 · 一整段直接粘）', target: '', overall: true,
+            tip: '把一整段美化 CSS 直接粘进来即可（要带选择器和大括号，就像分享出来的那种整段代码）。保存后会自动匹配到对应位置，不用管下面有没有对应板块。\n下面各分板块是给不想写选择器、只想改单个元素的人用的；如果你有整段现成美化，只用这个「总体美化」框就够了。',
+            eg: '示例（整段直接粘）：\n.msg-wrapper.user .msg-bubble {\n  background: linear-gradient(135deg,#FFD6E8,#FFB3D1);\n  border-radius: 18px 18px 5px 18px;\n}\n.msg-wrapper.ai .msg-bubble {\n  background: rgba(255,255,255,0.6);\n}\n.home-clock .time { color:#fff; }'
+        },
+        {
             key: 'redpacket', title: '🧧 红包美化', target: '.rp-card',
             tip: '自定义聊天里「红包卡片」的样式。写 CSS 属性即可（不用写选择器），会作用到红包卡片本身。',
             eg: '示例：\nbackground: linear-gradient(135deg,#FF9A6B,#F76B45);\nborder-radius: 18px;\nbox-shadow: 0 6px 18px rgba(247,107,69,.35);'
@@ -24284,6 +24322,19 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
     // 把用户写的「属性块」包成一条带作用域和高优先级的规则
     function buildCss(data) {
+        // 给整段规则里每条属性补 !important（跳过 @规则内声明块的花括号，简单处理）
+        function addImportant(rule) {
+            return rule.replace(/\{([^{}]*)\}/g, function (m, decls) {
+                var out = decls.split(';').map(function (d) {
+                    d = d.trim();
+                    if (!d) return '';
+                    if (/!important\s*$/i.test(d)) return d;
+                    if (d.indexOf(':') < 0) return d; // 不是属性声明，原样保留
+                    return d + ' !important';
+                }).filter(Boolean).join('; ');
+                return '{ ' + out + ' }';
+            });
+        }
         var out = [];
         // 让位模式：给每条规则加「非夜间」祖先前缀，夜间时自动失效、回落到夜间深色；
         // 保留模式：不加限定，自设美化全天生效。
@@ -24294,7 +24345,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             // 用户可能写了完整规则（带 {}）——原样输出（让位模式下给它加前缀）；
             // 否则当成属性块，包进 目标选择器 { ... }，并给每条属性补 !important 提升优先级。
             if (body.indexOf('{') >= 0) {
-                out.push(guard ? prefixRule(body, guard.trim()) : body);
+                var whole = addImportant(body);
+                out.push(guard ? prefixRule(whole, guard.trim()) : whole);
             } else {
                 var props = body.split(';').map(function (p) { return p.trim(); }).filter(Boolean)
                     .map(function (p) {
@@ -26505,6 +26557,13 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     function markUnread(charId) { var o = loadUnread(); o[charId] = true; saveUnread(o); refreshDots(); }
     function clearUnread(charId) { var o = loadUnread(); delete o[charId]; saveUnread(o); refreshDots(); }
     function isUnread(charId) { return !!loadUnread()[charId]; }
+    // 暴露给「合并思考」脚本：角色在正常回复里顺带写的 [心声:] 由那边解析后调这里存入，不额外发请求
+    window.__hvPush = function (charId, text) {
+        if (!charId || !text) return;
+        pushVoice(charId, text);
+        markUnread(charId);
+        if (hvOpenCharId === charId) { try { renderBody(charId); } catch (e) {} }
+    };
     // 给消息区里该角色的头像上未读心跳点
     function refreshDots() {
         try {
@@ -26647,18 +26706,10 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         window.__hvTriggerPatched = true;
         var orig = window.triggerAiReply;
         window.triggerAiReply = async function (chatId, forceCharId) {
-            var r = await orig.apply(this, arguments);
-            try {
-                var cid = chatId || (S() && S().currentChatId);
-                var chat = getChat(cid);
-                if (chat) {
-                    var chars = chatCharsOf(chat).filter(function (c) { return c && !c.isBlocked; });
-                    if (forceCharId) chars = chars.filter(function (c) { return c.id === forceCharId; });
-                    // 稍等一下，等这轮回复的消息都落库，再基于完整对话生成心声
-                    setTimeout(function () { chars.forEach(function (c) { genVoice(cid, c); }); }, 1200);
-                }
-            } catch (e) {}
-            return r;
+            // 一次「响应」= 一次计费：不再在每轮回复后自动生成心声（那会对每个角色各多发一次 AI 请求，
+            // 单人多扣 1 次、双人多扣 2 次，正是「一次扣两次/四次」的来源）。
+            // 心声改为你点角色头像看时才按需现生成（renderBody 里没有历史心声会自动生成一条），能力不丢。
+            return await orig.apply(this, arguments);
         };
     }
 
@@ -32326,7 +32377,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
 
 <!-- ============ 通话心声悬浮球：视频/语音通话中点小球看角色此刻心声 ============ -->
-<style id="heartVoiceCss">
+<style id="callHeartCss">
   #heartBall{position:absolute;right:14px;top:120px;width:48px;height:48px;border-radius:50%;z-index:460;display:none;align-items:center;justify-content:center;cursor:pointer;
     background:radial-gradient(circle at 32% 30%,rgba(255,255,255,0.35),rgba(255,145,175,0.9) 55%,rgba(214,90,130,0.95));
     box-shadow:0 6px 20px rgba(200,70,110,0.45),inset 0 1px 2px rgba(255,255,255,0.6);
@@ -32339,25 +32390,27 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   #heartVoiceOverlay{position:absolute;inset:0;z-index:520;display:none;align-items:center;justify-content:center;padding:26px;
     background:rgba(20,14,24,0.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
   #heartVoiceOverlay.show{display:flex;}
-  #heartVoiceOverlay .hv-card{width:100%;max-width:300px;border-radius:24px;padding:22px 20px 18px;position:relative;
+  #heartVoiceOverlay .cv-card{width:100%;max-width:300px;border-radius:24px;padding:22px 20px 18px;position:relative;
     background:linear-gradient(160deg,#fff5f8,#ffe9f0);box-shadow:0 18px 50px rgba(150,50,90,0.28);
-    border:1px solid rgba(255,255,255,0.7);animation:hvIn 0.42s cubic-bezier(.2,.9,.3,1.3);}
-  @keyframes hvIn{0%{opacity:0;transform:translateY(18px) scale(0.9);}100%{opacity:1;transform:translateY(0) scale(1);}}
-  #heartVoiceOverlay .hv-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
-  #heartVoiceOverlay .hv-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+    border:1px solid rgba(255,255,255,0.7);animation:cvIn 0.42s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes cvIn{0%{opacity:0;transform:translateY(18px) scale(0.9);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  #heartVoiceOverlay .cv-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  #heartVoiceOverlay .cv-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
     background:radial-gradient(circle at 32% 30%,rgba(255,255,255,0.4),rgba(255,145,175,0.95) 60%,rgba(214,90,130,1));flex-shrink:0;}
-  #heartVoiceOverlay .hv-title{font-size:13px;font-weight:700;color:#b5486e;letter-spacing:0.5px;}
-  #heartVoiceOverlay .hv-sub{font-size:11px;color:#c98aa2;margin-top:1px;}
-  #heartVoiceOverlay .hv-body{font-size:14.5px;line-height:1.85;color:#6a4453;white-space:pre-wrap;word-break:break-word;min-height:40px;}
-  #heartVoiceOverlay .hv-body.load{color:#c98aa2;font-size:13px;}
-  #heartVoiceOverlay .hv-ok{margin-top:16px;width:100%;padding:11px;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;
+  #heartVoiceOverlay .cv-title{font-size:13px;font-weight:700;color:#b5486e;letter-spacing:0.5px;}
+  #heartVoiceOverlay .cv-sub{font-size:11px;color:#c98aa2;margin-top:1px;}
+  #heartVoiceOverlay .cv-body{font-size:14.5px;line-height:1.85;color:#6a4453;white-space:pre-wrap;word-break:break-word;min-height:40px;}
+  #heartVoiceOverlay .cv-body.load{color:#c98aa2;font-size:13px;}
+  #heartVoiceOverlay .cv-ok{margin-top:16px;width:100%;padding:11px;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;
     background:linear-gradient(135deg,#ff90b0,#e0678c);box-shadow:0 6px 16px rgba(214,90,130,0.35);}
-  #heartVoiceOverlay .hv-ok:active{transform:scale(0.97);}
+  #heartVoiceOverlay .cv-ok:active{transform:scale(0.97);}
 </style>
-<script id="heartVoiceJs">
+<script id="callHeartJs">
 (function(){
   function boot(){
-    if(!window.__state||typeof window.buildSystemPrompt!=='function'){setTimeout(boot,600);return;}
+    // 小球只需要 state 和 #screen 就能建；心声内容用到的 buildSystemPrompt 在 generate 里已 try/catch 兜底，
+    // 所以这里不等它，避免它迟迟不就绪导致小球永远不初始化。
+    if(!window.__state||!document.getElementById('screen')){setTimeout(boot,600);return;}
     if(window.__heartVoice)return;
     var S=function(){return window.__state;};
     function getChat(id){return (S().chats||[]).find(function(c){return c.id===id;});}
@@ -32375,13 +32428,13 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
     // ---------- 弹窗 ----------
     var ov=document.createElement('div');ov.id='heartVoiceOverlay';
-    ov.innerHTML='<div class="hv-card">'+
-      '<div class="hv-head"><div class="hv-dot">💗</div><div><div class="hv-title" id="hvTitle">此刻的心声</div><div class="hv-sub" id="hvSub"></div></div></div>'+
-      '<div class="hv-body" id="hvBody"></div>'+
-      '<button class="hv-ok" id="hvOk">收下这句话</button></div>';
+    ov.innerHTML='<div class="cv-card">'+
+      '<div class="cv-head"><div class="cv-dot">💗</div><div><div class="cv-title" id="cvTitle">此刻的心声</div><div class="cv-sub" id="cvSub"></div></div></div>'+
+      '<div class="cv-body" id="cvBody"></div>'+
+      '<button class="cv-ok" id="cvOk">收下这句话</button></div>';
     SCREEN.appendChild(ov);
     ov.addEventListener('click',function(e){if(e.target===ov)hide();});
-    document.getElementById('hvOk').addEventListener('click',hide);
+    document.getElementById('cvOk').addEventListener('click',hide);
     function hide(){ov.classList.remove('show');}
 
     // ---------- 判断当前哪个通话在进行 ----------
@@ -32439,14 +32492,14 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
 
     function show(char,text){
-      document.getElementById('hvTitle').textContent=(char&&char.name?char.name:'ta')+' · 此刻的心声';
-      document.getElementById('hvSub').textContent='只有你能听见';
-      var body=document.getElementById('hvBody');
+      document.getElementById('cvTitle').textContent=(char&&char.name?char.name:'ta')+' · 此刻的心声';
+      document.getElementById('cvSub').textContent='只有你能听见';
+      var body=document.getElementById('cvBody');
       if(text===null){body.classList.add('load');body.textContent='正在听ta心里的声音…';}
       else{body.classList.remove('load');body.textContent=text;}
       ov.classList.add('show');
     }
-    function fill(text){var body=document.getElementById('hvBody');body.classList.remove('load');body.textContent=text;}
+    function fill(text){var body=document.getElementById('cvBody');body.classList.remove('load');body.textContent=text;}
 
     // ---------- 拖动 + 点击 ----------
     var dragging=false,moved=false,sx=0,sy=0,ox=0,oy=0;
@@ -32472,12 +32525,16 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
     // ---------- 通话开关时显示/隐藏小球 ----------
     function sync(){var on=!!activeCall();ball.classList.toggle('show',on);if(!on)hide();}
-    function watch(el){if(!el)return;new MutationObserver(sync).observe(el,{attributes:true,attributeFilter:['class']});}
-    (function waitEls(){
-      var vcEl=document.getElementById('vcCall');var voiceEl=document.getElementById('voiceCallModal');
-      if(vcEl&&voiceEl){watch(vcEl);watch(voiceEl);sync();}
-      else setTimeout(waitEls,600);
-    })();
+    var watched={};
+    function watch(el){if(!el||watched[el.id])return;watched[el.id]=true;new MutationObserver(sync).observe(el,{attributes:true,attributeFilter:['class']});}
+    // 语音通话弹窗是首次来电才动态建的，视频通话弹窗也可能晚于本脚本；
+    // 所以持续巡检：谁出现就给谁挂监听，并且定时兜底 sync 一次，避免永远等不到而不初始化。
+    setInterval(function(){
+      watch(document.getElementById('vcCall'));
+      watch(document.getElementById('voiceCallModal'));
+      sync();
+    },800);
+    sync();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
@@ -32592,6 +32649,14 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           }
         }
 
+        // —— 附加任务 D：顺带写下此刻的心声（不额外发请求，玩家点头像才看得到）——
+        tasks.voice = true;
+        extra += '\n\n## 🫧 顺带写一句：你此刻没说出口的心声\n' +
+          '在这次回复的最后，另起一行写下「' + char.name + '」此刻心里真实的、没说出口的那句话（心声/内心OS）：可以是吐槽、口是心非、害羞、破防、在意、小情绪等，紧贴刚刚这轮对话。\n' +
+          '格式 →  [心声: 这里写心里话]\n' +
+          '- 用第一人称，口语、真实、有活人感，10~40 个字，一两句就好，不要旁白动作、不要引号。\n' +
+          '- 这一行不会作为聊天消息发出去，只存进「点头像看心声」那里给玩家看。每轮都要写。';
+
         if (extra) {
           window.__mergedCtx[char.id] = tasks;
           extra += '\n\n（以上「顺带处理」的标签都单独成行、写在你正常回复内容的最后，不要和说的话混在一起。）';
@@ -32690,6 +32755,18 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           return null; // 不作为聊天气泡
         }
 
+        // —— 心声：角色在这轮回复里顺带写的 [心声: ...]，存进「点头像看心声」，不作为聊天气泡 ——
+        var voiceM = s.match(/^\[心声[:：]\s*([\s\S]+?)\]$/);
+        if (voiceM) {
+          try {
+            var vtext = (voiceM[1] || '').trim().replace(/^["'“”「」]+|["'“”「」]+$/g, '').trim();
+            if (vtext && !/^无$|^none$/i.test(vtext) && char && window.__hvPush) {
+              window.__hvPush(char.id, vtext);
+            }
+          } catch (e) { console.warn('[mergedThink] voice', e); }
+          return null; // 不作为聊天气泡
+        }
+
         return origCommit.apply(this, arguments);
       };
     }
@@ -32779,5 +32856,402 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     console.log('[imgFallbackPrompt] booted, drawOn=' + drawOn());
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+<!-- ============ 福利额度补偿模块 v2（作者密钥加密 · 设置入口 · 明细） ============ -->
+<style>
+  #welfare-ball{position:fixed;right:0;top:45%;z-index:99990;width:34px;height:46px;
+    background:linear-gradient(135deg,#ffd36b,#ff9f43);color:#7a4a00;border-radius:14px 0 0 14px;
+    display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1.1;
+    box-shadow:-2px 2px 10px rgba(0,0,0,.22);cursor:pointer;text-align:center;opacity:.86;
+    -webkit-user-select:none;user-select:none;transition:opacity .2s,transform .2s;padding:4px 2px;}
+  #welfare-ball.show{display:flex;}
+  #welfare-ball:hover{opacity:1;transform:scale(1.05);}
+  #welfare-ball .wf-badge{position:absolute;top:-6px;left:-6px;min-width:18px;height:18px;padding:0 4px;
+    background:#e5484d;color:#fff;border-radius:9px;font-size:11px;display:flex;align-items:center;
+    justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+  #welfare-ball .wf-badge.zero{display:none;}
+  #welfare-mask{position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.45);display:none;
+    align-items:center;justify-content:center;padding:18px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+  #welfare-mask.show{display:flex;}
+  #welfare-panel{width:100%;max-width:360px;max-height:86vh;overflow:auto;background:#fff;color:#1f2937;
+    border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:20px 18px 22px;box-sizing:border-box;}
+  #welfare-panel h3{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:6px;}
+  #welfare-panel .wf-sub{margin:0 0 16px;font-size:12px;color:#8a939c;line-height:1.6;}
+  #welfare-panel .wf-bal{background:linear-gradient(135deg,#fff4dc,#ffe3b3);border-radius:14px;
+    padding:16px;text-align:center;margin-bottom:14px;}
+  #welfare-panel .wf-bal .num{font-size:38px;font-weight:800;color:#e07b00;line-height:1;}
+  #welfare-panel .wf-bal .lbl{font-size:12px;color:#a06a1a;margin-top:6px;}
+  #welfare-panel .wf-stat{display:flex;gap:10px;margin-bottom:14px;}
+  #welfare-panel .wf-stat div{flex:1;background:#f5f6f8;border-radius:10px;padding:10px;text-align:center;}
+  #welfare-panel .wf-stat b{display:block;font-size:20px;color:#334155;}
+  #welfare-panel .wf-stat span{font-size:11px;color:#94a3b8;}
+  #welfare-panel .wf-chan{font-size:12px;border-radius:10px;padding:10px 12px;margin-bottom:14px;text-align:center;}
+  #welfare-panel .wf-chan.ok{background:#ecfdf5;color:#059669;}
+  #welfare-panel .wf-chan.no{background:#fef2f2;color:#dc2626;}
+  #welfare-panel .wf-modelbox{margin-bottom:14px;}
+  #welfare-panel .wf-mlabel{font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;
+    display:flex;align-items:center;justify-content:space-between;}
+  #welfare-panel .wf-mlabel button{font-size:11px;background:#ff9f43;color:#fff;border:none;
+    border-radius:7px;padding:4px 12px;cursor:pointer;}
+  #welfare-panel #wf-modelsel{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #e2e8f0;
+    border-radius:9px;font-size:13px;background:#fafbfc;color:#334155;}
+  #welfare-panel .wf-dettitle{font-size:13px;font-weight:700;color:#334155;margin:4px 0 8px;
+    display:flex;align-items:center;justify-content:space-between;}
+  #welfare-panel .wf-dettitle button{font-size:11px;color:#94a3b8;background:none;border:none;cursor:pointer;text-decoration:underline;}
+  #welfare-panel .wf-list{background:#f8fafc;border-radius:10px;max-height:190px;overflow:auto;padding:4px;}
+  #welfare-panel .wf-item{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;
+    border-bottom:1px solid #eef1f4;font-size:12px;}
+  #welfare-panel .wf-item:last-child{border-bottom:none;}
+  #welfare-panel .wf-item .who{color:#475569;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #welfare-panel .wf-item .cnt{color:#e07b00;font-weight:700;flex-shrink:0;}
+  #welfare-panel .wf-item .tm{color:#b0bac4;flex-shrink:0;font-size:11px;}
+  #welfare-panel .wf-empty{padding:22px 10px;text-align:center;color:#b0bac4;font-size:12px;}
+  #welfare-panel .wf-btns{display:flex;gap:10px;margin-top:16px;}
+  #welfare-panel .wf-btns button{flex:1;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
+  #welfare-panel .wf-recheck{background:#ff9f43;color:#fff;}
+  #welfare-panel .wf-close{background:#eef0f3;color:#64748b;}
+  #welfare-panel .wf-tip{font-size:11px;color:#94a3b8;line-height:1.6;margin-top:14px;background:#f8fafc;border-radius:9px;padding:10px 12px;}
+</style>
+<div id="welfare-ball" title="福利额度">福利<span class="wf-badge zero" id="wf-badge">0</span></div>
+<div id="welfare-mask">
+  <div id="welfare-panel">
+    <h3>🎁 福利额度</h3>
+    <p class="wf-sub">聊天里一次响应如果顺带发起了多余的后台请求，多扣的每一次都会累计成福利额度。开启「用福利额度响应」后，聊天主回复会改走作者提供的福利通道，把多扣的次数补回来。</p>
+    <div class="wf-bal"><div class="num" id="wf-num">0</div><div class="lbl">可用福利次数</div></div>
+    <div class="wf-stat">
+      <div><b id="wf-total">0</b><span>累计多扣</span></div>
+      <div><b id="wf-used">0</b><span>已用福利</span></div>
+    </div>
+    <div class="wf-chan no" id="wf-chan">福利通道未就绪</div>
+    <div class="wf-modelbox" id="wf-modelbox" style="display:none;">
+      <div class="wf-mlabel">福利模型<button id="wf-fetch" type="button">拉取</button></div>
+      <select id="wf-modelsel"></select>
+    </div>
+    <div class="wf-dettitle"><span>📋 多扣明细</span><button id="wf-clearlog">清空记录</button></div>
+    <div class="wf-list" id="wf-list"><div class="wf-empty">还没有检测到多扣记录</div></div>
+    <div class="wf-btns">
+      <button class="wf-close" id="wf-closebtn">关闭</button>
+      <button class="wf-recheck" id="wf-recheckbtn">刷新检查</button>
+    </div>
+    <div class="wf-tip">福利通道由作者提供，玩家无需配置。福利额度只从启用起记账，此前的扣费无法追溯；论坛、遇见、朋友圈等应用的请求不计入。</div>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  if(window.__welfareInited) return; window.__welfareInited = true;
+  /* =====================================================================
+     【作者配置区】福利通道 —— 直接填明文即可
+     ---------------------------------------------------------------------
+     1) 地址 + 密钥：填你的福利 API。
+     2) 有效期：WELFARE_DATE 填那一天的日期 YYYY-MM-DD，WELFARE_START/END 填
+        当天的几点到几点可用（24小时制，不带冒号的整点小时数）。
+         例如 '2026-08-01' + 8 + 23 表示 2026年8月1日 8:00~23:00 可用。
+     3) 福利模型：玩家只看到「福利一/二/三...」，实际用右边填的真实模型名。
+     ===================================================================== */
+  // 地址和密钥已加密（防止上传 git 后被爬虫/他人直接读到明文）。
+  // 要换成新的福利 API 时，别直接改这两行；用文件里说明的方式重新生成密文再替换。
+  var WF_SALT       = 'ekanw-welfare-2026-xsj';
+  var WELFARE_URL_E = 'DR8VHgQXWEoNFghcAEZTXkUYThceRRNa';                                   // 密文：接口地址
+  var WELFARE_KEY_E = 'FgBMKzNEQR0fDgMrKXVBVn8Fah45Lj0NLD86aRMqDyEzBwZHWAh/exgqC1MnBAZeHW9O'; // 密文：密钥
+  function __wfXor(s,k){ var o=''; for(var i=0;i<s.length;i++){ o+=String.fromCharCode(s.charCodeAt(i)^k.charCodeAt(i%k.length)); } return o; }
+  function __wfB64d(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return ''; } }
+  function __wfDec(e){ return e ? __wfXor(__wfB64d(e), WF_SALT) : ''; }
+  var WELFARE_URL   = __wfDec(WELFARE_URL_E);  // 运行时解密出的接口地址
+  var WELFARE_KEY   = __wfDec(WELFARE_KEY_E);  // 运行时解密出的密钥
+  var WELFARE_DATE  = '2026-08-01'; // ← 有效日期（YYYY-MM-DD）
+  var WELFARE_START = 8;            // ← 当天几点开始可用（0~23），8 = 早上 8 点
+  var WELFARE_END   = 23;           // ← 当天几点结束可用（0~23），23 = 晚上 11 点
+
+  // 福利模型：左边玩家看到的名字（福利一/二/三...），右边填真实模型名
+  // 有几个模型就写几行，不需要的可以删掉或留空 real
+  var WELFARE_MODELS = [
+    { label: '福利一', real: '【Y】gemini-3-flash-preview' },
+    { label: '福利二', real: '云雾-gemini-2.5-pro' },
+    { label: '福利三', real: '云雾-gemini-3-pro-preview' },
+    { label: '福利四', real: '云雾-gemini-3-pro-preview-thinking' }
+  ];
+
+  // 有效档位（填了真实模型的才算）
+  function welfareModelList(){ return WELFARE_MODELS.filter(function(m){ return m.real && m.real.trim(); }); }
+  // 按玩家看到的 label 找到真实模型
+  function realModelOf(label){
+    var hit = WELFARE_MODELS.filter(function(m){ return m.label === label && m.real && m.real.trim(); })[0];
+    return hit ? hit.real.trim() : '';
+  }
+  window.__wfModelList = welfareModelList;
+  window.__wfRealModel = realModelOf;
+
+  // 时间窗判断：当前是否在指定日期的指定时段内
+  function inTimeWindow(){
+    var now = new Date();
+    var targetDay = new Date(String(WELFARE_DATE).replace(/-/g,'/'));
+    var nowDay = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+    var tarDay = targetDay.toLocaleDateString('en-CA');
+    if(nowDay !== tarDay) return false; // 不是那一天
+    var h = now.getHours();
+    if(WELFARE_START === WELFARE_END) return true;
+    if(WELFARE_START < WELFARE_END) return h >= WELFARE_START && h < WELFARE_END;
+    return h >= WELFARE_START || h < WELFARE_END;
+  }
+  window.__wfInWindow = inTimeWindow;
+  window.__wfWindowText = function(){
+    var p = function(n){ return (n<10?'0':'')+n+':00'; };
+    return WELFARE_DATE + ' ' + p(WELFARE_START) + ' ~ ' + p(WELFARE_END);
+  };
+
+  // 组装通道：地址+密钥齐全，且有可用模型，才算"已配置"（是否当前可用另看时间窗）
+  var CHANNEL = (WELFARE_URL && WELFARE_KEY && welfareModelList().length)
+    ? { u: WELFARE_URL, k: WELFARE_KEY }
+    : null;
+
+  // —— 状态存储 ——
+  var LS = 'welfarePlan_v2';
+  function load(){
+    try{ var o=JSON.parse(localStorage.getItem(LS)||'{}');
+      return { balance:o.balance||0, total:o.total||0, used:o.used||0,
+        enable:!!o.enable, showBall:!!o.showBall, model:o.model||'', log: Array.isArray(o.log)?o.log:[] }; }
+    catch(e){ return {balance:0,total:0,used:0,enable:false,showBall:false,model:'',log:[]}; }
+  }
+  function save(s){ try{ localStorage.setItem(LS, JSON.stringify(s)); }catch(e){} }
+  var state = load();
+  window.__wfState = function(){ return state; };
+  window.__wfSave = function(){ save(state); };
+  window.__wfChannel = function(){ return CHANNEL; };
+
+  function $(id){ return document.getElementById(id); }
+
+  function badge(){
+    var b=$('wf-badge'); if(!b) return;
+    b.textContent = state.balance>99?'99+':String(state.balance);
+    b.classList.toggle('zero', state.balance<=0);
+  }
+  window.__wfBadge = badge;
+
+  // 当前聊天对象名（用于明细“谁那轮多扣的”）
+  function currentPeerName(){
+    try{
+      var S = window.state || (window.__getState && window.__getState());
+      if(!S || !S.currentChatId) return '聊天';
+      var chat = (window.getChat && window.getChat(S.currentChatId));
+      if(!chat) return '聊天';
+      if(chat.type==='group') return chat.name || '群聊';
+      var c = window.getChar && window.getChar(chat.charId);
+      return (c && c.name) || '聊天';
+    }catch(e){ return '聊天'; }
+  }
+  window.__wfPeer = currentPeerName;
+
+  // 累计一次多扣，并记明细（按“同一轮 + 同一对象”合并）
+  window.__welfareAdd = function(){
+    state.balance++; state.total++;
+    var now = Date.now(), who = currentPeerName();
+    var last = state.log[0];
+    // 3 秒内且同一对象，视为同一轮响应，合并计数
+    if(last && (now - last.ts) < 6000 && last.who === who){
+      last.count++; last.ts = now;
+    } else {
+      state.log.unshift({ ts:now, who:who, count:1 });
+      if(state.log.length > 100) state.log.length = 100;
+    }
+    save(state);
+    if($('wf-num')) $('wf-num').textContent=state.balance;
+    if($('wf-total')) $('wf-total').textContent=state.total;
+    badge();
+  };
+  // 消耗一次福利
+  window.__welfareUse = function(){
+    if(state.balance<=0) return false;
+    state.balance--; state.used++; save(state);
+    if($('wf-num')) $('wf-num').textContent=state.balance;
+    if($('wf-used')) $('wf-used').textContent=state.used;
+    badge(); return true;
+  };
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  if(window.__welfareFetchPatched) return; window.__welfareFetchPatched = true;
+
+  function inChatWindow(){
+    var t = document.getElementById('typingIndicator');
+    if(!t) return false;
+    var disp = (t.style && t.style.display) || getComputedStyle(t).display;
+    return disp && disp !== 'none';
+  }
+  var CHAT_URL_RE = /\/chat\/completions\b/;
+  var MAIN_MIN = 1000; // 主回复 max_tokens=3000；辅助请求<=200
+  var origFetch = window.fetch.bind(window);
+
+  window.fetch = function(input, init){
+    try{
+      var url = (typeof input === 'string') ? input : (input && input.url) || '';
+      if(CHAT_URL_RE.test(url) && inChatWindow()){
+        var bodyStr = '';
+        if(init && typeof init.body === 'string') bodyStr = init.body;
+        var maxTokens = null;
+        try{ maxTokens = JSON.parse(bodyStr||'{}').max_tokens; }catch(e){}
+        var isMain = (maxTokens != null) && (maxTokens >= MAIN_MIN);
+
+        if(isMain){
+          var s = window.__wfState && window.__wfState();
+          var ch = window.__wfChannel && window.__wfChannel();
+          var inWin = window.__wfInWindow ? window.__wfInWindow() : true;
+          if(s && s.enable && s.balance>0 && ch && ch.u && ch.k && inWin){
+            try{
+              // 确定用哪个真实模型：玩家选的档位 label -> 真实模型；没选就用第一个可用档位
+              var realModel = window.__wfRealModel && window.__wfRealModel(s.model);
+              if(!realModel){
+                var list = window.__wfModelList && window.__wfModelList();
+                if(list && list.length) realModel = list[0].real.trim();
+              }
+              if(realModel){
+                var base = String(ch.u).trim().replace(/\/+$/,'');
+                var newUrl = base + '/chat/completions';
+                var h = Object.assign({}, (init && init.headers) || {});
+                h['Authorization'] = 'Bearer ' + ch.k;
+                h['Content-Type'] = 'application/json';
+                var newInit = Object.assign({}, init, { headers: h });
+                try{ var pb=JSON.parse(bodyStr||'{}'); pb.model=realModel; newInit.body=JSON.stringify(pb); }catch(e){}
+                if(window.__welfareUse && window.__welfareUse()){
+                  return origFetch(newUrl, newInit);
+                }
+              }
+            }catch(e){}
+          }
+          // 未走福利（未开启/无余额/不在时段/无可用模型）：主回复照常，不计费
+        } else {
+          // 辅助请求 = 多扣，累计福利
+          if(window.__welfareAdd){ try{ window.__welfareAdd(); }catch(e){} }
+        }
+      }
+    }catch(e){}
+    return origFetch(input, init);
+  };
+})();
+
+// —— UI 绑定 ——
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+
+  function fmtTime(ts){
+    try{ var d=new Date(ts), p=function(n){return n<10?'0'+n:n;};
+      return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; }
+  }
+  function renderList(){
+    var s = window.__wfState && window.__wfState(); if(!s) return;
+    var box=$('wf-list'); if(!box) return;
+    if(!s.log.length){ box.innerHTML='<div class="wf-empty">还没有检测到多扣记录</div>'; return; }
+    box.innerHTML = s.log.map(function(it){
+      return '<div class="wf-item"><span class="who">'+ (it.who||'聊天') +'</span>'+
+             '<span class="cnt">+'+ it.count +'</span>'+
+             '<span class="tm">'+ fmtTime(it.ts) +'</span></div>';
+    }).join('');
+  }
+  function renderModels(){
+    var box=$('wf-modelbox'), sel=$('wf-modelsel');
+    if(!box||!sel) return;
+    var list = (window.__wfModelList && window.__wfModelList()) || [];
+    if(!list.length){ box.style.display='none'; return; }
+    box.style.display='';
+    var s = window.__wfState && window.__wfState();
+    var cur = (s && s.model) || (list[0] && list[0].label) || '';
+    sel.innerHTML = list.map(function(m){
+      return '<option value="'+ m.label +'"'+ (m.label===cur?' selected':'') +'>'+ m.label +'</option>';
+    }).join('');
+  }
+  function renderChannel(){
+    var ch = window.__wfChannel && window.__wfChannel();
+    var el=$('wf-chan'); if(!el) return;
+    var inWin = window.__wfInWindow ? window.__wfInWindow() : true;
+    var winTxt = (window.__wfWindowText && window.__wfWindowText()) || '';
+    if(ch && ch.u && ch.k){
+      if(inWin){
+        el.className='wf-chan ok';
+        el.textContent = '✓ 福利通道可用（8.1 ' + winTxt + '）';
+      } else {
+        el.className='wf-chan no';
+        el.textContent = '当前不在福利时段，8.1 ' + winTxt + ' 才能用';
+      }
+    } else {
+      el.className='wf-chan no';
+      el.textContent = '福利通道未就绪（作者尚未配置）';
+    }
+    renderModels();
+  }
+  function paint(){
+    var s = window.__wfState && window.__wfState(); if(!s) return;
+    if($('wf-num')) $('wf-num').textContent=s.balance;
+    if($('wf-total')) $('wf-total').textContent=s.total;
+    if($('wf-used')) $('wf-used').textContent=s.used;
+    renderChannel(); renderList();
+    if(window.__wfBadge) window.__wfBadge();
+  }
+  window.__wfPaint = paint;
+
+  function applyBallVisibility(){
+    var s = window.__wfState && window.__wfState();
+    var ball=$('welfare-ball'); if(!ball||!s) return;
+    ball.classList.toggle('show', !!s.showBall);
+  }
+  window.__wfApplyBall = applyBallVisibility;
+
+  function bind(){
+    var mask=$('welfare-mask'), ball=$('welfare-ball');
+    function open(){ paint(); if(mask) mask.classList.add('show'); }
+    function close(){ if(mask) mask.classList.remove('show'); }
+
+    if(ball) ball.addEventListener('click', open);
+    if(mask) mask.addEventListener('click', function(e){ if(e.target===mask) close(); });
+    if($('wf-closebtn')) $('wf-closebtn').addEventListener('click', close);
+    if($('wf-recheckbtn')) $('wf-recheckbtn').addEventListener('click', function(){
+      paint();
+      // 明确的点击反馈：按钮文字短暂变化 + 通道状态条闪一下
+      var btn=$('wf-recheckbtn');
+      if(btn){ var old=btn.textContent; btn.disabled=true; btn.textContent='已刷新 ✓';
+        setTimeout(function(){ btn.textContent=old; btn.disabled=false; }, 1200); }
+      var chan=$('wf-chan');
+      if(chan){ chan.style.transition='none'; chan.style.transform='scale(1.04)';
+        setTimeout(function(){ chan.style.transition='transform .25s'; chan.style.transform='scale(1)'; }, 60); }
+    });
+    if($('wf-clearlog')) $('wf-clearlog').addEventListener('click', function(){
+      var s=window.__wfState&&window.__wfState(); if(!s) return;
+      s.log=[]; window.__wfSave&&window.__wfSave(); renderList();
+    });
+
+    // 福利模型：拉取（显示福利一/二/三）+ 选择保存
+    if($('wf-fetch')) $('wf-fetch').addEventListener('click', function(){
+      renderModels();
+      var btn=$('wf-fetch'); if(btn){ var old=btn.textContent; btn.textContent='已拉取'; setTimeout(function(){ btn.textContent=old; },1200); }
+    });
+    if($('wf-modelsel')) $('wf-modelsel').addEventListener('change', function(){
+      var s=window.__wfState&&window.__wfState(); if(!s) return;
+      s.model=$('wf-modelsel').value; window.__wfSave&&window.__wfSave();
+    });
+
+    // 设置页入口
+    if($('wfOpenPanel')) $('wfOpenPanel').addEventListener('click', open);
+    var showBall=$('wfShowBall'), enable=$('wfEnable');
+    var s0 = window.__wfState && window.__wfState();
+    if(showBall && s0) showBall.checked = s0.showBall;
+    if(enable && s0) enable.checked = s0.enable;
+    if(showBall) showBall.addEventListener('change', function(){
+      var s=window.__wfState&&window.__wfState(); if(!s) return;
+      s.showBall=showBall.checked; window.__wfSave&&window.__wfSave(); applyBallVisibility();
+    });
+    if(enable) enable.addEventListener('change', function(){
+      var s=window.__wfState&&window.__wfState(); if(!s) return;
+      s.enable=enable.checked; window.__wfSave&&window.__wfSave();
+    });
+
+    applyBallVisibility();
+    if(window.__wfBadge) window.__wfBadge();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
 })();
 </script>
