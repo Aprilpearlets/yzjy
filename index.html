@@ -11962,6 +11962,8 @@ ${userInfo}
             var nightEl = document.getElementById('v16CharWpNight');
             if (nightEl) nightEl.checked = charWpNight;
         }
+        // 暴露当前编辑器里的壁纸值，供主保存逻辑同步读取（避免延时补写被覆盖）
+        window.__getCharWp = function () { return { wallpaper: charWp || '', wpNight: charWpNight !== false }; };
 
         // 打开已有角色：回填壁纸
         var origOCE = window.openCharEditor;
@@ -17136,6 +17138,8 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
           char={id:uid(),name:name,avatar:avatar,persona:persona,online:online,timeAware:timeAware,timeZone:timeZone,userTimeZone:userTimeZone,chatLang:chatLang,bilingual:bilingual,memoryCount:memoryCount,callCooldownMin:callCooldownMin,isBlocked:isBlocked,worldBookId:worldBookId,userId:userId,relationships:[],lockface:lockface,createdAt:Date.now()};
           S().characters.push(char);
         }
+        // 专属壁纸：同步并进本次保存，避免延时补写被页面切换/重渲染覆盖
+        try{ if(window.__getCharWp){ var __wp=window.__getCharWp(); char.wallpaper=__wp.wallpaper; char.wpNight=__wp.wpNight; } }catch(e){}
 
         try{
           await DB().characters.put(JSON.parse(JSON.stringify(char)));
