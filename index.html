@@ -158,32 +158,101 @@ var __idbUsable = (function () {
     return true;
   } catch (e) { return false; }
 })();
-if (typeof Dexie === 'undefined' || !__idbUsable) {
-  (function () {
-    function all(key){ try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ return []; } }
-    function save(key, arr){ try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){} }
-    function Table(dbName, store){ this.key = 'dxshim_' + dbName + '_' + store; this.pk = 'id'; }
-    Table.prototype._all = function(){ return all(this.key); };
-    Table.prototype._save = function(a){ save(this.key, a); };
-    Table.prototype.toArray = function(){ return Promise.resolve(this._all()); };
-    Table.prototype.get = function(k){ var pk=this.pk; return Promise.resolve(this._all().filter(function(x){return x[pk]===k;})[0]); };
-    Table.prototype.put = function(o){ var pk=this.pk, a=this._all(), i=-1; for(var j=0;j<a.length;j++){ if(a[j][pk]===o[pk]){ i=j; break; } } if(i>=0) a[i]=o; else a.push(o); this._save(a); return Promise.resolve(o[pk]); };
-    Table.prototype.delete = function(k){ var pk=this.pk; this._save(this._all().filter(function(x){return x[pk]!==k;})); return Promise.resolve(); };
-    Table.prototype.clear = function(){ this._save([]); return Promise.resolve(); };
-    Table.prototype.where = function(f){ var t=this; return { equals: function(v){ return new Coll(t, function(x){ return x[f]===v; }); } }; };
-    Table.prototype.toCollection = function(){ return new Coll(this, function(){ return true; }); };
-    function Coll(t, pred){ this.t=t; this.pred=pred; }
-    Coll.prototype.toArray = function(){ return Promise.resolve(this.t._all().filter(this.pred)); };
-    Coll.prototype.delete = function(){ var p=this.pred, t=this.t; t._save(t._all().filter(function(x){return !p(x);})); return Promise.resolve(); };
-    Coll.prototype.modify = function(fn){ var p=this.pred, t=this.t, a=t._all(); a.forEach(function(x){ if(p(x)) fn(x); }); t._save(a); return Promise.resolve(); };
-    function DexieShim(name){ this._name=name; this._tables={}; }
-    DexieShim.prototype.version = function(){ var self=this; var api={ stores:function(defs){ Object.keys(defs||{}).forEach(function(s){ if(!self._tables[s]){ var t=new Table(self._name,s); self._tables[s]=t; self[s]=t; } }); return { upgrade:function(fn){ try{ fn({ table:function(n){ return self._tables[n]; } }); }catch(e){} return api; } }; } }; return api; };
-    DexieShim.prototype.open = function(){ return Promise.resolve(this); };
-    DexieShim.prototype.on = function(){ return this; };
-    window.Dexie = DexieShim;
-    window.__dexieShim = true;
-    try { console.warn('Dexie CDN 未加载，已启用 localStorage 兜底存储'); } catch(e){}
-  })();
+if (typeof Dexie === 'undefined') {
+  if (__idbUsable) {
+    // ============ 原生 IndexedDB 适配器（不依赖外部 Dexie）============
+    // 配额远大于 localStorage（几百 MB 级），头像 base64 再多也装得下，
+    // 刷新后可靠持久化，从根上解决“角色/备份丢失”。接口与 Dexie 子集对齐。
+    (function () {
+      function reqP(req){ return new Promise(function(res,rej){ req.onsuccess=function(){res(req.result);}; req.onerror=function(){rej(req.error);}; }); }
+      function IDBColl(table, pred){ this.table=table; this.pred=pred||function(){return true;}; }
+      IDBColl.prototype.toArray = function(){ var p=this.pred; return this.table.toArray().then(function(a){ return a.filter(p); }); };
+      IDBColl.prototype.delete = function(){ var p=this.pred, t=this.table; return t.toArray().then(function(a){ return Promise.all(a.filter(p).map(function(x){ return t.delete(x[t.pk]); })); }); };
+      IDBColl.prototype.modify = function(fn){ var p=this.pred, t=this.table; return t.toArray().then(function(a){ var hit=a.filter(p); hit.forEach(fn); return Promise.all(hit.map(function(x){ return t.put(x); })); }); };
+      function IDBTable(shim, store){ this.shim=shim; this.store=store; this.pk='id'; }
+      IDBTable.prototype._os = function(mode){ return this.shim._db.transaction(this.store, mode).objectStore(this.store); };
+      IDBTable.prototype.toArray = function(){ var s=this; return new Promise(function(res,rej){ var out=[]; var req; try{ req=s._os('readonly').openCursor(); }catch(e){ return res([]); } req.onsuccess=function(){ var c=req.result; if(c){ out.push(c.value); c.continue(); } else res(out); }; req.onerror=function(){ rej(req.error); }; }); };
+      IDBTable.prototype.get = function(k){ try{ return reqP(this._os('readonly').get(k)); }catch(e){ return Promise.resolve(undefined); } };
+      IDBTable.prototype.put = function(o){ try{ return reqP(this._os('readwrite').put(o)); }catch(e){ return Promise.reject(e); } };
+      IDBTable.prototype.delete = function(k){ try{ return reqP(this._os('readwrite').delete(k)); }catch(e){ return Promise.resolve(); } };
+      IDBTable.prototype.clear = function(){ try{ return reqP(this._os('readwrite').clear()); }catch(e){ return Promise.resolve(); } };
+      IDBTable.prototype.where = function(f){ var t=this; return { equals: function(v){ return new IDBColl(t, function(x){ return x[f]===v; }); } }; };
+      IDBTable.prototype.toCollection = function(){ return new IDBColl(this, function(){ return true; }); };
+      function IDBShim(name){ this._name=name; this._db=null; this._stores={}; this._ver=1; }
+      IDBShim.prototype.version = function(v){ var self=this; if(v>self._ver) self._ver=v; var api={ stores:function(defs){ Object.keys(defs||{}).forEach(function(s){ self._stores[s]=true; if(!self[s]){ self[s]=new IDBTable(self, s); } }); return { upgrade:function(){ return api; } }; } }; return api; };
+      IDBShim.prototype._migrateFromLS = function(){
+        var self=this, names=Object.keys(self._stores);
+        return Promise.all(names.map(function(s){
+          var t=self[s];
+          return t.toArray().then(function(existing){
+            if(existing && existing.length) return;               // IndexedDB 已有数据，不覆盖
+            var raw; try{ raw=JSON.parse(localStorage.getItem('dxshim_'+self._name+'_'+s)||'null'); }catch(e){ raw=null; }
+            if(!raw || !raw.length) return;                       // 旧 localStorage 无此表数据
+            return Promise.all(raw.map(function(o){ return o && o.id!=null ? t.put(o).catch(function(){}) : null; }));
+          }).catch(function(){});
+        }));
+      };
+      IDBShim.prototype.open = function(){
+        var self=this;
+        return new Promise(function(res, rej){
+          var req;
+          try { req = indexedDB.open(self._name, self._ver); }
+          catch(e){ return rej(e); }
+          req.onupgradeneeded = function(){
+            var db = req.result;
+            Object.keys(self._stores).forEach(function(s){
+              if(!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath:'id' });
+            });
+          };
+          req.onsuccess = function(){
+            self._db = req.result;
+            // 首次切到 IndexedDB 时，把旧 localStorage 兜底数据自动搬进来（不删原数据，双保险）
+            self._migrateFromLS().then(function(){ res(self); }, function(){ res(self); });
+          };
+          req.onerror = function(){ rej(req.error); };
+        });
+      };
+      IDBShim.prototype.on = function(){ return this; };
+      window.Dexie = IDBShim;
+      window.__idbNative = true;
+      try { console.info('已启用原生 IndexedDB 存储（大容量，刷新持久）'); } catch(e){}
+    })();
+  } else {
+    // ============ localStorage 兜底（仅当 IndexedDB 完全不可用时）============
+    (function () {
+      function all(key){ try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ return []; } }
+      function save(key, arr){ localStorage.setItem(key, JSON.stringify(arr)); } // 不再吞错：配额满时向上抛，由写入方提示
+      function Table(dbName, store){ this.key = 'dxshim_' + dbName + '_' + store; this.pk = 'id'; }
+      Table.prototype._all = function(){ return all(this.key); };
+      Table.prototype._save = function(a){ save(this.key, a); };
+      Table.prototype.toArray = function(){ return Promise.resolve(this._all()); };
+      Table.prototype.get = function(k){ var pk=this.pk; return Promise.resolve(this._all().filter(function(x){return x[pk]===k;})[0]); };
+      Table.prototype.put = function(o){ var pk=this.pk, a=this._all(), i=-1; for(var j=0;j<a.length;j++){ if(a[j][pk]===o[pk]){ i=j; break; } } if(i>=0) a[i]=o; else a.push(o); try { this._save(a); } catch(e){ try{ window.__notifyStorageFull && window.__notifyStorageFull(); }catch(_){} } return Promise.resolve(o[pk]); };
+      Table.prototype.delete = function(k){ var pk=this.pk; try{ this._save(this._all().filter(function(x){return x[pk]!==k;})); }catch(e){} return Promise.resolve(); };
+      Table.prototype.clear = function(){ try{ this._save([]); }catch(e){} return Promise.resolve(); };
+      Table.prototype.where = function(f){ var t=this; return { equals: function(v){ return new Coll(t, function(x){ return x[f]===v; }); } }; };
+      Table.prototype.toCollection = function(){ return new Coll(this, function(){ return true; }); };
+      function Coll(t, pred){ this.t=t; this.pred=pred; }
+      Coll.prototype.toArray = function(){ return Promise.resolve(this.t._all().filter(this.pred)); };
+      Coll.prototype.delete = function(){ var p=this.pred, t=this.t; try{ t._save(t._all().filter(function(x){return !p(x);})); }catch(e){} return Promise.resolve(); };
+      Coll.prototype.modify = function(fn){ var p=this.pred, t=this.t, a=t._all(); a.forEach(function(x){ if(p(x)) fn(x); }); try{ t._save(a); }catch(e){} return Promise.resolve(); };
+      function DexieShim(name){ this._name=name; this._tables={}; }
+      DexieShim.prototype.version = function(){ var self=this; var api={ stores:function(defs){ Object.keys(defs||{}).forEach(function(s){ if(!self._tables[s]){ var t=new Table(self._name,s); self._tables[s]=t; self[s]=t; } }); return { upgrade:function(fn){ try{ fn({ table:function(n){ return self._tables[n]; } }); }catch(e){} return api; } }; } }; return api; };
+      DexieShim.prototype.open = function(){ return Promise.resolve(this); };
+      DexieShim.prototype.on = function(){ return this; };
+      window.Dexie = DexieShim;
+      window.__dexieShim = true;
+      // 配额满时给用户一个明确提示，而不是静默丢数据
+      var __sfShown = false;
+      window.__notifyStorageFull = function(){
+        if(__sfShown) return; __sfShown = true;
+        var msg = '手机存储空间已满，刚才的改动没能保存下来。\n\n这台设备的浏览器不支持大容量存储，建议：先到设置里「导出数据」备份，再删掉一些占空间大的头像或聊天记录。';
+        try { if(window.showModal){ window.showModal('存储空间已满', msg, '好的'); return; } } catch(e){}
+        try { alert(msg); } catch(e){}
+      };
+      try { console.warn('IndexedDB 不可用，已启用 localStorage 兜底存储'); } catch(e){}
+    })();
+  }
 }
 </script>
     <style>
@@ -202,7 +271,7 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
             --radius: 24px;
             --radius-sm: 14px;
-            --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Source Han Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
             --bubble-user: #B6EDFF;
             --bubble-ai: rgba(255, 255, 255, 0.7);
         }
@@ -1904,6 +1973,8 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
         .wb-folder-more { border: none; background: transparent; color: var(--text-secondary); font-size: 16px; cursor: pointer; padding: 0 4px; }
         .wb-folder-body { padding: 8px 4px 0 4px; display: flex; flex-direction: column; gap: 8px; }
         .wb-folder.collapsed .wb-folder-body { display: none; }
+        .wb-folder-caret { font-size: 11px; color: var(--text-secondary); transition: transform 0.2s; display: inline-block; }
+        .wb-folder:not(.collapsed) .wb-folder-caret { transform: rotate(90deg); }
         .wb-default-badge { font-size: 10px; color: var(--primary-dark); background: rgba(140, 212, 240, 0.2); padding: 1px 6px; border-radius: 6px; margin-left: 4px; }
 
         /* ---------- 聊天框美化预设 ---------- */
@@ -2272,7 +2343,7 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             <div id="characters-page" class="page">
                 <div class="app-header"><span class="back" data-page="home">‹</span><span class="title">人设</span><button class="action-text" id="importCharBtn" style="margin-right:8px;">导入</button><button class="action" id="newCharBtn">+</button></div>
                 <div class="scroll-content" id="charListContainer"><div class="empty-state"><span class="big">🧸</span><p>还没有人设<br>点击右上角「+」创建</p></div></div>
-                <input type="file" id="importCharFile" accept=".yzjc,application/json,.json" style="display:none;">
+                <input type="file" id="importCharFile" accept=".yzjc,application/json,.json" multiple style="display:none;">
             </div>
 
             <!-- 人设编辑器 (增强: 锁脸) -->
@@ -11835,9 +11906,16 @@ ${userInfo}
         function applyWallpaper(chatId) {
             var chat = getChat(chatId);
             var char = chat && chat.type !== 'group' ? getChar(chat.charId) : null;
-            var wp = char ? (char.wallpaper || '') : (chat ? (chat.wallpaper || '') : '');
+            // 全局聊天背景：所有角色/群聊默认都用；某个角色/群聊在编辑里勾了“不使用全局背景”则跳过
+            var globalWp = (S().settings && S().settings.globalChatWallpaper) || '';
+            var ownWp, noGlobal, wpNightVal;
+            if (char) { ownWp = char.wallpaper || ''; noGlobal = char.noGlobalChatWp === true; wpNightVal = char.wpNight !== false; }
+            else if (chat) { ownWp = chat.wallpaper || ''; noGlobal = chat.noGlobalChatWp === true; wpNightVal = chat.wpNight !== false; }
+            else { ownWp = ''; noGlobal = false; wpNightVal = true; }
+            // 专属壁纸优先；没有专属且没禁用全局时，回退到全局聊天背景
+            var wp = ownWp || (noGlobal ? '' : globalWp);
             // 夜间模式是否显示壁纸：默认显示（未设置过的老角色也当作显示，修复反馈的“夜里壁纸不见了”）
-            var wpNight = char ? (char.wpNight !== false) : (chat ? (chat.wpNight !== false) : true);
+            var wpNight = wpNightVal;
             var style = document.getElementById('chatWallpaperStyle');
             if (!style) { style = document.createElement('style'); style.id = 'chatWallpaperStyle'; document.head.appendChild(style); }
             if (wp) {
@@ -11891,6 +11969,7 @@ ${userInfo}
             group.className = 'setting-group';
             group.id = 'v16SetWpGroup';
             var wp = (S().settings && S().settings.homeWallpaper) || '';
+            var gcw = (S().settings && S().settings.globalChatWallpaper) || '';
             group.innerHTML = '<div class="group-title">桌面壁纸</div>' +
                 '<div class="setting-row"><div class="v16-wp-row">' +
                 '<div class="v16-wp-preview" id="v16SetWpPreview">' + (wp ? '<img src="' + wp + '" alt="">' : '未设置') + '</div>' +
@@ -11899,6 +11978,15 @@ ${userInfo}
                 '<button class="btn-secondary" id="v16SetWpClear">清除壁纸</button>' +
                 '<div class="v16-wp-tip">作用于主屏桌面背景</div>' +
                 '<input type="file" id="v16SetWpInput" accept="image/*"></div>' +
+                '</div></div>' +
+                '<div class="group-title" style="margin-top:14px;">全局聊天背景</div>' +
+                '<div class="setting-row"><div class="v16-wp-row">' +
+                '<div class="v16-wp-preview" id="v16GcwPreview">' + (gcw ? '<img src="' + gcw + '" alt="">' : '未设置') + '</div>' +
+                '<div class="v16-wp-actions">' +
+                '<button class="btn-primary" id="v16GcwBtn" type="button">上传背景</button>' +
+                '<button class="btn-secondary" id="v16GcwClear" type="button">清除背景</button>' +
+                '<div class="v16-wp-tip">所有角色/群聊聊天页默认都用这张背景；某个角色不想用，可到该角色编辑页关掉</div>' +
+                '<input type="file" id="v16GcwInput" accept="image/*"></div>' +
                 '</div></div>';
             // 放在莫兰迪皮肤配色之后
             var skin = document.getElementById('morandiSkinGroup');
@@ -11921,11 +12009,30 @@ ${userInfo}
                 document.getElementById('v16SetWpPreview').innerHTML = '未设置';
                 if (window.__applyHomeWallpaper) window.__applyHomeWallpaper();
             });
+            // 全局聊天背景：上传 / 清除
+            document.getElementById('v16GcwBtn').addEventListener('click', function () { document.getElementById('v16GcwInput').click(); });
+            document.getElementById('v16GcwInput').addEventListener('change', function (e) {
+                readFile(e.target.files[0], async function (url) {
+                    S().settings.globalChatWallpaper = url;
+                    await saveSettings();
+                    document.getElementById('v16GcwPreview').innerHTML = '<img src="' + url + '" alt="">';
+                    // 若正在某个聊天页，立即刷新背景
+                    try { if (window.__applyWallpaperV16 && S().currentChatId) window.__applyWallpaperV16(S().currentChatId); } catch (er) {}
+                });
+                e.target.value = '';
+            });
+            document.getElementById('v16GcwClear').addEventListener('click', async function () {
+                S().settings.globalChatWallpaper = '';
+                await saveSettings();
+                document.getElementById('v16GcwPreview').innerHTML = '未设置';
+                try { if (window.__applyWallpaperV16 && window.__currentChatId) window.__applyWallpaperV16(window.__currentChatId); } catch (er) {}
+            });
         }
 
         // ---------- 4. 人设编辑器：专属壁纸上传 ----------
         var charWp = '';
         var charWpNight = true; // 夜间模式是否显示聊天背景，默认显示
+        var charNoGlobal = false; // 该角色是否不使用全局聊天背景
         function injectCharWp() {
             var page = document.querySelector('#char-editor-page .scroll-content');
             if (!page || document.getElementById('v16CharWpGroup')) return;
@@ -11938,9 +12045,10 @@ ${userInfo}
                 '<div class="v16-wp-actions">' +
                 '<button class="btn-primary" id="v16CharWpBtn" type="button">上传壁纸</button>' +
                 '<button class="btn-secondary" id="v16CharWpClear" type="button">清除壁纸</button>' +
-                '<div class="v16-wp-tip">和这个角色聊天时会用这张壁纸，覆盖全局壁纸</div>' +
+                '<div class="v16-wp-tip">和这个角色聊天时会用这张壁纸，覆盖全局聊天背景</div>' +
                 '<input type="file" id="v16CharWpInput" accept="image/*"></div>' +
                 '</div>' +
+                '<div class="setting-row v16-wp-night-row"><div class="v16-wp-night-info"><div class="v16-wp-night-name">不使用全局聊天背景</div><div class="v16-wp-night-sub">打开后，这个角色不跟随设置里的全局聊天背景；没上传专属壁纸时聊天页就用纯色底</div></div><label class="v16-switch"><input type="checkbox" id="v16CharNoGlobal"><span class="v16-switch-track"></span></label></div>' +
                 '<div class="setting-row v16-wp-night-row"><div class="v16-wp-night-info"><div class="v16-wp-night-name">夜间模式显示聊天背景</div><div class="v16-wp-night-sub">关掉后，切到夜间模式时这个角色的聊天页会用纯深色底，不显示壁纸</div></div><label class="v16-switch"><input type="checkbox" id="v16CharWpNight" checked><span class="v16-switch-track"></span></label></div>';
             // 插到锁脸 group 之前（若找不到就放末尾）
             var lockGrid = document.getElementById('lockfaceGrid');
@@ -11955,15 +12063,19 @@ ${userInfo}
             document.getElementById('v16CharWpClear').addEventListener('click', function () { charWp = ''; refreshCharWpPreview(); });
             var nightEl = document.getElementById('v16CharWpNight');
             if (nightEl) nightEl.addEventListener('change', function () { charWpNight = nightEl.checked; });
+            var ngEl = document.getElementById('v16CharNoGlobal');
+            if (ngEl) ngEl.addEventListener('change', function () { charNoGlobal = ngEl.checked; });
         }
         function refreshCharWpPreview() {
             var p = document.getElementById('v16CharWpPreview');
             if (p) p.innerHTML = charWp ? '<img src="' + charWp + '" alt="">' : '未设置';
             var nightEl = document.getElementById('v16CharWpNight');
             if (nightEl) nightEl.checked = charWpNight;
+            var ngEl = document.getElementById('v16CharNoGlobal');
+            if (ngEl) ngEl.checked = charNoGlobal === true;
         }
         // 暴露当前编辑器里的壁纸值，供主保存逻辑同步读取（避免延时补写被覆盖）
-        window.__getCharWp = function () { return { wallpaper: charWp || '', wpNight: charWpNight !== false }; };
+        window.__getCharWp = function () { return { wallpaper: charWp || '', wpNight: charWpNight !== false, noGlobalChatWp: charNoGlobal === true }; };
 
         // 打开已有角色：回填壁纸
         var origOCE = window.openCharEditor;
@@ -11972,6 +12084,7 @@ ${userInfo}
             var c = getChar(id);
             charWp = (c && c.wallpaper) || '';
             charWpNight = c ? (c.wpNight !== false) : true;
+            charNoGlobal = c ? (c.noGlobalChatWp === true) : false;
             injectCharWp();
             refreshCharWpPreview();
             return r;
@@ -11981,6 +12094,7 @@ ${userInfo}
             if (e.target.closest && e.target.closest('#newCharBtn')) {
                 charWp = '';
                 charWpNight = true;
+                charNoGlobal = false;
                 setTimeout(function () { injectCharWp(); refreshCharWpPreview(); }, 60);
             }
         }, true);
@@ -11998,6 +12112,7 @@ ${userInfo}
                 if (!char) return;
                 char.wallpaper = snap || '';
                 char.wpNight = snapNight !== false;
+                char.noGlobalChatWp = charNoGlobal === true;
                 try { await DB().characters.put(char); } catch (err) {}
             }, 280);
         }, true);
@@ -17139,7 +17254,7 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
           S().characters.push(char);
         }
         // 专属壁纸：同步并进本次保存，避免延时补写被页面切换/重渲染覆盖
-        try{ if(window.__getCharWp){ var __wp=window.__getCharWp(); char.wallpaper=__wp.wallpaper; char.wpNight=__wp.wpNight; } }catch(e){}
+        try{ if(window.__getCharWp){ var __wp=window.__getCharWp(); char.wallpaper=__wp.wallpaper; char.wpNight=__wp.wpNight; char.noGlobalChatWp=__wp.noGlobalChatWp===true; } }catch(e){}
 
         try{
           await DB().characters.put(JSON.parse(JSON.stringify(char)));
@@ -25430,74 +25545,111 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       var inp = document.getElementById('importCharFile');
       inp.value = ''; inp.click();
     });
-    document.getElementById('importCharFile').addEventListener('change', async function (e) {
-      var file = e.target.files[0];
-      if (!file) return;
+    // 把单份人设对象落库（导入世界书 + 组装角色），返回导入的角色名；失败抛错
+    async function doImportOnePersona(obj) {
+      var p = obj.persona || {};
+      var name = (p.name || '').toString().trim();
+      if (!name) throw new Error('人设文件里没有名字，可能已损坏');
+      // 1) 先导入附带的世界书（新建，不覆盖同名），记录新 id 供绑定
+      var newWbIds = [];
+      if (Array.isArray(obj.worldbooks)) {
+        for (var i = 0; i < obj.worldbooks.length; i++) {
+          var b = obj.worldbooks[i];
+          if (!b || (!b.content && !b.name)) continue;
+          var wb = { id: uid(), name: (b.name || '导入世界书').toString().slice(0, 80), content: (b.content || '').toString(), folderId: null, scope: b.scope === 'global' ? 'global' : 'local' };
+          S().worldBooks.push(wb);
+          try { await DB().worldBooks.put(wb); } catch (er) {}
+          newWbIds.push(wb.id);
+        }
+      }
+      // 2) 组装新角色（用干净的字段，去掉可能残留的实例字段）
+      var c = JSON.parse(JSON.stringify(p));
+      delete c.id; delete c.userId; delete c.groupId;
+      c.id = uid();
+      c.userId = null;
+      c.createdAt = Date.now();
+      if (!Array.isArray(c.lockface)) c.lockface = [];
+      // 隐藏设定：导入的卡只保留加密串 hiddenEnc + 锁定标记，绝不带明文 hiddenSetting（别人看不到内容）
+      if (c.hiddenEnc && c.hiddenLocked) { delete c.hiddenSetting; }
+      else { delete c.hiddenEnc; delete c.hiddenLocked; }
+      // 关系：导出时已抽成 {targetName,type,desc}，本机不一定有对应角色，按名字尽量匹配，匹配不到就丢弃 targetId
+      if (Array.isArray(c.relationships)) {
+        c.relationships = c.relationships.map(function (r) {
+          var match = (S().characters || []).find(function (x) { return x.name === (r.targetName || ''); });
+          return match ? { targetId: match.id, type: r.type || '认识', desc: r.desc || '' } : null;
+        }).filter(Boolean);
+      } else { c.relationships = []; }
+      // 绑定导入进来的世界书
+      if (newWbIds.length) { c.worldBookIds = newWbIds; c.worldBookId = newWbIds[0]; }
+      else { c.worldBookIds = []; c.worldBookId = null; }
+
+      S().characters.push(c);
+      try { await DB().characters.put(c); } catch (er) {}
+      return { name: name, wbCount: newWbIds.length };
+    }
+
+    // 解析单个文件为人设对象；返回 {ok, obj, reason}
+    async function parsePersonaFile(file) {
       try {
         var text = await file.text();
         var obj;
-        try { obj = JSON.parse(text); } catch (err) { modal('导入失败', '这个文件不是有效的人设文件（无法解析）。', '好的'); e.target.value = ''; return; }
+        try { obj = JSON.parse(text); } catch (err) { return { ok: false, reason: '文件无法解析' }; }
+        if (isTavernCard(obj)) return { ok: false, reason: '酒馆角色卡（不支持）' };
+        if (!isOurCard(obj)) return { ok: false, reason: '不是一只机人设文件' };
+        var nm = ((obj.persona || {}).name || '').toString().trim();
+        if (!nm) return { ok: false, reason: '缺少名字' };
+        return { ok: true, obj: obj };
+      } catch (er) { return { ok: false, reason: '读取出错' }; }
+    }
 
-        // 禁令：识别到酒馆角色卡，一律拒绝导入
-        if (isTavernCard(obj)) {
-          modal('无法导入', '检测到这是<b>酒馆（SillyTavern）角色卡</b>格式。<br><br>本应用不支持导入酒馆格式的角色卡，请使用「一只机」自己导出的 .yzjc 人设文件。', '好的');
+    document.getElementById('importCharFile').addEventListener('change', async function (e) {
+      var files = Array.prototype.slice.call(e.target.files || []);
+      if (!files.length) return;
+
+      // ---- 单文件：保留原来的确认弹窗预览体验 ----
+      if (files.length === 1) {
+        var r0 = await parsePersonaFile(files[0]);
+        if (!r0.ok) {
+          if (r0.reason === '酒馆角色卡（不支持）') modal('无法导入', '检测到这是<b>酒馆（SillyTavern）角色卡</b>格式。<br><br>本应用不支持导入酒馆格式的角色卡，请使用「一只机」自己导出的 .yzjc 人设文件。', '好的');
+          else modal('导入失败', '这个文件' + (r0.reason ? '（' + r0.reason + '）' : '') + '，无法导入。请导入用本应用「导出」功能生成的 .yzjc 文件。', '好的');
           e.target.value = ''; return;
         }
-        if (!isOurCard(obj)) {
-          modal('导入失败', '这不是「一只机」的人设文件。请导入用本应用「导出」功能生成的 .yzjc 文件。', '好的');
-          e.target.value = ''; return;
-        }
-
+        var obj = r0.obj;
         var p = obj.persona || {};
         var name = (p.name || '').toString().trim();
-        if (!name) { modal('导入失败', '人设文件里没有名字，可能已损坏。', '好的'); e.target.value = ''; return; }
-
         var wbCount = Array.isArray(obj.worldbooks) ? obj.worldbooks.length : 0;
         var preview = '人设名：<b>' + esc(name) + '</b>' +
           (p.persona ? '<br>简介：' + esc(String(p.persona).slice(0, 40)) + (String(p.persona).length > 40 ? '…' : '') : '') +
           (wbCount ? '<br>附带世界书：' + wbCount + ' 本' : '');
         modal('确认导入人设', '将新建一个人设：<br><br>' + preview + '<br><br>（不会覆盖你现有的人设）', '导入', async function () {
           try {
-            // 1) 先导入附带的世界书（新建，不覆盖同名），记录新 id 供绑定
-            var newWbIds = [];
-            if (Array.isArray(obj.worldbooks)) {
-              for (var i = 0; i < obj.worldbooks.length; i++) {
-                var b = obj.worldbooks[i];
-                if (!b || (!b.content && !b.name)) continue;
-                var wb = { id: uid(), name: (b.name || '导入世界书').toString().slice(0, 80), content: (b.content || '').toString(), folderId: null, scope: b.scope === 'global' ? 'global' : 'local' };
-                S().worldBooks.push(wb);
-                try { await DB().worldBooks.put(wb); } catch (er) {}
-                newWbIds.push(wb.id);
-              }
-            }
-            // 2) 组装新角色（用干净的字段，去掉可能残留的实例字段）
-            var c = JSON.parse(JSON.stringify(p));
-            delete c.id; delete c.userId; delete c.groupId;
-            c.id = uid();
-            c.userId = null;
-            c.createdAt = Date.now();
-            if (!Array.isArray(c.lockface)) c.lockface = [];
-            // 隐藏设定：导入的卡只保留加密串 hiddenEnc + 锁定标记，绝不带明文 hiddenSetting（别人看不到内容）
-            if (c.hiddenEnc && c.hiddenLocked) { delete c.hiddenSetting; }
-            else { delete c.hiddenEnc; delete c.hiddenLocked; }
-            // 关系：导出时已抽成 {targetName,type,desc}，本机不一定有对应角色，按名字尽量匹配，匹配不到就丢弃 targetId
-            if (Array.isArray(c.relationships)) {
-              c.relationships = c.relationships.map(function (r) {
-                var match = (S().characters || []).find(function (x) { return x.name === (r.targetName || ''); });
-                return match ? { targetId: match.id, type: r.type || '认识', desc: r.desc || '' } : null;
-              }).filter(Boolean);
-            } else { c.relationships = []; }
-            // 绑定导入进来的世界书
-            if (newWbIds.length) { c.worldBookIds = newWbIds; c.worldBookId = newWbIds[0]; }
-            else { c.worldBookIds = []; c.worldBookId = null; }
-
-            S().characters.push(c);
-            try { await DB().characters.put(c); } catch (er) {}
+            var res = await doImportOnePersona(obj);
             if (window.renderCharList) window.renderCharList();
-            modal('导入成功', '已添加人设「' + esc(name) + '」' + (newWbIds.length ? ('，并导入 ' + newWbIds.length + ' 本世界书') : '') + ' ✅', '好的');
+            modal('导入成功', '已添加人设「' + esc(res.name) + '」' + (res.wbCount ? ('，并导入 ' + res.wbCount + ' 本世界书') : '') + ' ✅', '好的');
           } catch (er) { modal('错误', '导入失败：' + (er && er.message || er), '好的'); }
         }, true);
-      } catch (er) { modal('导入失败', '读取文件出错：' + (er && er.message || er), '好的'); }
+        e.target.value = '';
+        return;
+      }
+
+      // ---- 多文件：确认后批量导入，最后汇总结果 ----
+      var listPreview = files.map(function (f) { return '· ' + esc(f.name); }).slice(0, 12).join('<br>') + (files.length > 12 ? ('<br>… 等共 ' + files.length + ' 个文件') : '');
+      modal('批量导入人设', '将尝试导入 <b>' + files.length + '</b> 个文件：<br><br>' + listPreview + '<br><br>只会导入「一只机」的 .yzjc 人设，酒馆卡和无效文件会自动跳过，不会覆盖你现有的人设。', '开始导入', async function () {
+        var okNames = [], failList = [], totalWb = 0;
+        for (var i = 0; i < files.length; i++) {
+          var pr = await parsePersonaFile(files[i]);
+          if (!pr.ok) { failList.push(files[i].name + '（' + pr.reason + '）'); continue; }
+          try {
+            var res = await doImportOnePersona(pr.obj);
+            okNames.push(res.name); totalWb += res.wbCount;
+          } catch (er) { failList.push(files[i].name + '（' + (er && er.message || '导入出错') + '）'); }
+        }
+        if (window.renderCharList) window.renderCharList();
+        var msg = '成功导入 <b>' + okNames.length + '</b> 个人设' + (totalWb ? ('，附带 ' + totalWb + ' 本世界书') : '') + '。';
+        if (okNames.length) msg += '<br><br><span style="color:var(--text-secondary);font-size:12.5px;">' + okNames.map(esc).join('、') + '</span>';
+        if (failList.length) msg += '<br><br>跳过 ' + failList.length + ' 个：<br><span style="color:var(--text-secondary);font-size:12.5px;">' + failList.map(esc).join('<br>') + '</span>';
+        modal('批量导入完成', msg, '好的');
+      }, true);
       e.target.value = '';
     });
   }
@@ -33290,3 +33442,255 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
+
+
+<!-- ============ 玩家发送文件：功能栏「文件」按钮 · 角色可读可回 ============ -->
+<style id="phoneFileMsgCss">
+    /* 文件消息气泡：微信风格文件卡 */
+    .msg-bubble .file-card {
+        display: flex; align-items: center; gap: 11px; padding: 12px 13px;
+        border-radius: 12px; background: rgba(255,255,255,0.6); min-width: 200px; max-width: 240px;
+        border: 1px solid rgba(0,0,0,0.05); cursor: pointer;
+    }
+    .msg-wrapper.user .msg-bubble .file-card { background: rgba(255,255,255,0.42); }
+    .msg-bubble .file-card .fc-info { flex: 1; min-width: 0; }
+    .msg-bubble .file-card .fc-name { font-size: 14px; font-weight: 600; color: var(--text-primary, #333);
+        line-height: 1.35; word-break: break-all; max-height: 2.7em; overflow: hidden; }
+    .msg-bubble .file-card .fc-meta { font-size: 11.5px; color: var(--text-secondary, #999); margin-top: 4px; }
+    .msg-bubble .file-card .fc-ic {
+        width: 42px; height: 42px; flex-shrink: 0; border-radius: 9px;
+        background: linear-gradient(145deg, #B6EDFF, #8CD4F0);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .msg-bubble .file-card .fc-ic svg { width: 22px; height: 22px; fill: none; stroke: #2c5770; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    html.phone-night .msg-bubble .file-card, html.phone-dark .msg-bubble .file-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.08); }
+    /* 文件详情弹窗里的正文 */
+    #fileViewBody { max-height: 56vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+        background: rgba(0,0,0,0.035); border-radius: 12px; padding: 12px 14px;
+        font-size: 13.5px; line-height: 1.7; color: var(--text-primary, #333);
+        white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, Menlo, Consolas, var(--font); }
+    html.phone-night #fileViewBody, html.phone-dark #fileViewBody { background: rgba(255,255,255,0.06); color: #d6d9de; }
+    #fileViewMeta { font-size: 12px; color: var(--text-secondary, #999); margin-bottom: 10px; line-height: 1.6; }
+</style>
+<script id="phoneFileMsgJs">
+(function () {
+    function boot() {
+        if (!window.__state || !window.__db || typeof window.sendMessage !== 'function' || typeof window.createMsgElement !== 'function') { setTimeout(boot, 400); return; }
+        if (window.__fileMsg) return; window.__fileMsg = true;
+        var S = function () { return window.__state; };
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+        function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+        function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
+        function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
+        function avImg(a, fb) { if (a && (a.indexOf('http') === 0 || a.indexOf('data:') === 0)) return '<img src="' + a + '" alt="">'; return '<span class="emoji-avatar">' + (a || fb || '·') + '</span>'; }
+
+        var FILE_SVG = '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg>';
+
+        // 能当纯文本读的扩展名 / MIME
+        var TEXT_EXT = /\.(txt|md|markdown|json|csv|log|xml|html?|css|js|ts|jsx|tsx|py|java|c|cpp|h|go|rs|rb|php|sh|yml|yaml|ini|conf|sql|srt|vtt|tex|rtf)$/i;
+        function isTextFile(file) {
+            if (file.type && (file.type.indexOf('text/') === 0 || /json|xml|javascript|csv|markdown/.test(file.type))) return true;
+            return TEXT_EXT.test(file.name || '');
+        }
+        function fmtSize(n) {
+            if (n == null) return '';
+            if (n < 1024) return n + ' B';
+            if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+            return (n / 1024 / 1024).toFixed(1) + ' MB';
+        }
+        function extOf(name) { var m = (name || '').match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : '文件'; }
+
+        // ---------- 1. 隐藏 file input + 功能栏「文件」按钮 ----------
+        function ensureInput() {
+            var inp = document.getElementById('chatFileInput');
+            if (inp) return inp;
+            inp = document.createElement('input');
+            inp.type = 'file'; inp.id = 'chatFileInput'; inp.style.display = 'none';
+            // 常见文档/文本/代码后缀，也允许任意文件
+            inp.accept = '.txt,.md,.markdown,.json,.csv,.log,.xml,.html,.htm,.css,.js,.ts,.py,.java,.c,.cpp,.go,.rs,.rb,.php,.sh,.yml,.yaml,.ini,.conf,.sql,.srt,.vtt,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,image/*,*/*';
+            var chat = document.getElementById('chat-page');
+            (chat || document.body).appendChild(inp);
+            inp.addEventListener('change', onPick);
+            return inp;
+        }
+
+        function injectBtn() {
+            var grid = document.querySelector('#toolPopup .popup-grid');
+            if (!grid || grid.querySelector('[data-tool="file"]')) return;
+            var b = document.createElement('button');
+            b.className = 'popup-item';
+            b.setAttribute('data-tool', 'file');
+            b.innerHTML = '<span class="icon-sm">' + FILE_SVG + '</span><span class="label">文件</span>';
+            grid.appendChild(b);
+            b.addEventListener('click', function () {
+                var tp = document.getElementById('toolPopup'); if (tp) tp.classList.remove('visible');
+                if (!S().currentChatId) { window.showModal && window.showModal('提示', '请先进入一个聊天', '好的'); return; }
+                ensureInput();
+                var inp = document.getElementById('chatFileInput');
+                if (inp) { inp.value = ''; inp.click(); }
+            });
+        }
+
+        // ---------- 2. 选文件 → 读取 → 发送 ----------
+        function onPick(e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            var chatId = S().currentChatId;
+            var name = file.name || '未命名文件';
+            var size = file.size;
+            var kind = extOf(name);
+            // 文本类文件：读全文（限 200KB 以内，太大截断）
+            if (isTextFile(file)) {
+                var reader = new FileReader();
+                reader.onload = function (ev) {
+                    var text = String(ev.target.result || '');
+                    var truncated = false;
+                    if (text.length > 60000) { text = text.slice(0, 60000); truncated = true; }
+                    sendFile(chatId, name, size, kind, text, truncated);
+                };
+                reader.onerror = function () { sendFile(chatId, name, size, kind, '', false); };
+                reader.readAsText(file);
+            } else {
+                // 非文本文件：只带文件名/大小，让角色知道收到一个这样的文件
+                sendFile(chatId, name, size, kind, '', false);
+            }
+            e.target.value = '';
+        }
+
+        function sendFile(chatId, name, size, kind, text, truncated) {
+            // content 写成角色能直接读懂的文本（历史转文本时未知 type 会走 else 用 content）
+            var readable;
+            if (text && text.trim()) {
+                readable = '[对方发来一个文件「' + name + '」（' + kind + (size != null ? '，' + fmtSize(size) : '') + '）'
+                    + '，你可以阅读它的内容，并针对内容自然地回应对方。'
+                    + (truncated ? '（文件较大，以下为前一部分内容）' : '')
+                    + ']\n文件内容如下：\n' + text;
+            } else {
+                readable = '[对方发来一个文件「' + name + '」（' + kind + (size != null ? '，' + fmtSize(size) : '') + '）'
+                    + '，这是一个无法读取正文的文件（如图片/压缩包/文档等），你能看到文件名和类型，可以就这个文件自然地回应对方。]';
+            }
+            window.sendMessage(readable, 'file', {
+                fileName: name, fileSize: size, fileKind: kind, fileText: text || '', fileTruncated: !!truncated
+            });
+        }
+
+        // ---------- 3. 渲染文件消息气泡 ----------
+        var origCreate = window.createMsgElement;
+        window.createMsgElement = function (msg) {
+            if (msg && msg.type === 'file') return buildFileMsg(msg);
+            return origCreate(msg);
+        };
+
+        function buildFileMsg(msg) {
+            var chat = getChat(msg.chatId);
+            var isUser = msg.sender === 'user';
+            var char = getChar(msg.charId || (chat && chat.charId));
+            var user = getUser(chat && chat.userId);
+            var wrap = document.createElement('div');
+            wrap.className = 'msg-wrapper ' + (isUser ? 'user' : 'ai');
+            wrap.dataset.msgId = msg.id;
+            var av = document.createElement('div'); av.className = 'avatar-wrap';
+            av.innerHTML = isUser ? avImg(user && user.avatar, '👤') : avImg(char && char.avatar, '🧸');
+            wrap.appendChild(av);
+            var bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+            var chat2 = getChat(msg.chatId);
+            if (chat2 && chat2.type === 'group') {
+                var nm = document.createElement('div'); nm.className = 'sender-name';
+                nm.textContent = isUser ? (user && user.name || '我') : (char && char.name || 'AI');
+                if (!isUser) nm.style.display = ''; else nm.style.textAlign = 'right';
+                bubble.appendChild(nm);
+            }
+            var metaTxt = (msg.fileKind || '文件') + (msg.fileSize != null ? ' · ' + fmtSize(msg.fileSize) : '')
+                + (msg.fileText ? '' : ' · 无法预览');
+            bubble.innerHTML += '<div class="file-card"><div class="fc-ic">' + FILE_SVG + '</div>'
+                + '<div class="fc-info"><div class="fc-name">' + esc(msg.fileName || '文件') + '</div>'
+                + '<div class="fc-meta">' + esc(metaTxt) + '</div></div></div>';
+            wrap.appendChild(bubble);
+            // 点文件卡：查看内容（有正文才弹）
+            bubble.querySelector('.file-card').addEventListener('click', function (e) {
+                if (S().isMultiSelect) return;
+                e.stopPropagation();
+                openFileView(msg);
+            });
+            // 长按/右键菜单（删除/转发/多选等）
+            wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); window.showMsgMenu && window.showMsgMenu(msg.id); });
+            var timer = null;
+            wrap.addEventListener('touchstart', function () { timer = setTimeout(function () { window.showMsgMenu && window.showMsgMenu(msg.id); }, 500); });
+            wrap.addEventListener('touchend', function () { clearTimeout(timer); });
+            wrap.addEventListener('touchmove', function () { clearTimeout(timer); });
+            if (S().isMultiSelect) {
+                wrap.addEventListener('click', function () { window.toggleMultiSelect && window.toggleMultiSelect(msg.id); });
+                if (S().selectedMsgIds && S().selectedMsgIds.has(msg.id)) wrap.classList.add('multi-select');
+            }
+            return wrap;
+        }
+
+        function openFileView(msg) {
+            if (!msg.fileText || !msg.fileText.trim()) {
+                window.showModal && window.showModal(esc(msg.fileName || '文件'),
+                    '<div style="font-size:13px;color:var(--text-secondary);line-height:1.8;text-align:center;padding:14px 0;">这是一个「' + esc(msg.fileKind || '文件') + '」文件（' + esc(fmtSize(msg.fileSize)) + '），无法在这里预览正文。<br>对方仍然能看到你发了这个文件。</div>', '好的');
+                return;
+            }
+            var meta = '<div id="fileViewMeta">' + esc(msg.fileKind || '文件') + (msg.fileSize != null ? ' · ' + esc(fmtSize(msg.fileSize)) : '')
+                + (msg.fileTruncated ? ' · 内容较长，已截取前一部分' : '') + '</div>';
+            window.showModal(esc(msg.fileName || '文件'), meta + '<div id="fileViewBody">' + esc(msg.fileText) + '</div>', '关闭', null, false);
+        }
+
+        injectBtn();
+        setTimeout(injectBtn, 1500);
+        // 功能栏可能被其它补丁重建，兜底再注入
+        var n = 0; var iv = setInterval(function () { injectBtn(); if (++n > 30) clearInterval(iv); }, 600);
+    }
+    boot();
+})();
+</script>
+<!-- ============ 玩家发送文件 结束 ============ -->
+
+
+<!-- ============ 角色发送文件：commitCharLine 拦截 [文件: 名 | 正文] · buildSystemPrompt 教用法 ============ -->
+<script id="charFileMsgJs">
+(function () {
+    function boot() {
+        if (typeof window.commitCharLine !== 'function' || typeof window.buildSystemPrompt !== 'function') { setTimeout(boot, 400); return; }
+        if (window.__charFileMsg) return; window.__charFileMsg = true;
+
+        function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+        function extOf(name) { var m = (name || '').match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : '文件'; }
+
+        // ---------- 1. 拦截 [文件: 文件名 | 正文]（正文可选） ----------
+        var origCommit = window.commitCharLine;
+        window.commitCharLine = async function (chatId, char, line, ts) {
+            var s = (line || '').trim();
+            // [文件: 名字 | 正文]  或  [文件: 名字]
+            var fm = s.match(/^\[文件[:：]\s*([^|\]]+?)\s*(?:\|\s*([\s\S]*?))?\]$/);
+            if (fm) {
+                var name = (fm[1] || '').trim() || '未命名文件';
+                var text = (fm[2] || '').trim();
+                var truncated = false;
+                if (text.length > 60000) { text = text.slice(0, 60000); truncated = true; }
+                return {
+                    id: uid(), chatId: chatId, sender: 'ai', type: 'file', content: '',
+                    fileName: name, fileSize: null, fileKind: extOf(name),
+                    fileText: text, fileTruncated: truncated,
+                    timestamp: ts, charId: char.id
+                };
+            }
+            return origCommit(chatId, char, line, ts);
+        };
+
+        // ---------- 2. 系统提示词追加：角色发文件用法 ----------
+        var origBSP = window.buildSystemPrompt;
+        window.buildSystemPrompt = function (char, chat, opts) {
+            var base = '';
+            try { base = origBSP(char, chat, opts); } catch (e) { base = ''; }
+            var tip = '\n\n【发送文件】当你想给对方发送一个文件（如笔记、文档、代码、歌词、清单等），单独用一行输出：[文件: 文件名.扩展名 | 文件的完整正文]。'
+                + '例如：[文件: 会议纪要.txt | 今天讨论了三件事……]。'
+                + '文件名要带合适的扩展名（.txt/.md/.json/.py 等）。正文写在竖线后面，可以多行。'
+                + '如果只是提到某个文件而不需要真的发出来，就正常用文字描述，不要用这个格式。不要滥用，只在确有必要发文件时使用。';
+            return base + tip;
+        };
+    }
+    boot();
+})();
+</script>
+<!-- ============ 角色发送文件 结束 ============ -->
