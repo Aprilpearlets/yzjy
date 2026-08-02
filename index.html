@@ -4,6 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>一只机</title>
+    <!-- ┌─ file input 兼容补丁（预览外壳回填保护）· 独立部署也无害 ─┐ -->
+    <script id="__fileInputPatch">
+    (function () {
+        // ── 预览外壳兼容补丁 ──
+        // Polaris 预览外壳会自动保存/回填表单字段，包括 type=file 的头像上传框。
+        // 浏览器禁止给 file input 赋非空 value，外壳回填时会抛 InvalidStateError（每次启动报好几次）。
+        // 这里包一层：给 file input 赋非空值时静默忽略（赋空字符串仍然放行），真机独立部署不受影响。
+        try {
+            var __vd = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            if (__vd && __vd.set && !__vd.set.__filePatched) {
+                var __origSet = __vd.set;
+                var __origGet = __vd.get;
+                function __safeSet(v) {
+                    if (this.type === 'file' && v) { return; } // file 框只允许赋空串，非空一律忽略
+                    return __origSet.call(this, v);
+                }
+                __safeSet.__filePatched = true;
+                Object.defineProperty(HTMLInputElement.prototype, 'value', {
+                    configurable: true, enumerable: __vd.enumerable,
+                    get: __origGet, set: __safeSet
+                });
+            }
+        } catch (e) {}
+    })();
+    </script>
+    <!-- └─ file input 兼容补丁结束 ─┘ -->
+
     <!--
     ╔══════════════════════════════════════════════════════════════════════╗
     ║  补丁目录索引（维护导航用 · 只读注释，不影响任何逻辑）
@@ -112,7 +139,13 @@
       #deskRoot .desk-badge { position: absolute; top: 6px; right: 14px; min-width: 16px; height: 16px; border-radius: 8px; background: #ff6b6b; color: #fff; font-size: 10px; line-height: 16px; text-align: center; padding: 0 4px; display: none; }
       #deskRoot { opacity: 1; }
     </style>
-    <script src="https://fastly.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+    <!-- 本地优先：把官方 dexie.min.js 与本文件放在同一目录即可离线运行。
+         本地文件缺失时，浏览器会「立即」判定失败（不像境外 CDN 那样无限挂起卡加载），
+         随后自动落到下方的 localStorage 兜底存储，保证任何情况下都能打开、能用。 -->
+    <!-- 原来这里是 <script src="./dexie.min.js"></script>，但通过 content:// 或某些协议打开时，
+         这个相对路径请求在部分浏览器（如安卓 Edge）不会“立即失败”，而是长时间挂起，
+         阻塞后续全部脚本 → 永远黑屏卡加载。既然本文件本就走 localStorage 兜底，
+         这里直接不加载外部 Dexie，让下方兜底立即生效，从根上消除卡死。 -->
 <script>
 // Dexie 离线兜底：CDN 没加载出 Dexie 时，用 localStorage 实现一个最小可用的兼容层，
 // 保证 new Dexie / stores / open / put / get / toArray / where.equals.delete / toCollection.modify 都能跑，
@@ -744,25 +777,33 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
             color: var(--text-secondary);
         }
         .msg-bubble .blocked-badge {
-            font-size: 12px;
+            display: block;
+            font-size: 11px;
             color: #ff6b6b;
-            font-weight: 700;
-            margin-left: 6px;
+            font-weight: 600;
+            margin-top: 4px;
+            opacity: 0.9;
         }
+        /* 被玩家拉黑的角色：ta自己发出来的消息带一个红色感叹号，像微信里「消息未送达」 */
         .msg-wrapper.blocked .msg-bubble {
-            border: 2px solid #ff6b6b;
-            opacity: 0.85;
+            position: relative;
         }
         .msg-wrapper.blocked .msg-bubble::after {
-            content: '❗';
+            content: '!';
             position: absolute;
-            top: -6px;
-            right: -6px;
-            font-size: 16px;
-        }
-        .msg-wrapper.user.blocked .msg-bubble::after {
-            right: auto;
-            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            right: -22px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            background: #fa5151;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(250,81,81,0.4);
         }
 
         .typing-indicator {
@@ -2407,14 +2448,6 @@ if (typeof Dexie === 'undefined' || !__idbUsable) {
                     </div>
 
                     <div class="setting-group"><div class="group-title">数据管理</div><div class="btn-row"><button class="btn-secondary" id="exportDataBtn">导出数据</button><button class="btn-secondary" id="importDataBtn">导入数据</button></div><input type="file" id="importDataInput" accept=".json" style="display:none;"></div>
-                    <!-- 福利额度 -->
-                    <div class="setting-group">
-                        <div class="group-title">福利额度</div>
-                        <div class="setting-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;margin:0;"><span>显示福利悬浮球<br><small style="color:var(--text-secondary);font-weight:400;">在聊天等界面右侧显示福利入口小球</small></span><input type="checkbox" id="wfShowBall" style="width:22px;height:22px;flex-shrink:0;"></label></div>
-                        <div class="setting-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;margin:0;"><span>用福利额度响应<br><small style="color:var(--text-secondary);font-weight:400;">余额&gt;0 时，聊天主回复改走福利通道，把多扣的次数补回来</small></span><input type="checkbox" id="wfEnable" style="width:22px;height:22px;flex-shrink:0;"></label></div>
-                        <div class="setting-row"><button class="btn-primary" id="wfOpenPanel" style="width:100%;">查看福利额度 / 检查多扣情况</button></div>
-                        <div class="setting-row"><small style="color:var(--text-secondary);">福利通道由作者提供并已加密，玩家无需配置。福利额度只从启用起记账，此前的扣费无法追溯。</small></div>
-                    </div>
 
                     <div class="setting-group">
                         <div class="group-title">主题</div>
@@ -3383,12 +3416,14 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
                 'Save settings warning:', e); } }
 
         async function initApp() {
+            try { window.__diagMarkFn && window.__diagMarkFn('initApp开始'); } catch (e) {}
             // 根因修复：初始化必须有一条“无论数据库成功/失败/挂起都会进桌面”的确定路径。
             // 原来 loadData 里创建默认配置的裸 await 一旦 reject 或挂起，initApp 就会在“放下加载页”之前中断，导致永远卡在加载动画。
             let entered = false;
             function enterHome() {
                 if (entered) return;
                 entered = true;
+                try { window.__diagMarkFn && window.__diagMarkFn('进入桌面'); } catch (e) {}
                 try { $loading.classList.remove('active'); } catch (e) {}
                 try { showPage('home'); } catch (e) {}
                 try { updateHomeClock(); } catch (e) {}
@@ -3694,7 +3729,8 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
             wrapper.dataset.msgId = msg.id;
 
             const isBlocked = char?.isBlocked || false;
-            if (isBlocked) wrapper.classList.add('blocked');
+            // 只有被拉黑角色「自己发出来」的消息才标红（角色视角：消息发不到对方）；玩家自己的消息正常
+            if (isBlocked && !isUser) wrapper.classList.add('blocked');
 
             const avatarWrap = document.createElement('div');
             avatarWrap.className = 'avatar-wrap';
@@ -3836,10 +3872,11 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
 
             // 编辑后不再显示「已编辑」标记
 
-            if (isBlocked) {
+            // 被玩家拉黑后：只有角色自己发出来的消息才显示「对方已将你拉黑」（角色视角：自己被拉黑，消息发不出去）；玩家自己发的消息正常，不显示
+            if (isBlocked && !isUser) {
                 const badge = document.createElement('span');
                 badge.className = 'blocked-badge';
-                badge.textContent = '❗ 已拉黑';
+                badge.textContent = '❗ 消息已发出，但对方未收到';
                 bubble.appendChild(badge);
             }
 
@@ -4103,6 +4140,9 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
             const char = getChar(charId);
             if (!char) return;
             char.isBlocked = block;
+            // 记录被拉黑的时间点：用于让角色像真人一样，从这一刻起逐渐察觉自己发的消息送不出去
+            if (block) { char.blockedByUserAt = Date.now(); }
+            else { char.blockedByUserAt = 0; }
             await db.characters.put(char);
             if (state.currentChatId) {
                 const chat = getChat(state.currentChatId);
@@ -4225,11 +4265,6 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
             if (!state.currentChatId) return;
             const chat = getChat(state.currentChatId);
             if (!chat) return;
-            const chars = getChatChars(chat);
-            if (chars.length && chars.every(c => c.isBlocked)) {
-                showModal('提示', '这里的角色都已被拉黑，不会回复', '好的');
-                return;
-            }
             triggerAiReply(state.currentChatId);
         });
 
@@ -4496,6 +4531,42 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
                 leakHint = '\n## 悄悄察觉\n你最近隐约察觉到自己好像被对方的朋友圈屏蔽了(可能是共同好友不小心说漏嘴，或者点进ta主页发现看不到动态)。如果此刻聊天气氛合适，可以带一点点情绪自然地流露出来(困惑/吃醋/失落都可以)，不用直接点破，也不必每次都提，一切以自然为先。\n';
             }
 
+            // ── 被玩家拉黑：像真人一样逐渐察觉「消息发不出去」并有反应 ──
+            // 玩家拉黑角色后，角色的消息在ta自己视角里是「发送成功但对方一直不回」。
+            // 真人会：先照常发 → 几条没回后觉得奇怪 → 最后意识到被拉黑/不想理，然后有情绪反应。
+            let blockHint = '';
+            if (char.isBlocked && char.blockedByUserAt) {
+                // 统计拉黑之后，这个角色自己已经发出了多少条消息（越多说明ta「碰壁」越久）
+                let sentAfterBlock = 0;
+                try {
+                    sentAfterBlock = (state.messages || []).filter(m =>
+                        m.chatId === chat.id && m.sender === 'ai' && m.charId === char.id &&
+                        m.timestamp >= char.blockedByUserAt && m.type !== 'beautify'
+                    ).length;
+                } catch (e) { sentAfterBlock = 0; }
+
+                if (sentAfterBlock <= 0) {
+                    // 第 1 次响应：完全不知情，像平常一样发消息（发完这条ta才会开始碰壁）
+                    blockHint = '\n## ⚠️ 你此刻的处境（重要，只有你自己知道）\n' +
+                        '你并不知道对方刚刚把你拉黑了。像平常一样，按你现在想说的话自然地发消息。你还没有任何理由怀疑对方，别提"是不是被拉黑""怎么不回"这类话。\n';
+                } else if (sentAfterBlock <= 2) {
+                    // 第 2~3 次：消息发出去了却一直没回应，开始觉得不对劲
+                    blockHint = '\n## ⚠️ 你此刻的处境（重要，只有你自己知道）\n' +
+                        '你发现一个不对劲的地方：你刚才发的消息，对方一直没有任何回应，连"已读"后的只言片语都没有。你还不确定发生了什么——也许ta在忙，也许信号不好，也许ta在生气。\n' +
+                        '请符合你的人设，自然地流露出一点点这种情绪：可能是追问一句"在吗/怎么不理我了"，可能是有点在意地再发一条，也可能是不动声色地等。不要直接说"我是不是被拉黑了"，你现在还没确定。\n';
+                } else {
+                    // 第 4 次及以后：连续碰壁，一个正常人会意识到自己被拉黑/被对方不想理了
+                    blockHint = '\n## ⚠️ 你此刻的处境（重要，只有你自己知道）\n' +
+                        '你连着发了好几条消息，对方始终一个字都没回。到这个份上，一个正常人会意识到：自己很可能被对方拉黑了，或者对方铁了心不想再理你。\n' +
+                        '请完全按你的人设，做出属于"你"的真实反应——这可能是：\n' +
+                        '- 受伤、失落，发一条带情绪的话然后不再纠缠；\n' +
+                        '- 愤怒、觉得被羞辱，说几句重话或冷嘲；\n' +
+                        '- 故作平静地说一句"算了，当我没打扰过你"之类的收尾，然后沉默；\n' +
+                        '- 死心、认命，甚至连消息都懒得再发（这种时候你可以只回复 SKIP，表示你决定不再发了）。\n' +
+                        '不要一边说着被拉黑一边还热络地找话题——那不真实。被拉黑的人是会收手、会心冷的。选一种最符合你性格和你们关系的反应，别每条都重复同样的话。\n';
+                }
+            }
+
             // 时间感知：开启才把真实时间告诉角色；可分别指定角色和玩家所在的国家/地区时区
             let timeInfo = '';
             if (char.timeAware === false) {
@@ -4553,7 +4624,7 @@ ${char.persona || '一个有血有肉、有自己脾气和生活节奏的人'}
 ${wbText ? `## 设定与准则\n${wbText}\n` : ''}
 ## 聊天对象
 ${userInfo}
-${relationInfo}${peerInfo}${socialInfo}${lockfaceInfo}${leakHint}
+${relationInfo}${peerInfo}${socialInfo}${lockfaceInfo}${leakHint}${blockHint}
 ${langInfo}${timeInfo}
 ## 说话方式(很重要，决定了这个app像不像真人在聊天)
 - 像真人发消息一样：可以短、可以口语化、可以有语气词和小情绪，不要每句话都很工整、不要总结陈词、不要动不动就来一句"辛苦啦""抱抱你"这种客服式安慰。
@@ -4675,6 +4746,230 @@ ${isOffline
                 if (lines.length > 1 && (openTag || noEnd)) { lines.pop(); out = lines.join('\n'); }
             }
             return out;
+        }
+
+        // ============================================================
+        //  群聊「一次 API 编排」（方案B）
+        //  单聊仍走 generateReplyForChar；群聊在一次请求里由「导演」决定
+        //  这一轮谁说话、各说什么、按什么顺序，再分派给各角色气泡。
+        // ============================================================
+
+        // 群聊共享历史：不再站在某个角色视角，而是把整段群聊如实转录，
+        // 每条 AI 消息都带上说话人名字，让导演看清谁在群里说过什么。
+        function buildGroupHistory(chatId, memoryCount) {
+            const chat = getChat(chatId);
+            const msgs = getMessages(chatId).slice(-memoryCount);
+            const recentImgIds = new Set(msgs.slice(-6).filter(m => m.type === 'image' && m.imageUrl).map(m => m.id));
+            const user = getUser(chat.userId);
+            const userName = user?.name || '我';
+            return msgs.map(m => {
+                const isUser = m.sender === 'user';
+                const speakerName = isUser ? userName : (getChar(m.charId || chat.charId)?.name || '某人');
+                let textContent = '';
+                if (m.type === 'text') textContent = m.content || '';
+                else if (m.type === 'sticker') { const st = getSticker(m.stickerId); textContent = `[表情:${st?.name || '表情'}]`; }
+                else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
+                else if (m.type === 'daifu') textContent = `[代付 ¥${m.amount} ${m.note || ''}]`;
+                else if (m.type === 'forward') { const src = m.forwardSource || []; textContent = `[转发的聊天记录] ${src.map(s => `${s.senderName}: ${s.content}`).join(' | ')}`; }
+                else if (m.type === 'share_music') textContent = `[分享了音乐]《${m.shareTitle}》- ${m.shareSite}`;
+                else if (m.type === 'share_article') textContent = `[分享了文章]《${m.shareTitle}》- ${m.shareSite}`;
+                else if (m.type === 'image') textContent = m.content ? `[图片: ${m.content}]` : '[图片]';
+                else if (m.type === 'voice') textContent = m.content ? `[语音消息，内容是：${m.content}]` : '[语音消息]';
+                else textContent = m.content || '';
+
+                const timeTag = historyTimeLabel(m.timestamp, null);
+                const timePrefix = timeTag ? `[${timeTag}] ` : '';
+                // 群里所有发言（含玩家）都用「名字: 内容」的转录格式，导演一眼看清对话结构
+                const finalText = `${timePrefix}${speakerName}: ${textContent}`;
+
+                if (m.type === 'image' && m.imageUrl && recentImgIds.has(m.id)) {
+                    return { role: 'user', content: [
+                        { type: 'text', text: finalText || `${timePrefix}${speakerName}发了一张图` },
+                        { type: 'image_url', image_url: { url: m.imageUrl } }
+                    ] };
+                }
+                return { role: 'user', content: finalText };
+            });
+        }
+
+        // 群聊导演 system prompt：把群里所有在场角色的人设、关系、世界书一次性交给模型，
+        // 让它以「群聊导演」身份，替这一轮该开口的人各自说话。
+        function buildGroupDirectorPrompt(chat, chars) {
+            const user = getUser(chat.userId);
+            const userName = user?.name || '对方';
+            const userInfo = user ? `${user.name}（${user.gender || '未知'}）：${user.bio || '无特别设定'}` : '一个普通聊天对象';
+
+            // 逐个角色的人设卡片
+            const roster = chars.map(c => {
+                const wbs = getChatWorldBooks(chat, c);
+                const wbText = wbs.length ? wbs.map(w => `  · ${w.name}：${(w.content || '').slice(0, 300)}`).join('\n') : '';
+                // 该角色对群里其他人 / 玩家的关系
+                const rels = [];
+                (c.relationships || []).forEach(r => {
+                    const t = getChar(r.targetId);
+                    const isUserRel = user && r.targetId === user.id;
+                    const tName = isUserRel ? userName : (t?.name || null);
+                    if (tName) rels.push(`和${tName}是「${r.type || '认识'}」${r.desc ? '（' + r.desc + '）' : ''}`);
+                });
+                const relLine = rels.length ? `\n  关系：${rels.join('；')}` : '';
+                const langMap = { zh: '简体中文', yue: '粤语', en: '英语', de: '德语', ru: '俄语', fr: '法语', ja: '日语', ko: '韩语' };
+                const cl = c.chatLang || 'zh';
+                const langLine = cl !== 'zh' ? `\n  说话语言：${langMap[cl] || cl}` : '';
+                return `### ${c.name}\n  ${(c.persona || '一个有自己脾气的人').slice(0, 400)}${relLine}${langLine}${wbText ? '\n  设定：\n' + wbText : ''}`;
+            }).join('\n\n');
+
+            const names = chars.map(c => c.name).join('、');
+
+            return `你是一个「群聊导演」，负责让一个微信群里的多个角色像真人一样自然地聊天。这个群里的角色有：${names}。你要同时扮演他们所有人。
+
+## 群里的每个人是谁
+${roster}
+
+## 群里还有玩家本人
+${userInfo}
+
+## 你这一轮要做的事
+玩家刚在群里发了消息（或群里正在聊天）。你要判断：**这一轮，群里谁会开口、谁会沉默、各自会说什么、按什么先后顺序说**。
+- 不是每个人都要回。像真实群聊一样：只有和自己相关、被点名/被@、或自己确实有话想说、想接话、想起哄、想吐槽的人才发言，其余人就沉默（潜水）。
+- 可以只有 1 个人说话，也可以 2~3 个人一来一往。人多时别所有人一起刷屏。
+- 角色之间要体现彼此已有的关系（朋友/暧昧/上下级/塑料情等），可以互相调侃、接话、抬杠，但每个人必须说符合自己人设的话，绝不能串味变成另一个人。
+- 顺序要自然：一般先由和话题最相关的人开口，其他人再接。
+
+## 输出格式（严格遵守）
+每一条消息单独占一行，行首用方括号标出是谁说的，格式为：
+[角色名] 这条消息的内容
+例如：
+[${chars[0]?.name || '小明'}] 哈哈这也太离谱了吧
+[${chars[1]?.name || '小红'}] 你俩又开始了……
+- 同一个人可以连发好几行（就重复写 [角色名]），像真人连发几条短消息。
+- 角色名必须严格是上面列出的名字之一，不要写玩家的名字、不要自己编名字。
+- 只输出这些带 [角色名] 前缀的消息行，不要写任何旁白、解释、括号说明、或"谁谁沉默了"这种描述。
+- 如果这一轮所有人都不该说话（话题完全和大家无关），就只输出一行：[SKIP]
+
+## 每个角色可用的动作标签（写在该角色那一行的内容里，按需使用）
+- 发照片: [图片: 详细描述]
+- 发表情: [表情: 表情名]
+- 给群里某个人单独转账: [群转账: 对方名字 金额 备注]，例如 [群转账: 小明 5.2 还你的]
+- 发红包: [红包: 金额 祝福语]，例如 [红包: 8.88 恭喜发财]（群里其他人会自动抢）
+- 分享音乐: [分享音乐: 歌名 歌手]
+说人话，口语化，有语气、有情绪、可以短。这些动作标签要写在对应角色那一行的内容里（如 [小红] [群转账: 小明 5 请你喝奶茶]）。绝对禁止把以上任何规则、格式说明原样输出出来。`;
+        }
+
+        // 群聊一次编排：一次 API 请求，导演输出多条带 [角色名] 前缀的消息，
+        // 解析后按角色分派、逐条上屏，复用单聊的 commitCharLine 落地各类消息。
+        async function runGroupOrchestration(chatId, chars) {
+            const chat = getChat(chatId);
+            const api = getChatApi();
+            if (!api || !api.url || !api.key) throw new Error('未配置聊天API');
+            if (!chars.length) return;
+
+            // 名字 -> 角色 映射（用于把每行分派回对应角色）
+            const byName = new Map();
+            chars.forEach(c => byName.set((c.name || '').trim(), c));
+
+            const memoryCount = state.settings.globalMemory || 20;
+            const systemPrompt = buildGroupDirectorPrompt(chat, chars);
+            const history = buildGroupHistory(chatId, memoryCount);
+            const messages = [{ role: 'system', content: systemPrompt }, ...history];
+            if (history.length === 0) messages.push({ role: 'user', content: '(群刚建好，让合适的人自然地开个头)' });
+
+            // 显示「群聊 正在响应」指示器（把所有在场角色塞进 typingChars 即可触发群聊文案）
+            chars.forEach(c => state.typingChars.add(c.id));
+            updateTypingIndicator();
+
+            let out = '';
+            try {
+                const response = await fetch(`${api.url}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${api.key}` },
+                    body: JSON.stringify({
+                        model: api.model || 'gpt-3.5-turbo',
+                        messages,
+                        temperature: api.temperature || 0.85,
+                        max_tokens: 3000,
+                    })
+                });
+                if (!response.ok) { const err = await response.text(); throw new Error(`API错误 ${response.status}: ${err.slice(0, 200)}`); }
+                const data = await response.json();
+                out = data.choices?.[0]?.message?.content || '';
+                if (window.__stripThink) { try { out = window.__stripThink(out); } catch (e) {} }
+            } finally {
+                chars.forEach(c => state.typingChars.delete(c.id));
+                updateTypingIndicator();
+            }
+
+            // 解析导演输出：按行提取 [角色名] 内容
+            const rawLines = (out || '').split('\n').map(l => l.trim()).filter(Boolean);
+            // 整轮 SKIP：大家都没话说
+            if (rawLines.length === 1 && /^\[?\s*SKIP\s*\]?$/i.test(rawLines[0])) return;
+
+            // 把行归并成 {char, line} 序列；没有前缀的行归给上一条的说话人（连发）
+            const dispatch = [];
+            let lastChar = null;
+            for (const raw of rawLines) {
+                const m = raw.match(/^\[([^\]]+)\]\s*(.*)$/);
+                if (m) {
+                    const nm = (m[1] || '').trim();
+                    if (/^SKIP$/i.test(nm)) continue;
+                    const c = byName.get(nm) || chars.find(x => (x.name || '').trim() === nm);
+                    if (c) { lastChar = c; if ((m[2] || '').trim()) dispatch.push({ char: c, line: m[2].trim() }); }
+                    // 前缀名对不上任何角色：忽略这行，避免张冠李戴
+                } else if (lastChar) {
+                    dispatch.push({ char: lastChar, line: raw });
+                }
+            }
+            if (!dispatch.length) return;
+
+            // 逐条上屏：每条之间按真人打字节奏停顿，配合「群聊 正在响应」指示器
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+            const showTyping = () => {
+                const area = $('msgArea');
+                const typing = $('typingIndicator');
+                if (area && typing && state.currentChatId === chatId) {
+                    area.appendChild(typing);
+                    typing.style.display = 'flex';
+                    jellyScrollToBottom(null);
+                }
+            };
+            let ts = Date.now();
+            for (const item of dispatch) {
+                // 让指示器在这条消息发出前显示，营造"正在打字"
+                state.typingChars.add(item.char.id);
+                updateTypingIndicator();
+                const plain = item.line.replace(/\[[^\]]*\]/g, '').trim();
+                const typeMs = Math.min(1400, Math.max(420, plain.length * 50));
+                showTyping();
+                await sleep(typeMs);
+                state.typingChars.delete(item.char.id);
+                updateTypingIndicator();
+
+                // 走 window.commitCharLine（最外层完整包装链），让群转账/红包/线下旁白/发图等补丁都生效
+                const _commit = (typeof window.commitCharLine === 'function') ? window.commitCharLine : commitCharLine;
+                const msg = await _commit(chatId, item.char, item.line, ts);
+                ts += 500;
+                if (msg) {
+                    state.messages.push(msg);
+                    db.messages.put(msg).catch(() => {});
+                    const onThisChat = state.currentChatId === chatId && !document.hidden
+                        && document.getElementById('chat-page') && document.getElementById('chat-page').classList.contains('active');
+                    if (onThisChat) {
+                        const area = $('msgArea');
+                        const typing = $('typingIndicator');
+                        const _make = (typeof window.createMsgElement === 'function') ? window.createMsgElement : createMsgElement;
+                        const el = _make(msg);
+                        if (el && area) {
+                            if (typing && typing.parentNode === area) area.insertBefore(el, typing);
+                            else area.appendChild(el);
+                            jellyScrollToBottom(el);
+                        }
+                    } else {
+                        if (window.__pushChatToast) { try { window.__pushChatToast(item.char, msg, chatId); } catch (e) {} }
+                    }
+                }
+            }
+            const chatObj = getChat(chatId);
+            if (chatObj) { chatObj.updatedAt = Date.now(); await db.chats.put(chatObj); }
+            if (state.currentChatId === chatId) { renderChatList(); }
         }
 
         async function generateRealImage(description, char) {
@@ -4959,9 +5254,15 @@ ${isOffline
             if (!typing) return;
             state.isTyping = state.typingChars.size > 0;
             if (state.typingChars.size === 0) { typing.style.display = 'none'; return; }
-            const names = [...state.typingChars].map(id => getChar(id)?.name || '对方').join('、');
+            const curChat = getChat(state.currentChatId);
             const label = typing.querySelector('span');
-            if (label) label.textContent = `${names} 正在输入`;
+            if (curChat && curChat.type === 'group') {
+                // 群聊人多时不再把名字排一长串，统一显示「群聊 正在响应」
+                if (label) label.textContent = `群聊 正在响应`;
+            } else {
+                const names = [...state.typingChars].map(id => getChar(id)?.name || '对方').join('、');
+                if (label) label.textContent = `${names} 正在输入`;
+            }
             typing.style.display = 'flex';
         }
 
@@ -5086,7 +5387,8 @@ ${isOffline
             if (!targetChatId) return;
             const chat = getChat(targetChatId);
             if (!chat) return;
-            let chars = getChatChars(chat).filter(c => !c.isBlocked);
+            // 单聊：即使被玩家拉黑，角色也能"发消息"（只是在ta的视角里是自己被拉黑、消息发不到对方）；群聊仍过滤掉被拉黑的角色
+            let chars = getChatChars(chat).filter(c => (chat.type !== 'group') ? true : !c.isBlocked);
             // 群聊中：进一步过滤 activeCharIds，只让勾选的角色响应
             if (chat.type === 'group' && chat.activeCharIds && chat.activeCharIds.length > 0) {
                 const activeSet = new Set(chat.activeCharIds);
@@ -5103,7 +5405,13 @@ ${isOffline
                 showModal('提示', '请先在设置中配置聊天 API', '去设置', () => showPage('settings'));
                 return;
             }
-            await Promise.allSettled(chars.map(char => runCharReply(targetChatId, char)));
+            // 群聊：一次 API 编排（方案B）——由导演决定这轮谁开口、各说什么，再分派上屏。
+            // 单聊/被点名：仍走原有的单角色链路（保留转账、语音、拉黑等所有既有功能）。
+            if (chat.type === 'group' && !__forceId && chars.length > 1) {
+                await runGroupOrchestration(targetChatId, chars);
+            } else {
+                await Promise.allSettled(chars.map(char => runCharReply(targetChatId, char)));
+            }
         }
 
         // ============================================================
@@ -13758,7 +14066,12 @@ ${isOffline
                 '- 如果对方的言行让你忍无可忍、真的不想再理ta，你可以拉黑对方：单独一行输出 [拉黑玩家]。拉黑后对方就没法直接给你发消息了，需要重新提交好友验证你才可能看到。别动不动就拉黑，这是很重的动作。\n';
             try {
                 if (char && char.isBlocked) {
-                    extra += '\n## 📵 你被对方拉黑了\n对方把你拉黑了，你没法直接联系到ta。如果你很想传达点什么，可以托你们的共同好友带话：单独一行输出 [托带话: 共同好友的名字 | 你想让ta转达的话]。系统会让那位好友去联系对方。别频繁用。\n';
+                    extra += '\n## 📵 你被对方拉黑了（重要认知）\n' +
+                        '对方（玩家）把你拉黑了。在你的认知里，是「你被对方拉黑」，不是你拉黑了对方。\n' +
+                        '- 你依然可以照常给对方发消息、表达你此刻的情绪和想说的话——但你心里清楚：这些消息大概率发不到ta那里（就像微信里被拉黑后发消息会显示红色感叹号、对方收不到）。\n' +
+                        '- 所以你说话时可以带着「不知道你能不能看到」「也许这条你根本收不到」这种被拉黑一方的无力感、不甘、想解释或赌气的心情，符合你的人设去表达，别装作一切正常。\n' +
+                        '- 绝对不要说成是「你把对方拉黑了」或「你不想理ta」——事实相反，是ta不想理你、把你拉黑了。\n' +
+                        '- 如果你很想让对方真的听到，可以托你们的共同好友带话：单独一行输出 [托带话: 共同好友的名字 | 你想让ta转达的话]。别频繁用。\n';
                 }
             } catch (e) {}
             return base + extra;
@@ -21244,14 +21557,24 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (m.sys) return '<div class="sc-sys">' + esc(m.text) + '</div>';
         var tag = (m.from === 'me' && m.identity) ? '<div class="sc-idtag">以「' + esc(m.identity) + '」发送</div>' : '';
         var trap = (m.from !== 'me' && m.trap) ? ' trap' : '';
-        return '<div class="sc-msg ' + (m.from === 'me' ? 'me' : 'them') + trap + '" ' + (m.trap ? 'data-trap="1"' : '') + '>' + esc(m.text) + '</div>' + tag;
+        var failed = (m.from === 'me' && m.failed) ? ' failed' : '';
+        return '<div class="sc-msg ' + (m.from === 'me' ? 'me' : 'them') + trap + failed + '" ' + (m.trap ? 'data-trap="1"' : '') + '>' + esc(m.text) + '</div>' + tag;
       }).join('');
       sc.scrollTop = sc.scrollHeight;
       sc.querySelectorAll('[data-trap]').forEach(function (el) { el.addEventListener('click', function () { trapDrain(el.textContent || ''); }); });
     }
     async function sendIn(t) {
       var inp = document.getElementById('sc6Input'); var txt = (inp.value || '').trim(); if (!txt) return;
-      t.msgs.push({ from: 'me', text: txt, ts: Date.now(), identity: t._lastId || '本人' }); t.ts = Date.now(); inp.value = '';
+      var idKey = t._lastId || '本人';
+      // 这个发信身份（匿名/实名）已被对方拉黑：消息发不出去，只提示玩家，不入库不触发回复
+      if (t.smsBlocked && t.smsBlocked[idKey]) {
+        t.msgs.push({ from: 'me', text: txt, ts: Date.now(), identity: idKey, failed: true });
+        t.msgs.push({ sys: true, text: '对方已把' + (idKey === '匿名' ? '这个匿名号码' : ('「' + idKey + '」')) + '拉黑，消息发不出去' });
+        t.ts = Date.now(); inp.value = '';
+        await save(); renderThread(t); renderList();
+        return;
+      }
+      t.msgs.push({ from: 'me', text: txt, ts: Date.now(), identity: idKey }); t.ts = Date.now(); inp.value = '';
       await save(); renderThread(t); renderList();
     }
 
@@ -21310,7 +21633,12 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       // 短信拉黑只作用于短信、且只作用于当前这个发信身份（匿名/实名分开），不再串台到微信的 char.blockedByChar
       if (t.smsBlocked && t.smsBlocked[idKey]) { t.msgs.push({ sys: true, text: '对方已把这个号码拉黑，消息发不出去' }); t.ts = Date.now(); await save(); return; }
       var a = apiCfg();
-      var convo = t.msgs.slice(-12).map(function (m) { return (m.from === 'me' ? '对方' : char.name) + '：' + (m.text || ''); }).join('\n');
+      // 拼历史时标出每条消息是「用哪个身份发来的」，避免匿名/实名混成同一个人
+      var convo = t.msgs.slice(-12).map(function (m) {
+        if (m.from !== 'me') return char.name + '：' + (m.text || '');
+        var who = m.identity === '匿名' ? '匿名号码' : (m.identity && m.identity !== '本人' ? ('实名「' + m.identity + '」') : '对方');
+        return who + '：' + (m.text || '');
+      }).join('\n');
       if (!a) { t.msgs.push({ from: 'them', text: '？', ts: Date.now() }); t.ts = Date.now(); t.unread = (t.unread || 0) + 1; await save(); return; }
       var base = ''; try { base = window.buildSystemPrompt ? window.buildSystemPrompt(char, { type: 'single', charId: char.id }, {}) : ''; } catch (e) {}
       // 取该角色在微信单聊里的最近剧情，让短信回复能贴合"此刻剧情发展/时间点"
@@ -21330,6 +21658,11 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       var sys = base +
         '\n\n## 📩 你收到一条短信，需要真实回复（不是预设话术）\n' +
         '发信人：' + (anon ? '一个陌生/匿名号码（你不知道是谁，但可以凭直觉和当前处境猜）' : ('「' + identity + '」')) + '。\n' +
+        '## ⚠ 关于发信身份（很重要，别搞混）\n' +
+        '下面的往来记录里，每条都标了是「匿名号码」还是「实名『某某』」发来的。这些不同的身份**未必是同一个人**：匿名号码可能是陌生人、骚扰者，也可能是你认识的人偷偷用陌生号；实名则是明确亮出身份的人。\n' +
+        '- 对匿名号码：你不知道对方是谁，就按「面对一个不确定身份的陌生号」来反应，别自动认成某个你认识的人，更别把实名那个人说过的话、你们的关系，套到这个匿名号码头上。\n' +
+        '- 对实名号码：那才是你确知的那个人。\n' +
+        '- 除非从内容里有明确线索让你推断出匿名号就是某人，否则不要擅自把匿名和实名当成同一个人。\n' +
         (storyCtx ? ('## 你和对方最近在微信里的剧情（用来判断此刻你对ta是什么态度、发生到哪一步了）\n' + storyCtx + '\n\n') : '') +
         '## 你要在心里走一遍这个思路，再动手回（不要把思考过程写出来）：\n' +
         '1. 这是一条什么内容的信息？（关心/搭话/挑衅/求和/骚扰/表白/道歉…）\n' +
@@ -22089,6 +22422,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   }
   #sms-thread-page .sc-msg.trap { border: 1px dashed rgba(231,76,60,0.55); cursor: pointer; }
   #sms-thread-page .sc-idtag { align-self: flex-end; font-size: 10px; color: var(--text-secondary); margin-top: -3px; }
+  #sms-thread-page .sc-msg.me.failed { position: relative; opacity: 0.75; }
+  #sms-thread-page .sc-msg.me.failed::after { content: '!'; position: absolute; top: 50%; transform: translateY(-50%); left: -22px; width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 12px; font-weight: 700; color: #fff; background: #fa5151; border-radius: 50%; box-shadow: 0 1px 3px rgba(250,81,81,0.4); }
   #sms-thread-page .sc-sys { align-self: center; font-size: 11px; color: var(--text-secondary); background: rgba(0,0,0,0.045); padding: 3px 12px; border-radius: 20px; margin: 4px 0; }
   html.phone-night #sms-page .sms-thread { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
   html.phone-night #sms-thread-page .sc-msg.them { background: rgba(255,255,255,0.08); color: #d6d9de; border-color: rgba(255,255,255,0.08); }
@@ -27172,12 +27507,51 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (state.together) state.together.lastSong = song.name || '';
     }
     function resolveAndPlay(song, subEl) {
-        fetchJson(API + '?types=url&source=' + (song.source || 'netease') + '&id=' + song.id + '&br=320').then(function (d) {
-            if (!d || !d.url) { if (subEl) subEl.textContent = (song.artist || '') + ' · 这首暂时听不了'; return; }
-            song.audio = d.url; audio.src = d.url;
+        var reqId = (song && (song.id + '|' + song.source)) || '';
+        // 依次尝试：当前音源多个音质 → 换其它音源按“歌名+歌手”重搜同名歌再取直链。
+        // 只要还是当前这首歌，就一直努力找到能播的直链，而不是一失败就“暂时听不了”。
+        var SRC_ORDER = ['netease', 'tencent', 'kuwo', 'kugou'];
+        var BR = ['320', '128', '999'];
+
+        function stillCurrent() { return state.playing && (state.playing.id + '|' + state.playing.source) === reqId; }
+        function done(url) {
+            if (!stillCurrent()) return;
+            song.audio = url; audio.src = url;
             audio.play().then(function () { setPlayIcon(true); }).catch(function () { setPlayIcon(false); });
             if (subEl) subEl.textContent = song.artist || '';
-        });
+        }
+        function fail() { if (stillCurrent() && subEl) subEl.textContent = (song.artist || '') + ' · 这首暂时听不了'; }
+
+        // 第一步：用歌自身的 source/id 逐个音质取直链
+        function tryOwn(bi) {
+            if (!stillCurrent()) return;
+            if (bi >= BR.length) { tryOtherSources(0); return; }
+            fetchJson(API + '?types=url&source=' + (song.source || 'netease') + '&id=' + song.id + '&br=' + BR[bi]).then(function (d) {
+                if (!stillCurrent()) return;
+                if (d && d.url) { done(d.url); return; }
+                tryOwn(bi + 1);
+            });
+        }
+        // 第二步：换其它音源，用歌名(+歌手)重搜同名歌，命中后取直链
+        function tryOtherSources(si) {
+            if (!stillCurrent()) return;
+            var srcs = SRC_ORDER.filter(function (s) { return s !== (song.source || 'netease'); });
+            if (si >= srcs.length) { fail(); return; }
+            var src = srcs[si];
+            var kw = (song.name || '') + ' ' + (song.artist || '');
+            if (!kw.trim()) { fail(); return; }
+            fetchJson(API + '?types=search&source=' + src + '&name=' + encodeURIComponent(kw) + '&count=1').then(function (list) {
+                if (!stillCurrent()) return;
+                var hit = Array.isArray(list) && list[0];
+                if (!hit) { tryOtherSources(si + 1); return; }
+                fetchJson(API + '?types=url&source=' + src + '&id=' + hit.id + '&br=320').then(function (d) {
+                    if (!stillCurrent()) return;
+                    if (d && d.url) { done(d.url); return; }
+                    tryOtherSources(si + 1);
+                });
+            });
+        }
+        tryOwn(0);
     }
     function setPlayIcon(on) {
         var b = document.getElementById('ltPlayPause'); if (b) b.textContent = on ? '❚❚' : '▶';
@@ -27310,13 +27684,68 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
     // ---------- 搜索 ----------
     var searchState = { keyword: '', results: [], loading: false };
+    // 中/日/英 别名互通：搜任一个名字都能命中同一作品（尤其虚拟歌手、日系/欧美歌手）
+    var NAME_ALIAS = [
+        ['初音未来', '初音ミク', 'Hatsune Miku', 'miku', '初音'],
+        ['镜音铃', '鏡音リン', 'Kagamine Rin'],
+        ['镜音连', '鏡音レン', 'Kagamine Len'],
+        ['巡音流歌', '巡音ルカ', 'Megurine Luka'],
+        ['GUMI', 'グミ', 'Megpoid'],
+        ['洛天依', 'Luo Tianyi'],
+        ['言和', 'Yanhe'],
+        ['米津玄师', '米津玄師', 'Kenshi Yonezu', 'lemon'],
+        ['优里', 'Yuuri', 'ユーリ'],
+        ['宇多田光', '宇多田ヒカル', 'Utada Hikaru'],
+        ['滨崎步', '浜崎あゆみ', 'Ayumi Hamasaki'],
+        ['中岛美嘉', '中島美嘉', 'Mika Nakashima'],
+        ['滨田省吾', '浜田省吾'],
+        ['王菲', 'Faye Wong'],
+        ['邓丽君', 'Teresa Teng'],
+        ['泰勒斯威夫特', 'Taylor Swift', '霉霉'],
+        ['阿黛尔', 'Adele'],
+        ['防弹少年团', 'BTS', '방탄소년단'],
+        ['碧梨', 'Billie Eilish'],
+        ['布鲁诺马尔斯', 'Bruno Mars', '火星哥'],
+        ['坂本龙一', '坂本龍一', 'Ryuichi Sakamoto'],
+        ['久石让', '久石讓', 'Joe Hisaishi']
+    ];
+    function normName(s) { return String(s || '').toLowerCase().replace(/[\s·・\-'’.]/g, ''); }
+    function expandKeywords(kw) {
+        var out = [kw];
+        var nk = normName(kw);
+        if (!nk) return out;
+        NAME_ALIAS.forEach(function (grp) {
+            var hit = grp.some(function (n) {
+                var nn = normName(n);
+                return nn && (nn === nk || nn.indexOf(nk) >= 0 || nk.indexOf(nn) >= 0);
+            });
+            if (hit) grp.forEach(function (n) { if (out.indexOf(n) < 0) out.push(n); });
+        });
+        return out;
+    }
     function doSearch(kw) {
         hideSuggest();
         searchState.keyword = kw; searchState.loading = true; renderHome();
-        // 搜索：歌名/歌手/歌词都能命中（count 拉多一点，让歌词命中的结果也进来）
-        fetchJson(API + '?types=search&source=' + state.source + '&name=' + encodeURIComponent(kw) + '&count=30').then(function (data) {
-            searchState.loading = false; searchState.results = Array.isArray(data) ? data : []; renderHome();
-        });
+        var seq = (searchState._seq = (searchState._seq || 0) + 1);
+        // 搜索：歌名/歌手/歌词都能命中；中/日/英别名互通（如"初音未来"↔"初音ミク"）。
+        // 逐个候选词 × 逐个音源尝试，第一个有结果的就用，尽量搜到作品。
+        var SRC_TRY = [state.source].concat(['netease', 'tencent', 'kuwo', 'kugou'].filter(function (s) { return s !== state.source; }));
+        var WORDS = expandKeywords(kw);
+        var tasks = [];
+        // 先在每个音源里把所有候选词都试一遍，再换下一个音源
+        SRC_TRY.forEach(function (src) { WORDS.forEach(function (w) { tasks.push({ w: w, src: src }); }); });
+        function tryAt(i) {
+            if (seq !== searchState._seq) return; // 已有更新的搜索，放弃旧的
+            if (i >= tasks.length) { searchState.loading = false; searchState.results = []; renderHome(); return; }
+            var t = tasks[i];
+            fetchJson(API + '?types=search&source=' + t.src + '&name=' + encodeURIComponent(t.w) + '&count=30').then(function (data) {
+                if (seq !== searchState._seq) return;
+                var list = Array.isArray(data) ? data : [];
+                if (list.length) { searchState.loading = false; searchState.results = list; renderHome(); return; }
+                tryAt(i + 1); // 这个词在这个音源没结果，换下一个
+            });
+        }
+        tryAt(0);
     }
 
     // ---------- 搜索自动补全 ----------
@@ -27779,15 +28208,14 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         function fireSearch() { var v = (kwEl.value || '').trim(); if (v) doSearch(v); else { searchState.keyword = ''; hideSuggest(); renderHome(); } }
         if (kwEl) {
             kwEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') fireSearch(); });
-            // 输入时实时自动补全（防抖 250ms）
+            // 已按需求关闭“预备选择”自动补全：输入时只清空补全，不再弹列表挡住结果
             kwEl.addEventListener('input', function () {
                 var v = (kwEl.value || '').trim();
                 if (suggestTimer) clearTimeout(suggestTimer);
-                if (!v) { suggestSeq++; hideSuggest(); return; }
-                suggestTimer = setTimeout(function () { fetchSuggest(v); }, 250);
+                suggestSeq++;
+                hideSuggest();
+                if (!v) { searchState.keyword = ''; }
             });
-            // 失焦时延迟收起（留时间让点击生效）
-            kwEl.addEventListener('blur', function () { setTimeout(hideSuggest, 180); });
         }
         var sBtn = document.getElementById('ltSearchBtn');
         if (sBtn) sBtn.addEventListener('click', fireSearch);
@@ -32856,402 +33284,5 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     console.log('[imgFallbackPrompt] booted, drawOn=' + drawOn());
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-})();
-</script>
-
-<!-- ============ 福利额度补偿模块 v2（作者密钥加密 · 设置入口 · 明细） ============ -->
-<style>
-  #welfare-ball{position:fixed;right:0;top:45%;z-index:99990;width:34px;height:46px;
-    background:linear-gradient(135deg,#ffd36b,#ff9f43);color:#7a4a00;border-radius:14px 0 0 14px;
-    display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1.1;
-    box-shadow:-2px 2px 10px rgba(0,0,0,.22);cursor:pointer;text-align:center;opacity:.86;
-    -webkit-user-select:none;user-select:none;transition:opacity .2s,transform .2s;padding:4px 2px;}
-  #welfare-ball.show{display:flex;}
-  #welfare-ball:hover{opacity:1;transform:scale(1.05);}
-  #welfare-ball .wf-badge{position:absolute;top:-6px;left:-6px;min-width:18px;height:18px;padding:0 4px;
-    background:#e5484d;color:#fff;border-radius:9px;font-size:11px;display:flex;align-items:center;
-    justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3);}
-  #welfare-ball .wf-badge.zero{display:none;}
-  #welfare-mask{position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.45);display:none;
-    align-items:center;justify-content:center;padding:18px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
-  #welfare-mask.show{display:flex;}
-  #welfare-panel{width:100%;max-width:360px;max-height:86vh;overflow:auto;background:#fff;color:#1f2937;
-    border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:20px 18px 22px;box-sizing:border-box;}
-  #welfare-panel h3{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:6px;}
-  #welfare-panel .wf-sub{margin:0 0 16px;font-size:12px;color:#8a939c;line-height:1.6;}
-  #welfare-panel .wf-bal{background:linear-gradient(135deg,#fff4dc,#ffe3b3);border-radius:14px;
-    padding:16px;text-align:center;margin-bottom:14px;}
-  #welfare-panel .wf-bal .num{font-size:38px;font-weight:800;color:#e07b00;line-height:1;}
-  #welfare-panel .wf-bal .lbl{font-size:12px;color:#a06a1a;margin-top:6px;}
-  #welfare-panel .wf-stat{display:flex;gap:10px;margin-bottom:14px;}
-  #welfare-panel .wf-stat div{flex:1;background:#f5f6f8;border-radius:10px;padding:10px;text-align:center;}
-  #welfare-panel .wf-stat b{display:block;font-size:20px;color:#334155;}
-  #welfare-panel .wf-stat span{font-size:11px;color:#94a3b8;}
-  #welfare-panel .wf-chan{font-size:12px;border-radius:10px;padding:10px 12px;margin-bottom:14px;text-align:center;}
-  #welfare-panel .wf-chan.ok{background:#ecfdf5;color:#059669;}
-  #welfare-panel .wf-chan.no{background:#fef2f2;color:#dc2626;}
-  #welfare-panel .wf-modelbox{margin-bottom:14px;}
-  #welfare-panel .wf-mlabel{font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;
-    display:flex;align-items:center;justify-content:space-between;}
-  #welfare-panel .wf-mlabel button{font-size:11px;background:#ff9f43;color:#fff;border:none;
-    border-radius:7px;padding:4px 12px;cursor:pointer;}
-  #welfare-panel #wf-modelsel{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #e2e8f0;
-    border-radius:9px;font-size:13px;background:#fafbfc;color:#334155;}
-  #welfare-panel .wf-dettitle{font-size:13px;font-weight:700;color:#334155;margin:4px 0 8px;
-    display:flex;align-items:center;justify-content:space-between;}
-  #welfare-panel .wf-dettitle button{font-size:11px;color:#94a3b8;background:none;border:none;cursor:pointer;text-decoration:underline;}
-  #welfare-panel .wf-list{background:#f8fafc;border-radius:10px;max-height:190px;overflow:auto;padding:4px;}
-  #welfare-panel .wf-item{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;
-    border-bottom:1px solid #eef1f4;font-size:12px;}
-  #welfare-panel .wf-item:last-child{border-bottom:none;}
-  #welfare-panel .wf-item .who{color:#475569;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  #welfare-panel .wf-item .cnt{color:#e07b00;font-weight:700;flex-shrink:0;}
-  #welfare-panel .wf-item .tm{color:#b0bac4;flex-shrink:0;font-size:11px;}
-  #welfare-panel .wf-empty{padding:22px 10px;text-align:center;color:#b0bac4;font-size:12px;}
-  #welfare-panel .wf-btns{display:flex;gap:10px;margin-top:16px;}
-  #welfare-panel .wf-btns button{flex:1;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
-  #welfare-panel .wf-recheck{background:#ff9f43;color:#fff;}
-  #welfare-panel .wf-close{background:#eef0f3;color:#64748b;}
-  #welfare-panel .wf-tip{font-size:11px;color:#94a3b8;line-height:1.6;margin-top:14px;background:#f8fafc;border-radius:9px;padding:10px 12px;}
-</style>
-<div id="welfare-ball" title="福利额度">福利<span class="wf-badge zero" id="wf-badge">0</span></div>
-<div id="welfare-mask">
-  <div id="welfare-panel">
-    <h3>🎁 福利额度</h3>
-    <p class="wf-sub">聊天里一次响应如果顺带发起了多余的后台请求，多扣的每一次都会累计成福利额度。开启「用福利额度响应」后，聊天主回复会改走作者提供的福利通道，把多扣的次数补回来。</p>
-    <div class="wf-bal"><div class="num" id="wf-num">0</div><div class="lbl">可用福利次数</div></div>
-    <div class="wf-stat">
-      <div><b id="wf-total">0</b><span>累计多扣</span></div>
-      <div><b id="wf-used">0</b><span>已用福利</span></div>
-    </div>
-    <div class="wf-chan no" id="wf-chan">福利通道未就绪</div>
-    <div class="wf-modelbox" id="wf-modelbox" style="display:none;">
-      <div class="wf-mlabel">福利模型<button id="wf-fetch" type="button">拉取</button></div>
-      <select id="wf-modelsel"></select>
-    </div>
-    <div class="wf-dettitle"><span>📋 多扣明细</span><button id="wf-clearlog">清空记录</button></div>
-    <div class="wf-list" id="wf-list"><div class="wf-empty">还没有检测到多扣记录</div></div>
-    <div class="wf-btns">
-      <button class="wf-close" id="wf-closebtn">关闭</button>
-      <button class="wf-recheck" id="wf-recheckbtn">刷新检查</button>
-    </div>
-    <div class="wf-tip">福利通道由作者提供，玩家无需配置。福利额度只从启用起记账，此前的扣费无法追溯；论坛、遇见、朋友圈等应用的请求不计入。</div>
-  </div>
-</div>
-<script>
-(function(){
-  'use strict';
-  if(window.__welfareInited) return; window.__welfareInited = true;
-  /* =====================================================================
-     【作者配置区】福利通道 —— 直接填明文即可
-     ---------------------------------------------------------------------
-     1) 地址 + 密钥：填你的福利 API。
-     2) 有效期：WELFARE_DATE 填那一天的日期 YYYY-MM-DD，WELFARE_START/END 填
-        当天的几点到几点可用（24小时制，不带冒号的整点小时数）。
-         例如 '2026-08-01' + 8 + 23 表示 2026年8月1日 8:00~23:00 可用。
-     3) 福利模型：玩家只看到「福利一/二/三...」，实际用右边填的真实模型名。
-     ===================================================================== */
-  // 地址和密钥已加密（防止上传 git 后被爬虫/他人直接读到明文）。
-  // 要换成新的福利 API 时，别直接改这两行；用文件里说明的方式重新生成密文再替换。
-  var WF_SALT       = 'ekanw-welfare-2026-xsj';
-  var WELFARE_URL_E = 'DR8VHgQXWEoNFghcAEZTXkUYThceRRNa';                                   // 密文：接口地址
-  var WELFARE_KEY_E = 'FgBMKzNEQR0fDgMrKXVBVn8Fah45Lj0NLD86aRMqDyEzBwZHWAh/exgqC1MnBAZeHW9O'; // 密文：密钥
-  function __wfXor(s,k){ var o=''; for(var i=0;i<s.length;i++){ o+=String.fromCharCode(s.charCodeAt(i)^k.charCodeAt(i%k.length)); } return o; }
-  function __wfB64d(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return ''; } }
-  function __wfDec(e){ return e ? __wfXor(__wfB64d(e), WF_SALT) : ''; }
-  var WELFARE_URL   = __wfDec(WELFARE_URL_E);  // 运行时解密出的接口地址
-  var WELFARE_KEY   = __wfDec(WELFARE_KEY_E);  // 运行时解密出的密钥
-  var WELFARE_DATE  = '2026-08-01'; // ← 有效日期（YYYY-MM-DD）
-  var WELFARE_START = 8;            // ← 当天几点开始可用（0~23），8 = 早上 8 点
-  var WELFARE_END   = 23;           // ← 当天几点结束可用（0~23），23 = 晚上 11 点
-
-  // 福利模型：左边玩家看到的名字（福利一/二/三...），右边填真实模型名
-  // 有几个模型就写几行，不需要的可以删掉或留空 real
-  var WELFARE_MODELS = [
-    { label: '福利一', real: '【Y】gemini-3-flash-preview' },
-    { label: '福利二', real: '云雾-gemini-2.5-pro' },
-    { label: '福利三', real: '云雾-gemini-3-pro-preview' },
-    { label: '福利四', real: '云雾-gemini-3-pro-preview-thinking' }
-  ];
-
-  // 有效档位（填了真实模型的才算）
-  function welfareModelList(){ return WELFARE_MODELS.filter(function(m){ return m.real && m.real.trim(); }); }
-  // 按玩家看到的 label 找到真实模型
-  function realModelOf(label){
-    var hit = WELFARE_MODELS.filter(function(m){ return m.label === label && m.real && m.real.trim(); })[0];
-    return hit ? hit.real.trim() : '';
-  }
-  window.__wfModelList = welfareModelList;
-  window.__wfRealModel = realModelOf;
-
-  // 时间窗判断：当前是否在指定日期的指定时段内
-  function inTimeWindow(){
-    var now = new Date();
-    var targetDay = new Date(String(WELFARE_DATE).replace(/-/g,'/'));
-    var nowDay = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-    var tarDay = targetDay.toLocaleDateString('en-CA');
-    if(nowDay !== tarDay) return false; // 不是那一天
-    var h = now.getHours();
-    if(WELFARE_START === WELFARE_END) return true;
-    if(WELFARE_START < WELFARE_END) return h >= WELFARE_START && h < WELFARE_END;
-    return h >= WELFARE_START || h < WELFARE_END;
-  }
-  window.__wfInWindow = inTimeWindow;
-  window.__wfWindowText = function(){
-    var p = function(n){ return (n<10?'0':'')+n+':00'; };
-    return WELFARE_DATE + ' ' + p(WELFARE_START) + ' ~ ' + p(WELFARE_END);
-  };
-
-  // 组装通道：地址+密钥齐全，且有可用模型，才算"已配置"（是否当前可用另看时间窗）
-  var CHANNEL = (WELFARE_URL && WELFARE_KEY && welfareModelList().length)
-    ? { u: WELFARE_URL, k: WELFARE_KEY }
-    : null;
-
-  // —— 状态存储 ——
-  var LS = 'welfarePlan_v2';
-  function load(){
-    try{ var o=JSON.parse(localStorage.getItem(LS)||'{}');
-      return { balance:o.balance||0, total:o.total||0, used:o.used||0,
-        enable:!!o.enable, showBall:!!o.showBall, model:o.model||'', log: Array.isArray(o.log)?o.log:[] }; }
-    catch(e){ return {balance:0,total:0,used:0,enable:false,showBall:false,model:'',log:[]}; }
-  }
-  function save(s){ try{ localStorage.setItem(LS, JSON.stringify(s)); }catch(e){} }
-  var state = load();
-  window.__wfState = function(){ return state; };
-  window.__wfSave = function(){ save(state); };
-  window.__wfChannel = function(){ return CHANNEL; };
-
-  function $(id){ return document.getElementById(id); }
-
-  function badge(){
-    var b=$('wf-badge'); if(!b) return;
-    b.textContent = state.balance>99?'99+':String(state.balance);
-    b.classList.toggle('zero', state.balance<=0);
-  }
-  window.__wfBadge = badge;
-
-  // 当前聊天对象名（用于明细“谁那轮多扣的”）
-  function currentPeerName(){
-    try{
-      var S = window.state || (window.__getState && window.__getState());
-      if(!S || !S.currentChatId) return '聊天';
-      var chat = (window.getChat && window.getChat(S.currentChatId));
-      if(!chat) return '聊天';
-      if(chat.type==='group') return chat.name || '群聊';
-      var c = window.getChar && window.getChar(chat.charId);
-      return (c && c.name) || '聊天';
-    }catch(e){ return '聊天'; }
-  }
-  window.__wfPeer = currentPeerName;
-
-  // 累计一次多扣，并记明细（按“同一轮 + 同一对象”合并）
-  window.__welfareAdd = function(){
-    state.balance++; state.total++;
-    var now = Date.now(), who = currentPeerName();
-    var last = state.log[0];
-    // 3 秒内且同一对象，视为同一轮响应，合并计数
-    if(last && (now - last.ts) < 6000 && last.who === who){
-      last.count++; last.ts = now;
-    } else {
-      state.log.unshift({ ts:now, who:who, count:1 });
-      if(state.log.length > 100) state.log.length = 100;
-    }
-    save(state);
-    if($('wf-num')) $('wf-num').textContent=state.balance;
-    if($('wf-total')) $('wf-total').textContent=state.total;
-    badge();
-  };
-  // 消耗一次福利
-  window.__welfareUse = function(){
-    if(state.balance<=0) return false;
-    state.balance--; state.used++; save(state);
-    if($('wf-num')) $('wf-num').textContent=state.balance;
-    if($('wf-used')) $('wf-used').textContent=state.used;
-    badge(); return true;
-  };
-})();
-</script>
-<script>
-(function(){
-  'use strict';
-  if(window.__welfareFetchPatched) return; window.__welfareFetchPatched = true;
-
-  function inChatWindow(){
-    var t = document.getElementById('typingIndicator');
-    if(!t) return false;
-    var disp = (t.style && t.style.display) || getComputedStyle(t).display;
-    return disp && disp !== 'none';
-  }
-  var CHAT_URL_RE = /\/chat\/completions\b/;
-  var MAIN_MIN = 1000; // 主回复 max_tokens=3000；辅助请求<=200
-  var origFetch = window.fetch.bind(window);
-
-  window.fetch = function(input, init){
-    try{
-      var url = (typeof input === 'string') ? input : (input && input.url) || '';
-      if(CHAT_URL_RE.test(url) && inChatWindow()){
-        var bodyStr = '';
-        if(init && typeof init.body === 'string') bodyStr = init.body;
-        var maxTokens = null;
-        try{ maxTokens = JSON.parse(bodyStr||'{}').max_tokens; }catch(e){}
-        var isMain = (maxTokens != null) && (maxTokens >= MAIN_MIN);
-
-        if(isMain){
-          var s = window.__wfState && window.__wfState();
-          var ch = window.__wfChannel && window.__wfChannel();
-          var inWin = window.__wfInWindow ? window.__wfInWindow() : true;
-          if(s && s.enable && s.balance>0 && ch && ch.u && ch.k && inWin){
-            try{
-              // 确定用哪个真实模型：玩家选的档位 label -> 真实模型；没选就用第一个可用档位
-              var realModel = window.__wfRealModel && window.__wfRealModel(s.model);
-              if(!realModel){
-                var list = window.__wfModelList && window.__wfModelList();
-                if(list && list.length) realModel = list[0].real.trim();
-              }
-              if(realModel){
-                var base = String(ch.u).trim().replace(/\/+$/,'');
-                var newUrl = base + '/chat/completions';
-                var h = Object.assign({}, (init && init.headers) || {});
-                h['Authorization'] = 'Bearer ' + ch.k;
-                h['Content-Type'] = 'application/json';
-                var newInit = Object.assign({}, init, { headers: h });
-                try{ var pb=JSON.parse(bodyStr||'{}'); pb.model=realModel; newInit.body=JSON.stringify(pb); }catch(e){}
-                if(window.__welfareUse && window.__welfareUse()){
-                  return origFetch(newUrl, newInit);
-                }
-              }
-            }catch(e){}
-          }
-          // 未走福利（未开启/无余额/不在时段/无可用模型）：主回复照常，不计费
-        } else {
-          // 辅助请求 = 多扣，累计福利
-          if(window.__welfareAdd){ try{ window.__welfareAdd(); }catch(e){} }
-        }
-      }
-    }catch(e){}
-    return origFetch(input, init);
-  };
-})();
-
-// —— UI 绑定 ——
-(function(){
-  'use strict';
-  function $(id){ return document.getElementById(id); }
-
-  function fmtTime(ts){
-    try{ var d=new Date(ts), p=function(n){return n<10?'0'+n:n;};
-      return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; }
-  }
-  function renderList(){
-    var s = window.__wfState && window.__wfState(); if(!s) return;
-    var box=$('wf-list'); if(!box) return;
-    if(!s.log.length){ box.innerHTML='<div class="wf-empty">还没有检测到多扣记录</div>'; return; }
-    box.innerHTML = s.log.map(function(it){
-      return '<div class="wf-item"><span class="who">'+ (it.who||'聊天') +'</span>'+
-             '<span class="cnt">+'+ it.count +'</span>'+
-             '<span class="tm">'+ fmtTime(it.ts) +'</span></div>';
-    }).join('');
-  }
-  function renderModels(){
-    var box=$('wf-modelbox'), sel=$('wf-modelsel');
-    if(!box||!sel) return;
-    var list = (window.__wfModelList && window.__wfModelList()) || [];
-    if(!list.length){ box.style.display='none'; return; }
-    box.style.display='';
-    var s = window.__wfState && window.__wfState();
-    var cur = (s && s.model) || (list[0] && list[0].label) || '';
-    sel.innerHTML = list.map(function(m){
-      return '<option value="'+ m.label +'"'+ (m.label===cur?' selected':'') +'>'+ m.label +'</option>';
-    }).join('');
-  }
-  function renderChannel(){
-    var ch = window.__wfChannel && window.__wfChannel();
-    var el=$('wf-chan'); if(!el) return;
-    var inWin = window.__wfInWindow ? window.__wfInWindow() : true;
-    var winTxt = (window.__wfWindowText && window.__wfWindowText()) || '';
-    if(ch && ch.u && ch.k){
-      if(inWin){
-        el.className='wf-chan ok';
-        el.textContent = '✓ 福利通道可用（8.1 ' + winTxt + '）';
-      } else {
-        el.className='wf-chan no';
-        el.textContent = '当前不在福利时段，8.1 ' + winTxt + ' 才能用';
-      }
-    } else {
-      el.className='wf-chan no';
-      el.textContent = '福利通道未就绪（作者尚未配置）';
-    }
-    renderModels();
-  }
-  function paint(){
-    var s = window.__wfState && window.__wfState(); if(!s) return;
-    if($('wf-num')) $('wf-num').textContent=s.balance;
-    if($('wf-total')) $('wf-total').textContent=s.total;
-    if($('wf-used')) $('wf-used').textContent=s.used;
-    renderChannel(); renderList();
-    if(window.__wfBadge) window.__wfBadge();
-  }
-  window.__wfPaint = paint;
-
-  function applyBallVisibility(){
-    var s = window.__wfState && window.__wfState();
-    var ball=$('welfare-ball'); if(!ball||!s) return;
-    ball.classList.toggle('show', !!s.showBall);
-  }
-  window.__wfApplyBall = applyBallVisibility;
-
-  function bind(){
-    var mask=$('welfare-mask'), ball=$('welfare-ball');
-    function open(){ paint(); if(mask) mask.classList.add('show'); }
-    function close(){ if(mask) mask.classList.remove('show'); }
-
-    if(ball) ball.addEventListener('click', open);
-    if(mask) mask.addEventListener('click', function(e){ if(e.target===mask) close(); });
-    if($('wf-closebtn')) $('wf-closebtn').addEventListener('click', close);
-    if($('wf-recheckbtn')) $('wf-recheckbtn').addEventListener('click', function(){
-      paint();
-      // 明确的点击反馈：按钮文字短暂变化 + 通道状态条闪一下
-      var btn=$('wf-recheckbtn');
-      if(btn){ var old=btn.textContent; btn.disabled=true; btn.textContent='已刷新 ✓';
-        setTimeout(function(){ btn.textContent=old; btn.disabled=false; }, 1200); }
-      var chan=$('wf-chan');
-      if(chan){ chan.style.transition='none'; chan.style.transform='scale(1.04)';
-        setTimeout(function(){ chan.style.transition='transform .25s'; chan.style.transform='scale(1)'; }, 60); }
-    });
-    if($('wf-clearlog')) $('wf-clearlog').addEventListener('click', function(){
-      var s=window.__wfState&&window.__wfState(); if(!s) return;
-      s.log=[]; window.__wfSave&&window.__wfSave(); renderList();
-    });
-
-    // 福利模型：拉取（显示福利一/二/三）+ 选择保存
-    if($('wf-fetch')) $('wf-fetch').addEventListener('click', function(){
-      renderModels();
-      var btn=$('wf-fetch'); if(btn){ var old=btn.textContent; btn.textContent='已拉取'; setTimeout(function(){ btn.textContent=old; },1200); }
-    });
-    if($('wf-modelsel')) $('wf-modelsel').addEventListener('change', function(){
-      var s=window.__wfState&&window.__wfState(); if(!s) return;
-      s.model=$('wf-modelsel').value; window.__wfSave&&window.__wfSave();
-    });
-
-    // 设置页入口
-    if($('wfOpenPanel')) $('wfOpenPanel').addEventListener('click', open);
-    var showBall=$('wfShowBall'), enable=$('wfEnable');
-    var s0 = window.__wfState && window.__wfState();
-    if(showBall && s0) showBall.checked = s0.showBall;
-    if(enable && s0) enable.checked = s0.enable;
-    if(showBall) showBall.addEventListener('change', function(){
-      var s=window.__wfState&&window.__wfState(); if(!s) return;
-      s.showBall=showBall.checked; window.__wfSave&&window.__wfSave(); applyBallVisibility();
-    });
-    if(enable) enable.addEventListener('change', function(){
-      var s=window.__wfState&&window.__wfState(); if(!s) return;
-      s.enable=enable.checked; window.__wfSave&&window.__wfSave();
-    });
-
-    applyBallVisibility();
-    if(window.__wfBadge) window.__wfBadge();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
 })();
 </script>
