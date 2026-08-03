@@ -2469,7 +2469,7 @@ if (typeof Dexie === 'undefined') {
 
             <!-- 世界书编辑器 -->
             <div id="wb-editor-page" class="page">
-                <div class="app-header"><span class="back" id="wbEditorBack">‹</span><span class="title" id="wbEditorTitle">编辑世界书</span><button class="action-text" id="wbEditorSave">保存</button></div>
+                <div class="app-header"><span class="back" id="wbEditorBack">‹</span><span class="title" id="wbEditorTitle">编辑世界书</span><button class="action-text" id="wbExportBtn" style="margin-right:8px;">导出</button><button class="action-text" id="wbEditorSave">保存</button></div>
                 <div class="scroll-content">
                     <input type="hidden" id="editWbId">
                     <div class="setting-row"><label>名称</label><input type="text" id="editWbName" placeholder="世界书名称"></div>
@@ -4798,10 +4798,23 @@ ${isOffline
                 const isSelf = m.sender === 'ai' && m.charId === forChar.id;
                 const role = (m.sender === 'user') ? 'user' : (isSelf ? 'assistant' : 'user');
                 const speakerName = m.sender === 'user' ? (getUser(chat.userId)?.name || '我') : (getChar(m.charId || chat.charId)?.name || '对方');
+                // 系统提示（领取红包/收款/退回/代付完成等）：不是任何人说的话，作为中立旁白喂给模型，避免被当成玩家发言
+                if (m.type === 'systip' || m.sender === 'system') {
+                    const stTime = withTime ? historyTimeLabel(m.timestamp, tz) : '';
+                    const stPrefix = stTime ? `[${stTime}] ` : '';
+                    return { role: 'user', content: `${stPrefix}【系统自动提示（微信系统消息，不是任何人发的聊天内容，请据此了解发生了什么，但不要把它当成对方对你说的话来回应）】：${m.content || ''}` };
+                }
                 let textContent = '';
                 if (m.type === 'text') textContent = m.content || '';
                 else if (m.type === 'sticker') { const st = getSticker(m.stickerId); const sname = st?.name || '表情'; textContent = isSelf ? `[表情:${sname}]` : `[对方给你发了一张表情包，这张表情表达的情绪/含义是「${sname}」。请把它当成对方真的发来的一个表情，读懂这个情绪并自然地回应，而不是无视它]`; }
                 else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
+                else if (m.type === 'redpacket') {
+                    const rpAmt = m.rpTotal ? ` ¥${m.rpTotal}` : '';
+                    const rpNote = m.rpNote ? `，祝福语「${m.rpNote}」` : '';
+                    textContent = isSelf
+                        ? `[你给对方发了一个微信红包${rpAmt}${rpNote}]`
+                        : `[对方给你发了一个微信红包${rpAmt}${rpNote}，这是真的红包。你可以像收到红包一样自然回应，比如道个谢、逗两句，别把它当成假的]`;
+                }
                 else if (m.type === 'daifu') textContent = `[代付 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'forward') { const src = m.forwardSource || []; textContent = `[转发的聊天记录] ${src.map(s => `${s.senderName}: ${s.content}`).join(' | ')}`; }
                 else if (m.type === 'share_music') {
@@ -4900,10 +4913,21 @@ ${isOffline
             return msgs.map(m => {
                 const isUser = m.sender === 'user';
                 const speakerName = isUser ? userName : (getChar(m.charId || chat.charId)?.name || '某人');
+                // 系统提示（领取红包/收款/退回/群收款等）：微信系统消息，不是群里任何人说的话
+                if (m.type === 'systip' || m.sender === 'system') {
+                    const stTag = historyTimeLabel(m.timestamp, null);
+                    const stPre = stTag ? `[${stTag}] ` : '';
+                    return { role: 'user', content: `${stPre}【系统自动提示（微信系统消息，不是群里任何人发的聊天内容，据此了解发生了什么即可，别当成谁对你说的话来回应）】：${m.content || ''}` };
+                }
                 let textContent = '';
                 if (m.type === 'text') textContent = m.content || '';
                 else if (m.type === 'sticker') { const st = getSticker(m.stickerId); textContent = `[表情:${st?.name || '表情'}]`; }
                 else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
+                else if (m.type === 'redpacket') {
+                    const rpAmt = m.rpTotal ? ` ¥${m.rpTotal}` : '';
+                    const rpNote = m.rpNote ? `，祝福语「${m.rpNote}」` : '';
+                    textContent = `[发了一个微信红包${rpAmt}${rpNote}，这是真的红包，群里其他人可以自然回应或去抢]`;
+                }
                 else if (m.type === 'daifu') textContent = `[代付 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'forward') { const src = m.forwardSource || []; textContent = `[转发的聊天记录] ${src.map(s => `${s.senderName}: ${s.content}`).join(' | ')}`; }
                 else if (m.type === 'share_music') {
@@ -6566,9 +6590,10 @@ ${groupTimeInfo}
             state.wbFolders.forEach(folder => {
                 const items = state.worldBooks.filter(w => w.folderId === folder.id);
                 const sec = document.createElement('div');
-                sec.className = 'wb-folder';
+                sec.className = 'wb-folder collapsed';
                 sec.innerHTML = `
                     <div class="wb-folder-head">
+                        <span class="wb-folder-caret">▶</span>
                         <span class="icon-sm" data-icon="book"></span>
                         <span class="wb-folder-name">${escapeHtml(folder.name)}</span>
                         <span class="wb-folder-count">${items.length}</span>
@@ -6619,10 +6644,15 @@ ${groupTimeInfo}
             if (!folder) return;
             const body = `
                 <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;" id="folderExport">导出整个文件夹</div>
                     <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;" id="folderRename">重命名</div>
                     <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.3);cursor:pointer;text-align:center;color:#ff6b6b;" id="folderDelete">删除文件夹(条目会移到未分类)</div>
                 </div>`;
             showModal(folder.name, body, '取消', null, true);
+            document.querySelector('#folderExport')?.addEventListener('click', () => {
+                closeModal();
+                exportWbFolder(folderId);
+            });
             document.querySelector('#folderRename')?.addEventListener('click', () => {
                 closeModal();
                 const nameBody = `<input type="text" id="folderRenameInput" value="${escapeHtml(folder.name)}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font);">`;
@@ -7142,6 +7172,48 @@ ${groupTimeInfo}
             sel.value = selectedId || '';
         }
 
+        // ---------- 世界书导出（单条 / 整个文件夹） ----------
+        function downloadWbJson(payload, filename) {
+            try {
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+            } catch (e) { showModal('错误', '导出失败：' + (e.message || e), '好的'); }
+        }
+        function safeFileName(name) {
+            return (name || '世界书').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
+        }
+        // 导出单个世界书条目：格式与导入解析兼容（worldBooks 数组）
+        function exportWbEntry(wbId) {
+            const wb = getWb(wbId);
+            if (!wb) { showModal('提示', '找不到这个世界书', '好的'); return; }
+            const payload = {
+                type: 'yzj-worldbook', version: 1, exportedAt: new Date().toISOString(),
+                worldBooks: [{ name: wb.name || '世界书', content: wb.content || '', scope: wb.scope || 'local' }]
+            };
+            downloadWbJson(payload, '世界书_' + safeFileName(wb.name) + '_' + Date.now() + '.json');
+        }
+        // 导出整个文件夹：把文件夹里所有条目打包成一个文件
+        function exportWbFolder(folderId) {
+            const folder = getWbFolder(folderId);
+            if (!folder) { showModal('提示', '找不到这个文件夹', '好的'); return; }
+            const items = state.worldBooks.filter(w => w.folderId === folderId);
+            if (!items.length) { showModal('提示', '这个文件夹里还没有世界书', '好的'); return; }
+            const payload = {
+                type: 'yzj-worldbook', version: 1, exportedAt: new Date().toISOString(),
+                folderName: folder.name || '文件夹',
+                worldBooks: items.map(w => ({ name: w.name || '世界书', content: w.content || '', scope: w.scope || 'local' }))
+            };
+            downloadWbJson(payload, '世界书文件夹_' + safeFileName(folder.name) + '_' + Date.now() + '.json');
+            showModal('导出完成', '已导出文件夹「' + escapeHtml(folder.name) + '」里的 ' + items.length + ' 本世界书 📦', '好的');
+        }
+
         function openWbEditor(wbId) {
             state.editingWbId = wbId;
             const wb = getWb(wbId);
@@ -7155,6 +7227,12 @@ ${groupTimeInfo}
             $('deleteWbBtn').style.display = wb.isDefault ? 'none' : 'block';
             showPage('wbEditor');
         }
+
+        $('wbExportBtn')?.addEventListener('click', () => {
+            const id = $('editWbId').value;
+            if (!id) { showModal('提示', '请先保存这个世界书，再导出', '好的'); return; }
+            exportWbEntry(id);
+        });
 
         $('wbEditorSave').addEventListener('click', async () => {
             const id = $('editWbId').value;
@@ -8464,10 +8542,12 @@ ${groupTimeInfo}
         else if (m.type === 'image') body = m.content ? ('[\u56fe\u7247:' + m.content + ']') : '[\u56fe\u7247]';
         else if (m.type === 'voice') body = m.content ? ('[\u8bed\u97f3]' + m.content) : '[\u8bed\u97f3]';
         else if (m.type === 'transfer') body = '[\u8f6c\u8d26 \u00a5' + (m.amount || '') + ' ' + (m.note || '') + ']';
+        else if (m.type === 'redpacket') body = '[\u7ea2\u5305 \u00a5' + (m.rpTotal || '') + (m.rpNote ? ' ' + m.rpNote : '') + ']';
         else if (m.type === 'daifu') body = '[\u4ee3\u4ed8 \u00a5' + (m.amount || '') + ' ' + (m.note || '') + ']';
         else if (m.type === 'forward') body = '[\u8f6c\u53d1\u7684\u804a\u5929\u8bb0\u5f55]';
         else if (m.type === 'share_music') body = '[\u5206\u4eab\u97f3\u4e50]' + (m.shareTitle || '');
         else if (m.type === 'share_article') body = '[\u5206\u4eab\u6587\u7ae0]' + (m.shareTitle || '');
+        else if (m.type === 'systip' || m.sender === 'system') return '[\u7cfb\u7edf\u63d0\u793a] ' + (m.content || '');
         else body = m.content || '';
         if (!body) return '';
         return who + '\uff1a' + body;
