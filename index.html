@@ -4749,7 +4749,7 @@ ${isGroup ? '- 这是群聊：只有和你相关、被提到、或你确实有�
 
 ## 你可以使用的动作标签(按需使用，不用每次都用，标签之外的普通文字才是你要发的消息)
 - 发照片/自拍/画面: [图片: 详细描述(场景/光线/构图/情绪/风格)]
-- 发表情: [表情: 表情名]
+- 发表情: [表情: 表情名]${(state.stickers && state.stickers.length) ? `\n  ⚠️你的表情库里只有下面这些表情，发表情时【表情名必须一字不差地从这份清单里选】，绝对不能自己编名字、也不能凭空描述一个表情：\n  ${state.stickers.map(s => s.name).filter(Boolean).join(' / ')}\n  如果这些表情没有一个合适的，就【不要发表情】，用文字或别的方式表达。` : '\n  （你现在没有任何表情可用，不要发 [表情:...] 标签）'}
 - 转账: [转账: 金额 备注] / 接收对方转账: [接收转账: 金额] / 退回对方转账: [退回转账: 金额]
                 - 邀请对方和你一起听歌(想拉近距离、一起听同一首歌时): [一起听: 歌名 歌手]，例如 [一起听: 告白气球 周杰伦]，对方会收到邀请卡，点"一起听"就和你同步播放
                 - 代付: [代付: 金额 备注]
@@ -5044,7 +5044,7 @@ ${groupTimeInfo}
 
 ## 每个角色可用的动作标签（写在该角色那一行的内容里，按需使用）
 - 发照片: [图片: 详细描述]
-- 发表情: [表情: 表情名]
+- 发表情: [表情: 表情名]${(state.stickers && state.stickers.length) ? `\n  ⚠️表情名【必须一字不差地从下面这份清单里选】，不能自己编、不能凭空描述表情，没有合适的就别发表情：\n  ${state.stickers.map(s => s.name).filter(Boolean).join(' / ')}` : '\n  （当前没有可用表情，不要发 [表情:...] 标签）'}
 - 给群里某个人单独转账: [群转账: 对方名字 金额 备注]，例如 [群转账: 小明 5.2 还你的]
 - 发红包: [红包: 金额 祝福语]，例如 [红包: 8.88 恭喜发财]（群里其他人会自动抢）
 - 分享音乐: [分享音乐: 歌名 歌手]
@@ -5400,8 +5400,19 @@ ${groupTimeInfo}
 
             if (stickerMatch) {
                 const name = stickerMatch[1].trim();
-                const st = state.stickers.find(s => s.name === name);
-                return st ? { ...base, type: 'sticker', content: '', stickerId: st.id } : { ...base, type: 'text', content: name };
+                const list = state.stickers || [];
+                // 1) 精确匹配
+                let st = list.find(s => s.name === name);
+                // 2) 去空格/标点后再比一次
+                if (!st) {
+                    const norm = (x) => (x || '').replace(/\s+/g, '').replace(/[。，、！？!?.~…"'“”]/g, '').toLowerCase();
+                    const nn = norm(name);
+                    if (nn) st = list.find(s => norm(s.name) === nn);
+                    // 3) 互相包含（编的名字里含表情名，或表情名含编的名字）
+                    if (!st && nn) st = list.find(s => { const sn = norm(s.name); return sn && (sn.indexOf(nn) >= 0 || nn.indexOf(sn) >= 0); });
+                }
+                // 匹配到就发真表情；匹配不上就丢弃这条，绝不把编造的描述当文字消息发出去
+                return st ? { ...base, type: 'sticker', content: '', stickerId: st.id } : null;
             }
             if (transferMatch) {
                 const amount = parseFloat(transferMatch[1]);
@@ -16242,6 +16253,115 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
   boot();
 })();
 </script>
+<!-- ============ 小手机 v6-画风开关：偏动漫 / 偏真人（最终拦截层，覆盖所有生图路径） ============ -->
+<script id="phoneRealismJs">
+(function(){
+  if(window.__realismPatched)return;
+  window.__realismPatched=true;
+  var LS_KEY='phone_draw_realism';
+  function mode(){ try{return localStorage.getItem(LS_KEY)||'anime';}catch(e){return 'anime';} }
+  function setMode(m){ try{localStorage.setItem(LS_KEY,m);}catch(e){} }
+
+  // 把动漫/插画画风词剔除，改写成真人写实向提示词
+  function realifyPrompt(p){
+    if(!p||typeof p!=='string')return p;
+    var s=p;
+    // —— 剔除中文动漫画风描述 ——
+    s=s.replace(/2\.5D\s*半写实插画(渲染)?/gi,'');
+    s=s.replace(/2\.5D\s*半写实插画/gi,'');
+    s=s.replace(/2\.5D[^，,。；;]*/gi,'');
+    s=s.replace(/介于二次元与三维之间[^，,。；;]*/g,'');
+    s=s.replace(/柔和通透的?色彩与光影/g,'');
+    s=s.replace(/精致(细腻的)?动漫质感/g,'');
+    s=s.replace(/干净的?厚涂笔触/g,'');
+    s=s.replace(/厚涂渲染/g,'');
+    s=s.replace(/半写实插画[^，,。；;]*/g,'');
+    s=s.replace(/严禁真人照片质感[^，,。；;]*/g,'');
+    s=s.replace(/严禁写实摄影/g,'');
+    s=s.replace(/避免真人写实照片感/g,'');
+    s=s.replace(/非真人写实/g,'');
+    s=s.replace(/BJD质感/g,'').replace(/CG质感/g,'').replace(/韩式半厚涂/g,'');
+    // —— 剔除英文动漫画风描述 ——
+    s=s.replace(/no photorealistic/gi,'');
+    s=s.replace(/not a real photo/gi,'');
+    s=s.replace(/anime\s*2\.5d\s*illustration(\s*style)?/gi,'');
+    s=s.replace(/2\.5d\s*illustration(\s*style)?/gi,'');
+    // 清理多余标点空白
+    s=s.replace(/[，,、；;]{2,}/g,'，').replace(/^[，,、；;\s]+|[，,、；;\s]+$/g,'');
+    // —— 追加真人写实指令 ——
+    s+='，真实人像摄影风格，photorealistic, realistic portrait photo, RAW photo, natural skin texture, detailed face, cinematic lighting, 85mm, ultra detailed, 8k；容貌年轻、五官精致俊美有高级感、颜值出众，请根据该角色的姓名、人设与外貌设定自动匹配最合适的真实面孔（如东亚 / 东南亚 / 欧美 等族裔），肤色自然真实、不刻意追求白皙';
+    return s;
+  }
+  // 真人模式下改写负面词：去掉否定真人的词，加入否定动漫的词
+  function realifyNeg(n){
+    n=(n&&typeof n==='string')?n:'';
+    n=n.replace(/real photo,?\s*/gi,'').replace(/photorealistic,?\s*/gi,'');
+    n=n.replace(/,\s*,/g,',').replace(/^,\s*|,\s*$/g,'');
+    var add='anime, cartoon, 2.5d, illustration, cgi, 3d render, drawing, painting, sketch, doll, plastic skin, cel shading';
+    return n?(n+', '+add):add;
+  }
+
+  // ---- fetch 拦截：请求发出前改写 body ----
+  var of=window.fetch;
+  window.fetch=function(input,init){
+    try{
+      if(mode()==='real' && init && init.body && typeof init.body==='string'){
+        var url=(typeof input==='string')?input:(input&&input.url)||'';
+        if(/\/images\/generations/i.test(url)){
+          var b=JSON.parse(init.body);
+          if(b && typeof b.prompt==='string'){
+            b.prompt=realifyPrompt(b.prompt);
+            b.negative_prompt=realifyNeg(b.negative_prompt);
+            init=Object.assign({},init,{body:JSON.stringify(b)});
+          }
+        } else if(/\/chat\/completions/i.test(url) && /2\.5d|半写实插画|动漫质感|no photorealistic|anime 2\.5d/i.test(init.body)){
+          // 兼容“用对话接口画图”的中转：只有消息内容确含画风词时才改，避免误伤普通聊天
+          var cb=JSON.parse(init.body);
+          if(cb && Array.isArray(cb.messages)){
+            cb.messages.forEach(function(m){
+              if(m && typeof m.content==='string' && /2\.5d|半写实插画|动漫质感|no photorealistic|anime 2\.5d/i.test(m.content)){
+                m.content=realifyPrompt(m.content);
+              }
+            });
+            init=Object.assign({},init,{body:JSON.stringify(cb)});
+          }
+        }
+      }
+    }catch(e){}
+    return of.call(this,input,init);
+  };
+
+  // ---- 在画图 API 设置区注入「画风：动漫/真人」开关 ----
+  function label(){return '画风：'+(mode()==='real'?'偏真人 📷':'偏动漫 🎨');}
+  function injectToggle(){
+    var saveBtn=document.getElementById('drawApiSaveBtn');
+    if(!saveBtn||document.getElementById('drawRealismBtn'))return;
+    var btn=document.createElement('button');
+    btn.className='btn-secondary';btn.id='drawRealismBtn';btn.style.width='100%';btn.style.marginTop='6px';
+    btn.textContent=label();
+    saveBtn.parentNode.insertBefore(btn,saveBtn);
+    btn.addEventListener('click',function(){
+      var body='<div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:12px;">选择角色照片、自拍的整体画风。偏真人会生成写实人像照片，容貌年轻俊美，并根据角色的人设与外貌设定自动匹配合适的面孔与族裔。</div>'+
+        '<div style="display:flex;flex-direction:column;gap:12px;">'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;"><input type="radio" name="realismSel" value="anime" '+(mode()!=='real'?'checked':'')+'> 🎨 偏动漫（2.5D 插画质感，默认）</label>'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;"><input type="radio" name="realismSel" value="real" '+(mode()==='real'?'checked':'')+'> 📷 偏真人（写实人像照片，年轻美型）</label>'+
+        '</div>';
+      window.showModal('绘图画风',body,'保存',function(){
+        var sel=document.querySelector('input[name="realismSel"]:checked');
+        setMode(sel?sel.value:'anime');
+        btn.textContent=label();
+        window.showModal('已保存','之后角色绘图将使用「'+(mode()==='real'?'偏真人':'偏动漫')+'」风格。','好的');
+      },true);
+    });
+  }
+  function boot(){
+    if(!document.getElementById('drawApiSaveBtn')){setTimeout(boot,600);return;}
+    injectToggle();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+
 <!-- ============ 小手机 v5-57：超强内置绘图提示词（剧情推理增强 + 负面词） ============ -->
 <script id="phoneV57Js">
 (function(){
