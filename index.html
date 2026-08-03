@@ -171,11 +171,11 @@ if (typeof Dexie === 'undefined') {
       IDBColl.prototype.modify = function(fn){ var p=this.pred, t=this.table; return t.toArray().then(function(a){ var hit=a.filter(p); hit.forEach(fn); return Promise.all(hit.map(function(x){ return t.put(x); })); }); };
       function IDBTable(shim, store){ this.shim=shim; this.store=store; this.pk='id'; }
       IDBTable.prototype._os = function(mode){ return this.shim._db.transaction(this.store, mode).objectStore(this.store); };
-      IDBTable.prototype.toArray = function(){ var s=this; return new Promise(function(res,rej){ var out=[]; var req; try{ req=s._os('readonly').openCursor(); }catch(e){ return res([]); } req.onsuccess=function(){ var c=req.result; if(c){ out.push(c.value); c.continue(); } else res(out); }; req.onerror=function(){ rej(req.error); }; }); };
-      IDBTable.prototype.get = function(k){ try{ return reqP(this._os('readonly').get(k)); }catch(e){ return Promise.resolve(undefined); } };
-      IDBTable.prototype.put = function(o){ try{ return reqP(this._os('readwrite').put(o)); }catch(e){ return Promise.reject(e); } };
-      IDBTable.prototype.delete = function(k){ try{ return reqP(this._os('readwrite').delete(k)); }catch(e){ return Promise.resolve(); } };
-      IDBTable.prototype.clear = function(){ try{ return reqP(this._os('readwrite').clear()); }catch(e){ return Promise.resolve(); } };
+      IDBTable.prototype.toArray = function(){ var s=this; return s.shim._ready().then(function(){ return new Promise(function(res,rej){ var out=[]; var req; try{ req=s._os('readonly').openCursor(); }catch(e){ return res([]); } req.onsuccess=function(){ var c=req.result; if(c){ out.push(c.value); c.continue(); } else res(out); }; req.onerror=function(){ rej(req.error); }; }); }); };
+      IDBTable.prototype.get = function(k){ var s=this; return s.shim._ready().then(function(){ try{ return reqP(s._os('readonly').get(k)); }catch(e){ return undefined; } }); };
+      IDBTable.prototype.put = function(o){ var s=this; return s.shim._ready().then(function(){ return reqP(s._os('readwrite').put(o)); }); };
+      IDBTable.prototype.delete = function(k){ var s=this; return s.shim._ready().then(function(){ try{ return reqP(s._os('readwrite').delete(k)); }catch(e){ return undefined; } }); };
+      IDBTable.prototype.clear = function(){ var s=this; return s.shim._ready().then(function(){ try{ return reqP(s._os('readwrite').clear()); }catch(e){ return undefined; } }); };
       IDBTable.prototype.where = function(f){ var t=this; return { equals: function(v){ return new IDBColl(t, function(x){ return x[f]===v; }); } }; };
       IDBTable.prototype.toCollection = function(){ return new IDBColl(this, function(){ return true; }); };
       function IDBShim(name){ this._name=name; this._db=null; this._stores={}; this._ver=1; }
@@ -194,10 +194,12 @@ if (typeof Dexie === 'undefined') {
       };
       IDBShim.prototype.open = function(){
         var self=this;
-        return new Promise(function(res, rej){
+        if(self._db) return Promise.resolve(self);        // 已打开，直接复用
+        if(self._opening) return self._opening;            // 正在打开，复用同一个 Promise，避免并发重复 open
+        self._opening = new Promise(function(res, rej){
           var req;
           try { req = indexedDB.open(self._name, self._ver); }
-          catch(e){ return rej(e); }
+          catch(e){ self._opening=null; return rej(e); }
           req.onupgradeneeded = function(){
             var db = req.result;
             Object.keys(self._stores).forEach(function(s){
@@ -209,9 +211,12 @@ if (typeof Dexie === 'undefined') {
             // 首次切到 IndexedDB 时，把旧 localStorage 兜底数据自动搬进来（不删原数据，双保险）
             self._migrateFromLS().then(function(){ res(self); }, function(){ res(self); });
           };
-          req.onerror = function(){ rej(req.error); };
+          req.onerror = function(){ self._opening=null; rej(req.error); };
         });
+        return self._opening;
       };
+      // 任何读写前调用：保证 _db 已就绪，否则先 open，从根上避免 _db 为 null 时访问 .transaction 崩溃
+      IDBShim.prototype._ready = function(){ return this._db ? Promise.resolve(this) : this.open(); };
       IDBShim.prototype.on = function(){ return this; };
       window.Dexie = IDBShim;
       window.__idbNative = true;
@@ -3866,6 +3871,12 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
                     <div class="loc-map"><svg class="loc-lines" viewBox="0 0 200 96" preserveAspectRatio="none"><path d="M0 30 L60 30 L60 96 M60 30 L140 30 L140 0 M140 30 L200 30 M0 66 L110 66 L110 96 M110 66 L200 66"/></svg><span class="loc-pin"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12A7 7 0 0 0 5 10c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg></span></div>
                     <div class="loc-info"><div class="loc-name">${lcName}</div>${lcAddr ? `<div class="loc-addr">${lcAddr}</div>` : ''}</div>
                 </div>`;
+            } else if (msg.type === 'share_article' && msg.isForumPost) {
+                const preview = (msg.postContent || '').toString().slice(0, 60);
+                contentHtml = `<div class="share-card forum-share-card" data-forum-post="1" style="cursor:pointer;">
+                    <div class="share-ic">${ICONS.article}</div>
+                    <div class="share-info"><div class="share-title">${escapeHtml(msg.shareTitle || '论坛帖子')}</div><div class="share-sub">论坛 · ${escapeHtml(msg.postAuthor || '匿名')}${preview ? ' · ' + escapeHtml(preview) : ''}</div></div>
+                </div>`;
             } else if (msg.type === 'share_article') {
                 contentHtml = `<a class="share-card" href="${msg.shareUrl}" target="_blank" rel="noopener">
                     <div class="share-ic">${ICONS.article}</div>
@@ -4104,6 +4115,13 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
             const msgs = msgIds.map(id => state.messages.find(m => m.id === id)).filter(Boolean);
             if (msgs.length === 0) return;
             const targets = [];
+            // 群聊：优先列在最前面，方便把记录转进群里
+            (state.chats || []).forEach(ch => {
+                if (ch.type === 'group') {
+                    const gname = ch.title || (ch.charIds || []).map(id => getChar(id)?.name).filter(Boolean).join('、') || '群聊';
+                    targets.push({ id: ch.id, name: gname, avatar: '👥', type: 'group' });
+                }
+            });
             state.characters.forEach(c => {
                 targets.push({ id: c.id, name: c.name, avatar: c.avatar || '🧸', type: 'char' });
             });
@@ -4112,11 +4130,12 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
             });
             if (targets.length === 0) { showModal('提示', '通讯录为空', '好的'); return; }
 
+            const tagName = { group: '群聊', char: '角色', user: '我' };
             const body = targets.map(t =>
                 `<div class="contact-select-item" data-target-id="${t.id}" data-target-type="${t.type}">
-                    <div class="c-avatar">${avatarHtml(t.avatar, t.type === 'char' ? '🧸' : '👤')}</div>
+                    <div class="c-avatar">${avatarHtml(t.avatar, t.type === 'group' ? '👥' : (t.type === 'char' ? '🧸' : '👤'))}</div>
                     <span class="c-name">${escapeHtml(t.name || '未命名')}</span>
-                    <span class="c-tag">${t.type === 'char' ? '角色' : '我'}</span>
+                    <span class="c-tag">${tagName[t.type] || ''}</span>
                 </div>`
             ).join('');
             $('forwardModalBody').innerHTML = body;
@@ -4138,9 +4157,12 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
 
         $('forwardModalCancel').addEventListener('click', () => { $('forwardModal').classList.remove('visible'); });
 
-        async function doForward(msgs, targetId, targetType) {
+        async function doForward(msgs, targetId, targetType, say) {
             let targetChat = null;
-            if (targetType === 'char') {
+            if (targetType === 'group') {
+                targetChat = state.chats.find(c => c.id === targetId && c.type === 'group');
+                if (!targetChat) { showModal('提示', '没有找到这个群聊', '好的'); return; }
+            } else if (targetType === 'char') {
                 targetChat = state.chats.find(c => c.charId === targetId);
                 if (!targetChat) {
                     targetChat = { id: uid(), charId: targetId, userId: null, createdAt: Date.now(), updatedAt: Date
@@ -4183,16 +4205,37 @@ AI严禁替{{user}}做出任何决定、说出任何话语、完成任何动作�
                 content: `转发 ${msgs.length} 条消息`,
                 forwardSource: forwardData,
                 timestamp: Date.now(),
-                charId: targetChat.charId,
+                charId: targetChat.type === 'group' ? null : targetChat.charId,
                 userId: targetChat.userId,
             };
             state.messages.push(forwardMsg);
             await db.messages.put(forwardMsg);
+
+            // 附言：转发后再补一条玩家的话（可留空）
+            const sayText = (say || '').trim();
+            if (sayText) {
+                const sayMsg = {
+                    id: uid(),
+                    chatId: targetChat.id,
+                    sender: 'user',
+                    type: 'text',
+                    content: sayText,
+                    timestamp: Date.now() + 1,
+                    charId: targetChat.type === 'group' ? null : targetChat.charId,
+                    userId: targetChat.userId,
+                };
+                state.messages.push(sayMsg);
+                await db.messages.put(sayMsg);
+            }
+
             targetChat.updatedAt = Date.now();
             await db.chats.put(targetChat);
 
-            // ★★★ 关键: 如果目标是一个角色，触发该角色的独立思考回复 ★★★
-            if (targetType === 'char') {
+            // ★★★ 触发目标的思考回复 ★★★
+            if (targetType === 'group') {
+                // 群聊：交给群聊导演编排，让群里合适的人围绕这段转发记录接话
+                triggerAiReply(targetChat.id);
+            } else if (targetType === 'char') {
                 const targetChar = getChar(targetId);
                 if (targetChar && !targetChar.isBlocked) {
                     // 触发AI回复，会基于与玩家的关系、剧情、世界书思考
@@ -4745,7 +4788,8 @@ ${isOffline
 
         function buildHistoryForChar(chatId, forChar, isGroup, memoryCount) {
             const chat = getChat(chatId);
-            const msgs = getMessages(chatId).slice(-memoryCount);
+            // 撤回的消息：原文不进历史（角色不该再读到被撤回消息的内容），痕迹由 v5-44 补丁按需补一条淡提示
+            const msgs = getMessages(chatId).filter(m => !m.isRecalled).slice(-memoryCount);
             const recentImgIds = new Set(msgs.slice(-6).filter(m => m.type === 'image' && m.imageUrl).map(m => m.id));
             // 开了时间感知才给历史消息标时间，否则角色本就“不知道现在几点”，标了反而自相矛盾
             const withTime = forChar && forChar.timeAware !== false;
@@ -4760,11 +4804,30 @@ ${isOffline
                 else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'daifu') textContent = `[代付 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'forward') { const src = m.forwardSource || []; textContent = `[转发的聊天记录] ${src.map(s => `${s.senderName}: ${s.content}`).join(' | ')}`; }
-                else if (m.type === 'share_music') textContent = `[分享了音乐]《${m.shareTitle}》- ${m.shareSite}`;
+                else if (m.type === 'share_music') {
+                    const song = `《${m.shareTitle || '一首歌'}》${m.shareArtist ? ' - ' + m.shareArtist : ''}`;
+                    textContent = (m.sender === 'user')
+                        ? `[对方给你分享了一首歌 ${song}，是真的分享给你听的。请像真人收到朋友安利歌一样自然回应：可以说说你对这首歌/这个歌手的感觉、猜猜对方为什么分享它、此刻的心情，别只干巴巴说“好听”，也别无视这次分享]`
+                        : `[你分享了一首歌 ${song} 给对方]`;
+                }
+                else if (m.type === 'share_article' && m.isForumPost) {
+                    const tagStr = (m.postTags && m.postTags.length) ? `（标签：${m.postTags.join('、')}）` : '';
+                    textContent = (m.sender === 'user')
+                        ? `[对方转发给你一个论坛帖子，想让你看看、听听你的看法。帖子标题《${m.shareTitle || ''}》，发帖人「${m.postAuthor || '匿名'}」${tagStr}，正文如下：\n${m.postContent || ''}\n请像真人被朋友转来一个帖子那样自然回应：可以吐槽、共鸣、发表看法、联想到你俩的事，别只说“看到了”，也别无视]`
+                        : `[转发了一个论坛帖子《${m.shareTitle || ''}》给对方]`;
+                }
                 else if (m.type === 'share_article') textContent = `[分享了文章]《${m.shareTitle}》- ${m.shareSite}`;
                 else if (m.type === 'image') textContent = m.content ? `[图片: ${m.content}]` : '[图片]';
                 else if (m.type === 'voice') textContent = m.content ? `[语音消息，内容是：${m.content}]` : '[语音消息]';
+                else if (m.type === 'narration') textContent = m.content || '';
                 else textContent = m.content || '';
+
+                // 旁白不是玩家说的话，而是剧情叙述/场景补充：用「旁白」身份，不加玩家名字前缀
+                if (m.type === 'narration') {
+                    const timeTag2 = withTime ? historyTimeLabel(m.timestamp, tz) : '';
+                    const timePrefix2 = timeTag2 ? `[${timeTag2}] ` : '';
+                    return { role: 'user', content: `${timePrefix2}【剧情旁白（不是任何人说的话，是对当下场景/剧情的叙述与补充，请据此理解情境，但不要把它当成${speakerName}发的消息来回应）】：${textContent}` };
+                }
 
                 const namePrefix = (isGroup && role === 'user') ? `${speakerName}: ` : '';
                 const timeTag = withTime ? historyTimeLabel(m.timestamp, tz) : '';
@@ -4829,7 +4892,8 @@ ${isOffline
         // 每条 AI 消息都带上说话人名字，让导演看清谁在群里说过什么。
         function buildGroupHistory(chatId, memoryCount) {
             const chat = getChat(chatId);
-            const msgs = getMessages(chatId).slice(-memoryCount);
+            // 撤回的消息：原文不进群聊历史，避免导演一直围绕被撤回的内容做戏
+            const msgs = getMessages(chatId).filter(m => !m.isRecalled).slice(-memoryCount);
             const recentImgIds = new Set(msgs.slice(-6).filter(m => m.type === 'image' && m.imageUrl).map(m => m.id));
             const user = getUser(chat.userId);
             const userName = user?.name || '我';
@@ -4842,14 +4906,42 @@ ${isOffline
                 else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'daifu') textContent = `[代付 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'forward') { const src = m.forwardSource || []; textContent = `[转发的聊天记录] ${src.map(s => `${s.senderName}: ${s.content}`).join(' | ')}`; }
-                else if (m.type === 'share_music') textContent = `[分享了音乐]《${m.shareTitle}》- ${m.shareSite}`;
+                else if (m.type === 'share_music') {
+                    const song = `《${m.shareTitle || '一首歌'}》${m.shareArtist ? ' - ' + m.shareArtist : ''}`;
+                    textContent = (m.sender === 'user')
+                        ? `[给群里分享了一首歌 ${song}，是真的分享的。相关的人可以像收到朋友安利歌一样自然聊聊这首歌/歌手/为什么分享]`
+                        : `[分享了一首歌 ${song}]`;
+                }
+                else if (m.type === 'share_article' && m.isForumPost) {
+                    const tagStr = (m.postTags && m.postTags.length) ? `（标签：${m.postTags.join('、')}）` : '';
+                    textContent = (m.sender === 'user')
+                        ? `[往群里转发了一个论坛帖子，想让大家看看。标题《${m.shareTitle || ''}》，发帖人「${m.postAuthor || '匿名'}」${tagStr}，正文：\n${m.postContent || ''}\n相关的人可以像被转来帖子一样自然聊聊：吐槽、共鸣、发表看法]`
+                        : `[转发了一个论坛帖子《${m.shareTitle || ''}》]`;
+                }
                 else if (m.type === 'share_article') textContent = `[分享了文章]《${m.shareTitle}》- ${m.shareSite}`;
                 else if (m.type === 'image') textContent = m.content ? `[图片: ${m.content}]` : '[图片]';
                 else if (m.type === 'voice') textContent = m.content ? `[语音消息，内容是：${m.content}]` : '[语音消息]';
+                else if (m.type === 'narration') textContent = m.content || '';
                 else textContent = m.content || '';
 
                 const timeTag = historyTimeLabel(m.timestamp, null);
                 const timePrefix = timeTag ? `[${timeTag}] ` : '';
+
+                // 旁白：不是任何人说的话，而是剧情叙述。群聊支持定向——只有名单里的角色能感知到
+                if (m.type === 'narration') {
+                    const targets = Array.isArray(m.narrTargets) ? m.narrTargets : [];
+                    let scopeNote = '';
+                    if (targets.length) {
+                        const names = targets.map(id => getChar(id)?.name).filter(Boolean).join('、');
+                        scopeNote = names
+                            ? `（这段剧情/暗示只有【${names}】能感知到、放在心里，群里其他人并不知情，也读不到这段；只有 ${names} 的心理和反应会受它影响，其他角色不要因为这段旁白做出任何反应）`
+                            : '';
+                    } else {
+                        scopeNote = '（这是群里所有人都能感知到的场景/剧情叙述）';
+                    }
+                    return { role: 'user', content: `${timePrefix}【剧情旁白，不是任何人说出口的话】：${textContent} ${scopeNote}` };
+                }
+
                 // 群里所有发言（含玩家）都用「名字: 内容」的转录格式，导演一眼看清对话结构
                 const finalText = `${timePrefix}${speakerName}: ${textContent}`;
 
@@ -4865,7 +4957,7 @@ ${isOffline
 
         // 群聊导演 system prompt：把群里所有在场角色的人设、关系、世界书一次性交给模型，
         // 让它以「群聊导演」身份，替这一轮该开口的人各自说话。
-        function buildGroupDirectorPrompt(chat, chars) {
+        function buildGroupDirectorPrompt(chat, chars, wantVoice) {
             const user = getUser(chat.userId);
             const userName = user?.name || '对方';
             const userInfo = user ? `${user.name}（${user.gender || '未知'}）：${user.bio || '无特别设定'}` : '一个普通聊天对象';
@@ -4886,10 +4978,43 @@ ${isOffline
                 const langMap = { zh: '简体中文', yue: '粤语', en: '英语', de: '德语', ru: '俄语', fr: '法语', ja: '日语', ko: '韩语' };
                 const cl = c.chatLang || 'zh';
                 const langLine = cl !== 'zh' ? `\n  说话语言：${langMap[cl] || cl}` : '';
-                return `### ${c.name}\n  ${(c.persona || '一个有自己脾气的人').slice(0, 400)}${relLine}${langLine}${wbText ? '\n  设定：\n' + wbText : ''}`;
+                // 时间感知：群开了时间感知，且该角色没关时间感知时，标出 ta 所在时区的当前时间
+                let timeLine = '';
+                if (chat.timeAware !== false && c.timeAware !== false) {
+                    const ctz = c.timeZone;
+                    if (ctz) {
+                        try {
+                            const ctStr = new Date().toLocaleString('zh-CN', { timeZone: ctz, dateStyle: 'full', timeStyle: 'short' });
+                            const clabel = TIMEZONE_LABEL(ctz);
+                            timeLine = `\n  当前所在地/时间：${clabel ? clabel + ' · ' : ''}${ctStr}`;
+                        } catch (e) {}
+                    }
+                }
+                return `### ${c.name}\n  ${(c.persona || '一个有自己脾气的人').slice(0, 400)}${relLine}${langLine}${timeLine}${wbText ? '\n  设定：\n' + wbText : ''}`;
             }).join('\n\n');
 
             const names = chars.map(c => c.name).join('、');
+
+            // 群时间感知说明：整段拼在 prompt 里（角色各自时区已写进各自卡片）
+            let groupTimeInfo = '';
+            if (chat.timeAware === false) {
+                groupTimeInfo = '\n## 关于时间\n群里的角色并不知道现在的确切日期和几点钟，不要凭空报出具体时间，只能根据聊天内容自然推测大概是白天还是夜里。不要动不动催对方睡觉。\n';
+            } else {
+                let userTimeLine = '';
+                const utz = chat.userTimeZone;
+                if (utz) {
+                    try {
+                        const utStr = new Date().toLocaleString('zh-CN', { timeZone: utz, dateStyle: 'full', timeStyle: 'short' });
+                        const ulabel = TIMEZONE_LABEL(utz);
+                        userTimeLine = `\n玩家（${userName}）现在人在「${ulabel || utz}」，当地时间：${utStr}。`;
+                    } catch (e) {}
+                }
+                groupTimeInfo = '\n## 关于时间（重要）\n每个角色对时间的感知，以上面各自卡片里标注的「当前所在地/时间」为准——群里不同角色可能身处不同城市/时区，各说各的当地时间，绝不能统一用同一个时间，更不能用你（模型）默认的时间。' +
+                    userTimeLine +
+                    '\n- 角色的作息、状态要和 ta 自己那一栏的当地时间吻合（比如深夜多半准备休息、工作日下午多半在忙）。\n' +
+                    '- 聊天记录里每条消息前的方括号时间（如「[今天14:30]」）是这句话说出的时间，用来分清哪些是刚刚、哪些是更早说的，不要原样复述。\n' +
+                    '- 就算现在是深夜，也不要用「早点睡」「别熬夜」这种客服式关心，除非人设和剧情真的到了那个份上。\n';
+            }
 
             return `你是一个「群聊导演」，负责让一个微信群里的多个角色像真人一样自然地聊天。这个群里的角色有：${names}。你要同时扮演他们所有人。
 
@@ -4898,7 +5023,7 @@ ${roster}
 
 ## 群里还有玩家本人
 ${userInfo}
-
+${groupTimeInfo}
 ## 你这一轮要做的事
 玩家刚在群里发了消息（或群里正在聊天）。你要判断：**这一轮，群里谁会开口、谁会沉默、各自会说什么、按什么先后顺序说**。
 - 不是每个人都要回。像真实群聊一样：只有和自己相关、被点名/被@、或自己确实有话想说、想接话、想起哄、想吐槽的人才发言，其余人就沉默（潜水）。
@@ -4923,7 +5048,16 @@ ${userInfo}
 - 给群里某个人单独转账: [群转账: 对方名字 金额 备注]，例如 [群转账: 小明 5.2 还你的]
 - 发红包: [红包: 金额 祝福语]，例如 [红包: 8.88 恭喜发财]（群里其他人会自动抢）
 - 分享音乐: [分享音乐: 歌名 歌手]
-说人话，口语化，有语气、有情绪、可以短。这些动作标签要写在对应角色那一行的内容里（如 [小红] [群转账: 小明 5 请你喝奶茶]）。绝对禁止把以上任何规则、格式说明原样输出出来。`;
+说人话，口语化，有语气、有情绪、可以短。这些动作标签要写在对应角色那一行的内容里（如 [小红] [群转账: 小明 5 请你喝奶茶]）。绝对禁止把以上任何规则、格式说明原样输出出来。${wantVoice ? `
+
+## 🫧 顺带写：这轮开口的人的心声（不额外发请求）
+在你输出完上面所有 [角色名] 消息之后，再为**这一轮真正开口说了话的每个角色**，各写一行 ta 此刻没说出口的真实心里话（心声/内心OS），格式：
+[心声: 角色名 | 这里写这个角色的心里话]
+例如：
+[心声: ${chars[0]?.name || '小明'} | 嘴上这么说，其实还挺在意她刚那句话的]
+- 只给这轮开口的人写，潜水没说话的人不用写。
+- 用第一人称，口语、真实、10~40 个字，可以和 ta 嘴上说的不一样（口是心非/嘴硬心软/吐槽/害羞都行），紧贴刚刚群里的对话。
+- 心声行统一写在最后，不要和上面的聊天消息混在一起。这些 [心声:] 行不会作为群消息发出去，只存进「点头像看心声」给玩家看。` : ''}`;
         }
 
         // 群聊一次编排：一次 API 请求，导演输出多条带 [角色名] 前缀的消息，
@@ -4939,7 +5073,15 @@ ${userInfo}
             chars.forEach(c => byName.set((c.name || '').trim(), c));
 
             const memoryCount = state.settings.globalMemory || 20;
-            const systemPrompt = buildGroupDirectorPrompt(chat, chars);
+            // 心声节流：群里人少每轮都写；人多（>3）时每隔几轮才写一次，省 token 也更自然
+            let wantVoice = true;
+            try {
+                if (chars.length > 3) {
+                    const gc = (getMessages(chatId) || []).length;
+                    wantVoice = (Math.floor(gc / 3) !== Math.floor((gc - 1) / 3)); // 大约每 3 条消息才要一次
+                }
+            } catch (e) { wantVoice = true; }
+            const systemPrompt = buildGroupDirectorPrompt(chat, chars, wantVoice);
             const history = buildGroupHistory(chatId, memoryCount);
             const messages = [{ role: 'system', content: systemPrompt }, ...history];
             if (history.length === 0) messages.push({ role: 'user', content: '(群刚建好，让合适的人自然地开个头)' });
@@ -4975,9 +5117,25 @@ ${userInfo}
             if (rawLines.length === 1 && /^\[?\s*SKIP\s*\]?$/i.test(rawLines[0])) return;
 
             // 把行归并成 {char, line} 序列；没有前缀的行归给上一条的说话人（连发）
+            // 同时把 [心声: 角色名 | 内容] 行拦下来存进心声，不上屏、不进 dispatch
             const dispatch = [];
             let lastChar = null;
             for (const raw of rawLines) {
+                // 心声行：[心声: 角色名 | 心里话]（角色名可省略时归给上一个说话人）
+                const vm = raw.match(/^\[心声[:：]\s*([\s\S]+?)\]$/);
+                if (vm) {
+                    let vname = '', vtext = '';
+                    const inner = (vm[1] || '').trim();
+                    const sep = inner.match(/^(.+?)\s*[|｜]\s*([\s\S]+)$/);
+                    if (sep) { vname = (sep[1] || '').trim(); vtext = (sep[2] || '').trim(); }
+                    else { vtext = inner; }
+                    vtext = vtext.replace(/^["'“”「」]+|["'“”「」]+$/g, '').trim();
+                    let vc = vname ? (byName.get(vname) || chars.find(x => (x.name || '').trim() === vname)) : (lastChar || null);
+                    if (vc && vtext && !/^无$|^none$/i.test(vtext)) {
+                        try { window.__hvPush && window.__hvPush(vc.id, vtext); } catch (e) {}
+                    }
+                    continue; // 心声行不上屏
+                }
                 const m = raw.match(/^\[([^\]]+)\]\s*(.*)$/);
                 if (m) {
                     const nm = (m[1] || '').trim();
@@ -5438,9 +5596,23 @@ ${userInfo}
                 if (chatObj) { chatObj.updatedAt = Date.now(); await db.chats.put(chatObj); }
             } catch (e) {
                 console.error('AI回复出错:', char.name, e);
-                const msg = { id: uid(), chatId, sender: 'ai', type: 'text', content: `(网络好像不太好...要不再试一次？ ${e.message})`, timestamp: Date.now(), charId: char.id };
+                // 区分错误来源，别再把 API/配置/存储问题都糊成一句"网络不好"
+                var em = (e && e.message) || String(e || '未知错误');
+                var tip;
+                if (/未配置聊天API/.test(em)) {
+                    tip = '（还没配置聊天 API 呢，去设置里填一下再聊吧）';
+                } else if (/API错误\s*\d{3}|HTTP\s*\d{3}/.test(em)) {
+                    tip = '（对方服务返回了错误：' + em + '）';
+                } else if (/Failed to fetch|NetworkError|network|timeout|ECONN|ETIMEDOUT/i.test(em)) {
+                    tip = '（网络好像不太好…要不再试一次？）';
+                } else if (/transaction|IndexedDB|QuotaExceeded|存储|storage/i.test(em)) {
+                    tip = '（消息生成好了，但存储没能写进去，可能是空间不足：' + em + '）';
+                } else {
+                    tip = '（回复出了点问题，要不再试一次？ ' + em + '）';
+                }
+                const msg = { id: uid(), chatId, sender: 'ai', type: 'text', content: tip, timestamp: Date.now(), charId: char.id };
                 state.messages.push(msg);
-                await db.messages.put(msg);
+                try { await db.messages.put(msg); } catch (e2) {}
                 if (state.currentChatId === chatId) renderMessages(chatId);
             } finally {
                 state.typingChars.delete(char.id);
@@ -5772,6 +5944,18 @@ ${userInfo}
             const selectedWbs = new Set(chat.worldBookIds || []);
             // activeCharIds 存储允许响应的角色，默认全选
             const activeCharIds = new Set(chat.activeCharIds || chat.charIds || []);
+            // 群时间感知：玩家所在时区下拉（角色各自按人设时区）
+            const tzOptionsHtml = (selected) => {
+                let opts = `<option value="">跟随你的设备时区</option>`;
+                (TIMEZONE_OPTIONS || []).forEach(g => {
+                    opts += `<optgroup label="${g.group}">`;
+                    g.zones.forEach(z => {
+                        opts += `<option value="${z.v}"${selected === z.v ? ' selected' : ''}>${z.l}</option>`;
+                    });
+                    opts += `</optgroup>`;
+                });
+                return opts;
+            };
             const body = `
                 <input type="text" id="groupSettingsTitle" value="${escapeHtml(chat.title || '')}" placeholder="群聊名称" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font);margin-bottom:12px;">
                 <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;">我在群里的身份(用哪个人设发言)</div>
@@ -5805,6 +5989,18 @@ ${userInfo}
                         <span>${escapeHtml(w.name)}</span>
                     </label>`).join('') || '<div style="font-size:12px;color:var(--text-secondary);">还没有世界书</div>'}
                 </div>
+                <div style="border-top:1px dashed rgba(0,0,0,0.1);padding-top:12px;margin-top:6px;">
+                    <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;cursor:pointer;">
+                        <span style="font-size:13px;color:var(--text-secondary);">时间感知（让群里角色知道现在几点）</span>
+                        <input type="checkbox" id="groupTimeAware" ${chat.timeAware === false ? '' : 'checked'}>
+                    </label>
+                    <div id="groupTimeRows" style="display:${chat.timeAware === false ? 'none' : 'block'};">
+                        <div style="font-size:11px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;">群里每个角色各自按 ta 人设里设定的时区来感知时间（在角色编辑页设置）。这里只设定「你（玩家）」在群里所处的时区，让角色分得清和你的时差。</div>
+                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">我（玩家）所在时区</div>
+                        <select id="groupUserTz" style="width:100%;padding:9px 10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font);background:rgba(255,255,255,0.5);">${tzOptionsHtml(chat.userTimeZone || '')}</select>
+                        <div id="groupUserTzPv" style="font-size:11px;color:var(--text-secondary);margin-top:6px;"></div>
+                    </div>
+                </div>
             `;
             showModal('群聊设置', body, '保存', async () => {
                 const title = document.getElementById('groupSettingsTitle')?.value.trim();
@@ -5818,6 +6014,9 @@ ${userInfo}
                 chat.worldBookIds = wbIds;
                 chat.activeCharIds = activeIds.length > 0 ? activeIds : charIds; // 如果没选响应角色，默认全响应
                 if (pickedUserId) chat.userId = pickedUserId; // 玩家在这个群里以哪个人设发言
+                // 时间感知：开关 + 玩家时区
+                chat.timeAware = document.getElementById('groupTimeAware')?.checked !== false;
+                chat.userTimeZone = document.getElementById('groupUserTz')?.value || '';
                 await db.chats.put(chat);
                 if (state.currentChatId === chatId) { $('chatTitle').textContent = chat.title; renderMessages(chatId); }
                 renderChatList();
@@ -5842,6 +6041,29 @@ ${userInfo}
                     }
                 });
             });
+
+            // 时间感知：开关切换时区行显隐；时区下拉更新预览
+            setTimeout(() => {
+                const awareCb = document.getElementById('groupTimeAware');
+                const rows = document.getElementById('groupTimeRows');
+                const tzSel = document.getElementById('groupUserTz');
+                const tzPv = document.getElementById('groupUserTzPv');
+                const updatePv = () => {
+                    if (!tzPv || !tzSel) return;
+                    const tz = tzSel.value;
+                    if (!tz) {
+                        let localName = '';
+                        try { localName = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+                        tzPv.textContent = '跟随你的设备时区' + (localName ? '（' + localName + '）' : '') + ' · 现在 ' + (timeInZone(localName) || new Date().toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', weekday: 'short' }));
+                    } else {
+                        tzPv.textContent = '🕐 ' + (TIMEZONE_LABEL(tz) || tz) + ' 现在是 ' + (timeInZone(tz) || '—');
+                    }
+                };
+                if (awareCb && rows) {
+                    awareCb.addEventListener('change', () => { rows.style.display = awareCb.checked ? 'block' : 'none'; });
+                }
+                if (tzSel) { tzSel.addEventListener('change', updatePv); updatePv(); }
+            }, 0);
         }
 
         $('chatBack').addEventListener('click', () => { state.currentChatId = null;
@@ -8272,11 +8494,19 @@ ${userInfo}
             window.__memAutoPatched = true;
             var origTrigger = window.triggerAiReply;
             window.triggerAiReply = async function (chatId) {
-                // 一次「响应」= 一次计费：不再在响应链里连带跑自动记忆总结（那是额外的一次 AI 请求）。
-                // 记忆总结改为按需触发，见 window.__manualSummarize（记忆面板手动总结仍可用）。
-                return await origTrigger(chatId);
+                var res = await origTrigger(chatId);
+                // 回复完成后自动触发记忆总结（异步执行，不阻塞主流程）
+                try {
+                    var cid = chatId || (window.__state && window.__state.currentChatId);
+                    if (cid) {
+                        setTimeout(function() {
+                            maybeAutoSummarize(cid).catch(function() {});
+                        }, 100);
+                    }
+                } catch (e) {}
+                return res;
             };
-            // 保留能力：需要时手动总结，不占用「响应」这次计费。
+            // 保留能力：需要时手动总结
             window.__manualSummarize = function (chatId) {
                 try { return maybeAutoSummarize(chatId || (window.__state && window.__state.currentChatId)); } catch (e) {}
             };
@@ -9312,8 +9542,9 @@ ${userInfo}
         try { patchPrompt2(); } catch (e) { console.warn('feat2 prompt', e); }
         try { injectGroupPayButton(); } catch (e) { console.warn('feat2 gpBtn', e); }
         try { injectListenTogetherButton(); } catch (e) { console.warn('feat2 ltBtn', e); }
+        try { injectShareMusicButton(); } catch (e) { console.warn('feat2 smBtn', e); }
         try { injectLocationButton(); } catch (e) { console.warn('feat2 locBtn', e); }
-        setTimeout(function () { try { injectGroupPayButton(); } catch (e) {} try { injectListenTogetherButton(); } catch (e) {} try { injectLocationButton(); } catch (e) {} }, 700);
+        setTimeout(function () { try { injectGroupPayButton(); } catch (e) {} try { injectListenTogetherButton(); } catch (e) {} try { injectShareMusicButton(); } catch (e) {} try { injectLocationButton(); } catch (e) {} }, 700);
     }
 
     // ============ 1 & 3. 消息渲染：修复用户头像 + 渲染群收款卡 ============
@@ -9540,6 +9771,111 @@ ${userInfo}
         var ltBtn = grid.querySelector('[data-tool="listentogether"]');
         if (ltBtn && ltBtn.nextSibling) grid.insertBefore(btn, ltBtn.nextSibling);
         else grid.appendChild(btn);
+    }
+
+    // ============ 工具栏「音乐」按钮：玩家主动分享一首歌给角色 ============
+    var MUSIC_BTN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+
+    function injectShareMusicButton() {
+        var grid = document.querySelector('#toolPopup .popup-grid');
+        if (!grid || grid.querySelector('[data-tool="sharemusic"]')) return;
+        var btn = document.createElement('button');
+        btn.className = 'popup-item';
+        btn.setAttribute('data-tool', 'sharemusic');
+        btn.innerHTML = '<span class="icon-sm">' + MUSIC_BTN_ICON + '</span><span class="label">音乐</span>';
+        btn.addEventListener('click', function () {
+            var tp = document.getElementById('toolPopup'); if (tp) tp.classList.remove('visible');
+            openShareMusicDialog();
+        });
+        // 放到「一起听」按钮后面；找不到就直接追加
+        var ltBtn = grid.querySelector('[data-tool="listentogether"]');
+        if (ltBtn && ltBtn.nextSibling) grid.insertBefore(btn, ltBtn.nextSibling);
+        else grid.appendChild(btn);
+    }
+
+    function openShareMusicDialog() {
+        var chat = getChat(S().currentChatId);
+        if (!chat) return;
+        var toName = chat.type === 'group' ? (chat.title || '群里') : esc(userMateName(chat));
+        var body = '' +
+            '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+            '<input type="text" id="smSearchKw" placeholder="搜索歌名 / 歌手，如 晴天 周杰伦" style="flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font);font-size:14px;">' +
+            '<button class="btn-primary" id="smSearchGo" style="padding:0 16px;white-space:nowrap;">搜索</button>' +
+            '</div>' +
+            '<div id="smSearchResult" style="max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">' +
+            '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:26px 0;">搜一首想分享给 ' + toName + ' 的歌吧</div>' +
+            '</div>';
+        window.showModal('分享音乐', body, '关闭', null, false);
+        setTimeout(function () {
+            var input = document.getElementById('smSearchKw');
+            var go = document.getElementById('smSearchGo');
+            if (go) go.addEventListener('click', function () { runShareMusicSearch(); });
+            if (input) input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); runShareMusicSearch(); } });
+            if (input) input.focus();
+        }, 50);
+    }
+
+    function runShareMusicSearch() {
+        var kwEl = document.getElementById('smSearchKw');
+        var box = document.getElementById('smSearchResult');
+        if (!kwEl || !box) return;
+        var kw = (kwEl.value || '').trim();
+        if (!kw) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">请输入歌名</div>'; return; }
+        if (!window.ltSearchList) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜歌功能未就绪</div>'; return; }
+        box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:24px 0;">搜索中…</div>';
+        window.ltSearchList(kw, 'netease').then(function (list) {
+            if (!list || !list.length) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">没找到这首歌，换个关键词试试</div>'; return; }
+            box.innerHTML = list.map(function (s, i) {
+                return '<div class="lt-song-row" data-idx="' + i + '" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:12px;cursor:pointer;">' +
+                    '<div style="width:38px;height:38px;border-radius:9px;background:rgba(0,0,0,0.06);flex:none;display:flex;align-items:center;justify-content:center;color:#8a90a0;">' + MUSIC_BTN_ICON + '</div>' +
+                    '<div style="flex:1;min-width:0;"><div style="font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.name) + '</div>' +
+                    '<div style="font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.artist || '') + '</div></div>' +
+                    '<button class="btn-primary sm-song-send" data-idx="' + i + '" style="padding:6px 12px;font-size:13px;white-space:nowrap;">分享</button>' +
+                    '</div>';
+            }).join('');
+            box.querySelectorAll('.sm-song-send').forEach(function (b) {
+                b.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    var s = list[parseInt(b.dataset.idx, 10)];
+                    if (s) sendShareMusic(s);
+                });
+            });
+        }).catch(function () {
+            box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜索失败，稍后再试</div>';
+        });
+    }
+
+    // 玩家把一首歌分享给角色/群：落一条 sender:user 的 share_music，然后触发角色回应
+    function sendShareMusic(song) {
+        var chat = getChat(S().currentChatId);
+        if (!chat) return;
+        var pic = '';
+        var proceed = function () {
+            var msg = {
+                id: uid(), chatId: chat.id, sender: 'user',
+                charId: chat.type === 'group' ? null : (chat.charId || null), userId: chat.userId,
+                type: 'share_music', shareFrom: 'user',
+                content: '[分享音乐] ' + (song.name || '') + (song.artist ? (' - ' + song.artist) : ''),
+                shareTitle: song.name || '', shareArtist: song.artist || '', shareSite: '网易云音乐',
+                shareUrl: song.url || '', shareAudio: song.audio || '',
+                musicId: song.id, musicSource: song.source || 'netease', sharePic: pic,
+                timestamp: Date.now()
+            };
+            S().messages.push(msg);
+            persistMsg(msg);
+            chat.updatedAt = Date.now();
+            try { DB().chats.put(chat); } catch (e) {}
+            window.closeModal && window.closeModal();
+            if (S().currentChatId === chat.id && window.renderMessages) window.renderMessages(chat.id);
+            if (window.renderChatList) window.renderChatList();
+            // 分享后不自动触发角色回应：玩家可能还想接着发几句，等玩家点「响应」再让角色回
+        };
+        if (window.ltResolveCover && song.pic) {
+            window.ltResolveCover(song.source || 'netease', song.pic).then(function (u) { pic = u || ''; proceed(); }).catch(proceed);
+        } else if (window.ltResolveAudio && song.id && !song.audio) {
+            // 尽量补全音频直链，让角色那边收到的也是可播放的
+            window.ltResolveAudio(song.source || 'netease', song.id).then(function (a) { if (a) song.audio = a; proceed(); }).catch(proceed);
+        } else { proceed(); }
     }
 
     // 内置一批常见地点，玩家可直接选，也可自己填
@@ -13858,6 +14194,10 @@ ${userInfo}
             var uname = (getUser(chat && chat.userId) || {}).name || '对方';
             var msgs = (S().messages || []).filter(function (m) { return m.chatId === chatId && !m.isDeleted; })
                 .sort(function (a, b) { return a.timestamp - b.timestamp; }).slice(-(memoryCount || 15));
+            // 撤回提示只保留「最近这一条、且刚撤回不久（2 分钟内）」的，避免每轮都反复提早就撤回过的消息
+            var recalledList = msgs.filter(function (m) { return m.isRecalled; });
+            var latestRecalled = recalledList.length ? recalledList[recalledList.length - 1] : null;
+            var RECALL_FRESH_MS = 2 * 60 * 1000;
             var extra = [];
             msgs.forEach(function (m) {
                 var who = m.sender === 'user' ? uname : ((getChar(m.charId) || {}).name || '对方');
@@ -13897,8 +14237,12 @@ ${userInfo}
                         extra.push({ role: 'user', content: '[聊天动态] ' + itip });
                     }
                 }
-                if (m.isRecalled) {
-                    extra.push({ role: 'user', content: '[系统提示] ' + who + ' 撤回了一条消息' });
+                // 只有「最近这一条撤回、且刚撤回不久」才提一次；老的撤回不再反复提，避免角色一直纠着撤回的事
+                if (m.isRecalled && m === latestRecalled) {
+                    var recAt = m.recalledAt || m.timestamp || 0;
+                    if (Date.now() - recAt <= RECALL_FRESH_MS) {
+                        extra.push({ role: 'user', content: '[系统提示] ' + who + ' 刚撤回了一条消息（内容已收回，你并不知道撤回的是什么，就当没看到，正常往下聊，不要追问、不要反复提这件事）' });
+                    }
                 }
             });
             if (extra.length) hist = hist.concat(extra);
@@ -14818,11 +15162,16 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
           '<div class="fd-content">'+esc(p.content||p.intro||'')+'</div>'+
           (p.tags&&p.tags.length?('<div class="fd-tags">'+p.tags.map(function(t){return '<span class="fp-tag">#'+esc(t)+'</span>';}).join('')+'</div>'):'')+
           '<div class="fd-stat"><span>♡ 点赞 '+(p.likes||0)+'</span><span>💬 评论 '+((p.comments&&p.comments.length)||0)+'</span></div>'+
-          '<button class="btn-primary" id="fdResp" style="width:100%;margin:14px 0;">响应（路人+角色评论）</button>'+
+          '<div style="display:flex;gap:8px;margin:14px 0;">'+
+            '<button class="btn-primary" id="fdResp" style="flex:1;">响应（路人+角色评论）</button>'+
+            '<button class="btn-secondary" id="fdForward" style="flex:none;padding:0 16px;white-space:nowrap;">↗️ 转发</button>'+
+          '</div>'+
           '<div class="fcm-title">评论区</div><div id="fcmList"></div></div>';
         body.innerHTML=html;
         var bk=document.getElementById('fhBack');if(bk)bk.addEventListener('click',function(){F.render('home');});
         document.getElementById('fdResp').addEventListener('click',function(){F.openResponderPicker(pid);});
+        var fwdBtn=document.getElementById('fdForward');
+        if(fwdBtn)fwdBtn.addEventListener('click',function(){ if(window.__forwardForumPost) window.__forwardForumPost(p); });
         var cl=document.getElementById('fcmList');
         if(!p.comments){cl.innerHTML='<div class="forum-loading">正在加载评论…</div>';loadComments(p,function(){paint();});}
         else if(!p.comments.length){cl.innerHTML='<div class="forum-empty">还没有评论</div>';}
@@ -14853,6 +15202,107 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
 
     F.openDetailPost=openDetail;
     F.renderFeed=function(){var fd=document.getElementById('forumFeed');if(fd)renderFeed(fd);};
+
+    // ============ 论坛帖子转发给角色 / 群聊 ============
+    function chatsForForward(){
+      var S=window.__state; if(!S) return [];
+      var out=[];
+      (S.chats||[]).forEach(function(ch){
+        if(ch.type==='group'){
+          var gname=ch.title||(ch.charIds||[]).map(function(id){return (S.characters||[]).find(function(c){return c.id===id;});}).filter(Boolean).map(function(c){return c.name;}).join('、')||'群聊';
+          out.push({id:ch.id,name:gname,avatar:'👥',type:'group'});
+        }
+      });
+      (S.characters||[]).forEach(function(c){ out.push({id:c.id,name:c.name,avatar:c.avatar||'🧸',type:'char'}); });
+      return out;
+    }
+
+    // 点聊天里的论坛帖子卡片：弹出完整帖子正文
+    if(!window.__forumShareCardBound){
+      window.__forumShareCardBound=true;
+      document.addEventListener('click',function(ev){
+        var card=ev.target.closest&&ev.target.closest('.forum-share-card[data-forum-post]');
+        if(!card)return;
+        var wrap=card.closest('.msg-wrapper'); if(!wrap)return;
+        var mid=wrap.dataset.msgId;
+        var msg=(window.__state&&window.__state.messages||[]).find(function(m){return m.id===mid;});
+        if(!msg)return;
+        ev.stopPropagation();
+        var esc2=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});};
+        var tags=(msg.postTags&&msg.postTags.length)?('<div style="margin-top:10px;color:#9aa4ac;font-size:12px;">#'+msg.postTags.map(esc2).join('  #')+'</div>'):'';
+        var body='<div style="font-size:12px;color:#9aa4ac;margin-bottom:6px;">论坛 · '+esc2(msg.postAuthor||'匿名')+'</div>'+
+          '<div style="font-size:15px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:var(--text-primary);">'+esc2(msg.postContent||'')+'</div>'+tags;
+        window.showModal(msg.shareTitle||'论坛帖子',body,'关闭',null,true);
+      },true);
+    }
+
+    window.__forwardForumPost=function(post){
+      if(!post){return;}
+      var targets=chatsForForward();
+      if(!targets.length){ window.showModal('提示','还没有可转发的角色或群聊','好的'); return; }
+      var tagName={group:'群聊',char:'角色'};
+      var rows=targets.map(function(t){
+        return '<div class="contact-select-item" data-fid="'+t.id+'" data-ftype="'+t.type+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;">'+
+          '<div class="c-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.05);">'+F.avImg(t.avatar,t.type==='group'?'👥':'🧸')+'</div>'+
+          '<span style="flex:1;">'+esc(t.name||'未命名')+'</span>'+
+          '<span style="font-size:12px;color:#9aa4ac;">'+(tagName[t.type]||'')+'</span>'+
+        '</div>';
+      }).join('');
+      window.showModal('转发帖子到','<div style="max-height:50vh;overflow-y:auto;">'+rows+'</div>','取消',null,true);
+      setTimeout(function(){
+        document.querySelectorAll('#genericModalBody .contact-select-item[data-fid]').forEach(function(el){
+          el.addEventListener('click',function(){
+            var tid=el.getAttribute('data-fid'), ttype=el.getAttribute('data-ftype');
+            window.closeModal&&window.closeModal();
+            var sayBody='<div class="setting-row"><label>附一句话（可留空）</label><textarea id="fwdPostSay" rows="2" placeholder="想说点什么…" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font);"></textarea></div>';
+            window.showModal('转发这个帖子',sayBody,'发送',function(){
+              var say=(document.getElementById('fwdPostSay')&&document.getElementById('fwdPostSay').value||'').trim();
+              doForwardForumPost(post,tid,ttype,say);
+            },true);
+          });
+        });
+      },50);
+    };
+
+    function doForwardForumPost(post,targetId,targetType,say){
+      var S=window.__state; if(!S) return;
+      var chat=null;
+      if(targetType==='group'){ chat=(S.chats||[]).find(function(c){return c.id===targetId&&c.type==='group';}); }
+      else{
+        chat=(S.chats||[]).find(function(c){return c.charId===targetId&&c.type!=='group';});
+        if(!chat){ chat={id:uid(),charId:targetId,userId:null,type:'single',createdAt:Date.now(),updatedAt:Date.now()}; S.chats.push(chat); try{window.__db&&window.__db.chats.put(chat);}catch(e){} }
+      }
+      if(!chat){ window.showModal('提示','没有找到目标聊天','好的'); return; }
+      var mkId=function(){return window.uid?window.uid():(Date.now().toString(36)+Math.random().toString(36).slice(2,7));};
+      var postBody=(post.content||post.intro||'').toString();
+      var msg={
+        id:mkId(), chatId:chat.id, sender:'user',
+        charId:chat.type==='group'?null:(chat.charId||null), userId:chat.userId,
+        type:'share_article', isForumPost:true,
+        shareTitle:post.title||'论坛帖子', shareSite:'论坛', shareUrl:'',
+        postAuthor:post.author||'匿名', postContent:postBody, postTags:(post.tags||[]).slice(0,6),
+        content:'[转发论坛帖子]《'+(post.title||'')+'》',
+        timestamp:Date.now()
+      };
+      S.messages.push(msg);
+      try{window.__db&&window.__db.messages.put(msg);}catch(e){}
+      if(say){
+        var sayMsg={id:mkId(),chatId:chat.id,sender:'user',type:'text',content:say,charId:chat.type==='group'?null:(chat.charId||null),userId:chat.userId,timestamp:Date.now()+1};
+        S.messages.push(sayMsg);
+        try{window.__db&&window.__db.messages.put(sayMsg);}catch(e){}
+      }
+      chat.updatedAt=Date.now();
+      try{window.__db&&window.__db.chats.put(chat);}catch(e){}
+      // 跳转到该聊天并触发角色回应
+      try{
+        S.currentChatId=chat.id;
+        if(window.openChat) window.openChat(chat.id);
+        else if(window.renderMessages) window.renderMessages(chat.id);
+      }catch(e){}
+      // 转发后不自动触发角色回应：玩家可能还想接着发几句，等玩家点「响应」再让角色回
+      if(window.renderChatList) window.renderChatList();
+      window.showModal&&window.showModal('成功','已把帖子转发过去了 💬','好的');
+    }
   }
   boot();
 })();
@@ -20971,10 +21421,57 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 <!-- ============ 玩家旁白：句子前加 <旁白> 就输出成系统旁白样式 ============ -->
 <script id="phonePlayerNarrationJs">
 (function () {
+  function mkId() { return window.uid ? window.uid() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 7)); }
+
+  // 落一条玩家旁白消息（type=narration，sender=user）。narrTargets 为角色id数组，空/null=全体可见
+  function commitPlayerNarration(chatId, text, narrTargets) {
+    var S = window.__state;
+    if (!S || !text) return null;
+    var msg = { id: mkId(), chatId: chatId, sender: 'user', type: 'narration', content: text, timestamp: Date.now() };
+    if (Array.isArray(narrTargets) && narrTargets.length) msg.narrTargets = narrTargets.slice();
+    S.messages.push(msg);
+    try { window.__db && window.__db.messages.put(msg); } catch (e) {}
+    // 增量渲染这条旁白
+    var area = document.getElementById('msgArea');
+    if (area && window.createMsgElement) {
+      var typing = document.getElementById('typingIndicator');
+      var el = window.createMsgElement(msg);
+      if (el) {
+        if (typing && typing.parentNode === area) area.insertBefore(el, typing);
+        else area.appendChild(el);
+        if (window.jellyScrollToBottom) window.jellyScrollToBottom(el);
+      }
+    }
+    try { if (window.renderChatList) window.renderChatList(); } catch (e) {}
+    return msg;
+  }
+  window.__commitPlayerNarration = commitPlayerNarration;
+
+  // 群聊发旁白时，弹窗让玩家选这段旁白「作用于哪些角色」（定向暗示），确认后落库
+  function showGroupNarrTargetPicker(chat, text) {
+    var chars = (chat.charIds || []).map(function (id) {
+      return (window.__state.characters || []).find(function (c) { return c.id === id; });
+    }).filter(Boolean);
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var rows = chars.map(function (c) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,0.35);margin-bottom:6px;cursor:pointer;">' +
+        '<input type="checkbox" class="narr-target-cb" data-cid="' + c.id + '">' +
+        '<span>' + esc(c.name || '角色') + '</span></label>';
+    }).join('');
+    var body =
+      '<div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:10px;">这段旁白：<br><span style="color:var(--text-primary);">' + esc(text) + '</span></div>' +
+      '<div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;">选择这段旁白<b>作用于谁</b>：只有被选中的角色能感知到这段剧情/暗示，其他人读不到、也不会因它反应。<br><b>不选任何人＝全群可见</b>（当作大家都在的场景叙述）。</div>' +
+      '<div style="max-height:200px;overflow-y:auto;">' + (rows || '<div style="font-size:12px;color:var(--text-secondary);">群里还没有角色</div>') + '</div>';
+    window.showModal('这段旁白作用于谁', body, '发送旁白', function () {
+      var picked = [].slice.call(document.querySelectorAll('.narr-target-cb:checked')).map(function (cb) { return cb.getAttribute('data-cid'); });
+      commitPlayerNarration(chat.id, text, picked);
+    }, true);
+  }
+  window.__showGroupNarrTargetPicker = showGroupNarrTargetPicker;
+
   function boot() {
     if (typeof window.sendMessage !== 'function') { setTimeout(boot, 400); return; }
     if (window.__playerNarr) return; window.__playerNarr = true;
-    function mkId() { return window.uid ? window.uid() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 7)); }
     // 匹配句首的旁白前缀：<旁白>、〈旁白〉、【旁白】、[旁白]、旁白：等，后面跟正文
     var NARR_RE = /^\s*(?:[<〈［\[【]\s*旁白\s*[>〉］\]】]|旁白)\s*[:：]?\s*([\s\S]+)$/;
     var orig = window.sendMessage;
@@ -20983,26 +21480,17 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if ((type === 'text' || !type) && typeof content === 'string') {
           var m = content.match(NARR_RE);
           if (m && m[1].trim()) {
-            // 直接落一条玩家旁白消息（type=narration，sender=user），走和角色旁白一样的居中渲染
             var S = window.__state;
             if (S && S.currentChatId) {
               var chatId = S.currentChatId;
-              var msg = { id: mkId(), chatId: chatId, sender: 'user', type: 'narration', content: m[1].trim(), timestamp: Date.now() };
-              S.messages.push(msg);
-              try { window.__db && window.__db.messages.put(msg); } catch (e) {}
-              // 增量渲染这条旁白
-              var area = document.getElementById('msgArea');
-              if (area && window.createMsgElement) {
-                var typing = document.getElementById('typingIndicator');
-                var el = window.createMsgElement(msg);
-                if (el) {
-                  if (typing && typing.parentNode === area) area.insertBefore(el, typing);
-                  else area.appendChild(el);
-                  if (window.jellyScrollToBottom) window.jellyScrollToBottom(el);
-                }
+              var narrText = m[1].trim();
+              var chat = (S.chats || []).find(function (c) { return c.id === chatId; });
+              // 群聊：先让玩家选这段旁白「作用于谁」（定向暗示），再落库；单聊直接落库
+              if (chat && chat.type === 'group') {
+                showGroupNarrTargetPicker(chat, narrText);
+                return null; // 交给选择弹窗后续落库
               }
-              try { if (window.renderChatList) window.renderChatList(); } catch (e) {}
-              return msg;
+              return commitPlayerNarration(chatId, narrText, null);
             }
           }
         }
@@ -27191,18 +27679,11 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         }, true);
     }
 
-    // ---------- 每轮回复后生成心声：包装 triggerAiReply ----------
-    function patchTrigger() {
-        if (typeof window.triggerAiReply !== 'function' || window.__hvTriggerPatched) return;
-        window.__hvTriggerPatched = true;
-        var orig = window.triggerAiReply;
-        window.triggerAiReply = async function (chatId, forceCharId) {
-            // 一次「响应」= 一次计费：不再在每轮回复后自动生成心声（那会对每个角色各多发一次 AI 请求，
-            // 单人多扣 1 次、双人多扣 2 次，正是「一次扣两次/四次」的来源）。
-            // 心声改为你点角色头像看时才按需现生成（renderBody 里没有历史心声会自动生成一条），能力不丢。
-            return await orig.apply(this, arguments);
-        };
-    }
+    // ---------- 心声不再单独请求 API ----------
+    // 心声改为让角色在「同一次回复请求」里顺带用 [心声: ...] 写出来（见 mergedThink 脚本），
+    // 由那边解析后调 window.__hvPush 存入。单独发请求会导致一次响应多扣一次费，这里不再包装 triggerAiReply。
+    // 点头像看心声时，若确实没有历史心声，openModal 里仍会按需现生成一条兜底（那是玩家主动查看时才发生）。
+    function patchTrigger() { /* no-op：保留函数名，避免 boot 里调用报错 */ }
 
     function boot() {
         bindUI();
