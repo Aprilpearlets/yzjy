@@ -196,22 +196,43 @@ if (typeof Dexie === 'undefined') {
         var self=this;
         if(self._db) return Promise.resolve(self);        // 已打开，直接复用
         if(self._opening) return self._opening;            // 正在打开，复用同一个 Promise，避免并发重复 open
+        // 需要建表时才升版本：老用户的库可能已是很高的版本（旧 Dexie 把版本号乘了 10），
+        // 绝不能用固定低版本去 open，否则会 VersionError（“不能用更低版本打开”），_db 永远 null → 导入崩溃。
+        function needStores(db){
+          return Object.keys(self._stores).some(function(s){ return !db.objectStoreNames.contains(s); });
+        }
+        function createMissing(db){
+          Object.keys(self._stores).forEach(function(s){
+            if(!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath:'id' });
+          });
+        }
+        function finish(db, res){
+          self._db = db;
+          if(self._ver < db.version) self._ver = db.version;   // 记住真实版本，后续 open 不再降级
+          // 首次切到 IndexedDB 时，把旧 localStorage 兜底数据自动搬进来（不删原数据，双保险）
+          self._migrateFromLS().then(function(){ res(self); }, function(){ res(self); });
+        }
         self._opening = new Promise(function(res, rej){
           var req;
-          try { req = indexedDB.open(self._name, self._ver); }
+          // 第一步：不带版本号打开现有库（新库会建在 version 1），拿到库当前真实版本，绝不降级
+          try { req = indexedDB.open(self._name); }
           catch(e){ self._opening=null; return rej(e); }
-          req.onupgradeneeded = function(){
-            var db = req.result;
-            Object.keys(self._stores).forEach(function(s){
-              if(!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath:'id' });
-            });
-          };
-          req.onsuccess = function(){
-            self._db = req.result;
-            // 首次切到 IndexedDB 时，把旧 localStorage 兜底数据自动搬进来（不删原数据，双保险）
-            self._migrateFromLS().then(function(){ res(self); }, function(){ res(self); });
-          };
+          req.onupgradeneeded = function(){ createMissing(req.result); };   // 新建库时顺手建表
           req.onerror = function(){ self._opening=null; rej(req.error); };
+          req.onsuccess = function(){
+            var db = req.result;
+            if(!needStores(db)) return finish(db, res);   // 表齐全，直接用
+            // 缺表：在当前版本上抬一级，触发 onupgradeneeded 补建缺失的表
+            var nextVer = db.version + 1;
+            db.close();
+            var up;
+            try { up = indexedDB.open(self._name, nextVer); }
+            catch(e){ self._opening=null; return rej(e); }
+            up.onupgradeneeded = function(){ createMissing(up.result); };
+            up.onblocked = function(){ /* 其他标签页占用旧连接：等其释放，success/error 仍会到达 */ };
+            up.onerror = function(){ self._opening=null; rej(up.error); };
+            up.onsuccess = function(){ finish(up.result, res); };
+          };
         });
         return self._opening;
       };
@@ -20340,6 +20361,12 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
               if (window.__ltTogetherWith && window.__ltTogetherWith.charId === chat.charId) { try { window.__ltTogetherWith = null; } catch (e2) {} }
               if (window.__ltResetTogether) { try { window.__ltResetTogether(chat.charId); } catch (e2) {} }
             } catch (e) {}
+            // 2d) 清通话记忆 vcMemory：它会被注入提示词，不清掉角色会“记得”重置前的通话内容
+            //     （不能依赖 v6-38 那条延时监听：点“重置角色”只是弹确认框，此刻消息还在，延时检查会误判为未重置而跳过清理）
+            try {
+              if (char && char.vcMemory) { delete char.vcMemory; }
+              if (char && char.vcEager) { delete char.vcEager; }
+            } catch (e) {}
             // 顺带清掉“已被察觉屏蔽”等运行时痕迹
             if (char) { char._leakRevealed = false; try { await DB().characters.put(JSON.parse(JSON.stringify(char))); } catch (e) {} }
             if (window.renderMessages) window.renderMessages(chat.id);
@@ -27741,7 +27768,20 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (!charId || !text) return;
         pushVoice(charId, text);
         markUnread(charId);
+        // 记录这个角色最近一次产出心声的时间，供「两次回应内至少一条」的兜底判断使用
+        try {
+            var seen = JSON.parse(localStorage.getItem('phone_hv_lastseen') || '{}');
+            seen[charId] = Date.now();
+            localStorage.setItem('phone_hv_lastseen', JSON.stringify(seen));
+        } catch (e) {}
         if (hvOpenCharId === charId) { try { renderBody(charId); } catch (e) {} }
+    };
+    // 暴露：这个角色距上次心声过了几条消息（供 mergedThink 判断要不要强制补写）
+    window.__hvVoiceGap = function (charId) {
+        try {
+            var seen = JSON.parse(localStorage.getItem('phone_hv_lastseen') || '{}');
+            return seen[charId] || 0; // 返回上次心声时间戳；0=从没写过
+        } catch (e) { return 0; }
     };
     // 给消息区里该角色的头像上未读心跳点
     function refreshDots() {
@@ -27796,36 +27836,72 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         });
     }
 
+    // 心声专用弹层：z-index 高于 #hvModal(6000)，稳稳盖在心声弹窗上方居中，
+    // 不再借用通用 genericModal（那是 position:absolute; z-index:100，会被心声弹窗压到下方）
+    function hvOverlay(innerHtml, onReady) {
+        closeHvOverlay();
+        var ov = document.createElement('div');
+        ov.id = 'hvActionOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:6100;display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;background:rgba(20,22,28,0.42);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        var card = document.createElement('div');
+        card.style.cssText = 'width:100%;max-width:300px;background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 50px rgba(30,35,50,0.28);box-sizing:border-box;';
+        card.innerHTML = innerHtml;
+        ov.appendChild(card);
+        ov.addEventListener('click', function (e) { if (e.target === ov) closeHvOverlay(); });
+        document.body.appendChild(ov);
+        if (onReady) onReady(card);
+        return ov;
+    }
+    function closeHvOverlay() {
+        var ov = document.getElementById('hvActionOverlay');
+        if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+    }
+
     function openVoiceMenu(charId, vid) {
         var voices = getVoices(charId);
         var v = voices.filter(function (x) { return x.id === vid; })[0];
         if (!v) return;
-        var body = '<div style="display:flex;flex-direction:column;gap:10px;">' +
+        var html = '<div style="font-size:15px;font-weight:700;color:#2b3040;text-align:center;margin-bottom:14px;">心声</div>' +
+            '<div style="display:flex;flex-direction:column;gap:10px;">' +
             '<button class="btn-secondary" id="hvEditBtn" style="width:100%;">改写这条心声</button>' +
             '<button class="btn-secondary" id="hvDelBtn" style="width:100%;color:#e0605e;">删除这条心声</button>' +
+            '<button class="btn-secondary" id="hvCancelBtn" style="width:100%;">取消</button>' +
             '</div>';
-        window.showModal('心声', body, '取消', null, true);
-        setTimeout(function () {
-            var eb = document.getElementById('hvEditBtn');
-            var db = document.getElementById('hvDelBtn');
-            if (eb) eb.onclick = function () { openVoiceEdit(charId, vid, v.text); };
+        hvOverlay(html, function (card) {
+            var eb = card.querySelector('#hvEditBtn');
+            var db = card.querySelector('#hvDelBtn');
+            var cb = card.querySelector('#hvCancelBtn');
+            if (eb) eb.onclick = function () { closeHvOverlay(); openVoiceEdit(charId, vid, v.text); };
             if (db) db.onclick = function () {
-                window.closeModal && window.closeModal();
+                closeHvOverlay();
                 deleteVoice(charId, vid);
                 if (hvOpenCharId === charId) renderBody(charId);
             };
-        }, 40);
+            if (cb) cb.onclick = function () { closeHvOverlay(); };
+        });
     }
 
     function openVoiceEdit(charId, vid, oldText) {
-        var body = '<textarea id="hvEditInput" rows="4" style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);font-family:var(--font);font-size:14px;line-height:1.6;resize:vertical;box-sizing:border-box;">' + esc(oldText) + '</textarea>';
-        window.showModal('改写心声', body, '保存', function () {
-            var t = (document.getElementById('hvEditInput') && document.getElementById('hvEditInput').value || '').trim();
-            if (!t) return;
-            updateVoice(charId, vid, t);
-            if (hvOpenCharId === charId) renderBody(charId);
-        }, true);
-        setTimeout(function () { var i = document.getElementById('hvEditInput'); if (i) i.focus(); }, 50);
+        var html = '<div style="font-size:15px;font-weight:700;color:#2b3040;text-align:center;margin-bottom:14px;">改写心声</div>' +
+            '<textarea id="hvEditInput" rows="4" style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);font-family:var(--font);font-size:14px;line-height:1.6;resize:vertical;box-sizing:border-box;">' + esc(oldText) + '</textarea>' +
+            '<div style="display:flex;gap:10px;margin-top:14px;">' +
+            '<button class="btn-secondary" id="hvEditCancel" style="flex:1;">取消</button>' +
+            '<button class="btn-primary" id="hvEditSave" style="flex:1;">保存</button>' +
+            '</div>';
+        hvOverlay(html, function (card) {
+            var i = card.querySelector('#hvEditInput');
+            if (i) setTimeout(function () { i.focus(); }, 50);
+            var sv = card.querySelector('#hvEditSave');
+            var cc = card.querySelector('#hvEditCancel');
+            if (sv) sv.onclick = function () {
+                var t = (i && i.value || '').trim();
+                if (!t) return;
+                updateVoice(charId, vid, t);
+                closeHvOverlay();
+                if (hvOpenCharId === charId) renderBody(charId);
+            };
+            if (cc) cc.onclick = function () { closeHvOverlay(); };
+        });
     }
     function openModal(charId) {
         var char = getChar(charId);
@@ -33915,12 +33991,35 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         }
 
         // —— 附加任务 D：顺带写下此刻的心声（不额外发请求，玩家点头像才看得到）——
+        // 「两次回应内至少一条」兜底：算这个角色距上次产出心声，之后又发了几条消息。
+        // 如果 ≥2 条还没写新心声（或从没写过），这轮就强制补写，并把心声任务提到最前、语气加重。
         tasks.voice = true;
-        extra += '\n\n## 🫧 顺带写一句：你此刻没说出口的心声\n' +
+        var forceVoice = false;
+        try {
+          var lastVoiceTs = (typeof window.__hvVoiceGap === 'function') ? window.__hvVoiceGap(char.id) : 0;
+          var msgs = window.getMessages ? window.getMessages(chat.id) : [];
+          var aiSince = 0;
+          for (var vi = 0; vi < msgs.length; vi++) {
+            var mm = msgs[vi];
+            if (mm && mm.sender !== 'user' && (!mm.charId || mm.charId === char.id) && (mm.timestamp || 0) > lastVoiceTs) aiSince++;
+          }
+          // 从没写过，或距上次心声已隔 ≥2 条该角色消息 → 强制补
+          if (!lastVoiceTs || aiSince >= 2) forceVoice = true;
+        } catch (e) {}
+        var voiceBlock = '\n\n## 🫧 顺带写一句：你此刻没说出口的心声\n' +
           '在这次回复的最后，另起一行写下「' + char.name + '」此刻心里真实的、没说出口的那句话（心声/内心OS）：可以是吐槽、口是心非、害羞、破防、在意、小情绪等，紧贴刚刚这轮对话。\n' +
           '格式 →  [心声: 这里写心里话]\n' +
           '- 用第一人称，口语、真实、有活人感，10~40 个字，一两句就好，不要旁白动作、不要引号。\n' +
-          '- 这一行不会作为聊天消息发出去，只存进「点头像看心声」那里给玩家看。每轮都要写。';
+          '- 这一行不会作为聊天消息发出去，只存进「点头像看心声」那里给玩家看。' +
+          (forceVoice
+            ? '\n- ⚠️这一轮【必须】写心声，不能省略、不能跳过，无论如何都要在回复最后补上这一行 [心声: ...]。'
+            : '\n- 尽量每轮都写。');
+        if (forceVoice) {
+          // 提到最前，降低被其它顺带任务挤掉的概率
+          extra = voiceBlock + extra;
+        } else {
+          extra += voiceBlock;
+        }
 
         if (extra) {
           window.__mergedCtx[char.id] = tasks;
