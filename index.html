@@ -2391,6 +2391,7 @@ if (typeof Dexie === 'undefined') {
                             </div>
                         </div>
                         <div class="setting-row"><label>人设描述</label><textarea id="editCharPersona" rows="4" placeholder="性格、背景、说话风格..."></textarea></div>
+                        <div class="setting-row"><label>备注<br><small style="color:var(--text-secondary);font-weight:400;">只给你自己看的小纸条，不会发给 AI，会显示在人设列表里</small></label><textarea id="editCharNote" rows="2" placeholder="例如：这个是我给谁谁做的号 / 备用 / 待完善…"></textarea></div>
                         <div class="setting-row"><label>在线状态</label><select id="editCharOnline"><option value="1">🟢 在线</option><option value="0">⚪ 离线</option></select></div>
                         <div class="setting-row"><label>感知实时时间</label><select id="editCharTimeAware"><option value="1">🕐 开启（知道现在几点）</option><option value="0">🌫️ 关闭（靠聊天自己推理）</option></select></div>
                         <div class="setting-row" id="editCharTimeZoneSearchRow" style="margin-bottom:-4px;"><label>搜索角色地点</label><input type="text" id="editCharTimeZoneSearch" placeholder="输入城市名，如 洛杉矶 / paris / 东京" autocomplete="off"></div>
@@ -2527,6 +2528,7 @@ if (typeof Dexie === 'undefined') {
                         <div class="setting-row"><label>模型</label><select id="apiModel"></select><button class="btn-secondary" id="fetchModelsBtn" style="width:100%;margin-top:6px;">拉取模型</button></div>
                         <div class="setting-row"><label>温度 (0~2)</label><div class="range-wrap"><input type="range" id="apiTemp" min="0" max="200" value="70"><span class="val" id="apiTempVal">0.7</span></div></div>
                         <div class="setting-row"><label>全局记忆条数</label><input type="number" id="globalMemory" value="15" min="1" max="100"></div>
+                        <div class="setting-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;margin:0;"><span>朋友圈只让关系人点赞评论<br><small style="color:var(--text-secondary);font-weight:400;">开启后，你发的朋友圈只有出现在该身份「人际关系」里的角色才会点赞评论</small></span><input type="checkbox" id="momentRelOnly" style="width:22px;height:22px;flex-shrink:0;"></label></div>
                         <button class="btn-primary" id="apiSaveBtn" style="width:100%;margin-top:6px;">保存聊天 API</button>
                     </div>
 
@@ -4827,7 +4829,7 @@ ${isOffline
                 }
                 let textContent = '';
                 if (m.type === 'text') textContent = m.content || '';
-                else if (m.type === 'sticker') { const st = getSticker(m.stickerId); const sname = st?.name || '表情'; textContent = isSelf ? `[表情:${sname}]` : `[对方给你发了一张表情包，这张表情表达的情绪/含义是「${sname}」。请把它当成对方真的发来的一个表情，读懂这个情绪并自然地回应，而不是无视它]`; }
+                else if (m.type === 'sticker') { const st = getSticker(m.stickerId); const sname = st?.name || '表情'; textContent = isSelf ? `[表情:${sname}]` : `[对方给你发了一张表情包，这张表情传达的情绪/含义大致是「${sname}」（这是给你的内部提示，帮助你读懂对方此刻的情绪）。你只需领会这份情绪、像真人一样自然地接话回应即可。绝对不要在回复里复述、点名或描述这个表情本身，比如不要说"你发的这个xx表情""这个表情真可爱""哈哈这表情"之类——现实中没人会对着朋友发来的表情特地评价它。就当作你已经看懂了对方的情绪，顺着情绪往下聊。]`; }
                 else if (m.type === 'transfer') textContent = `[转账 ¥${m.amount} ${m.note || ''}]`;
                 else if (m.type === 'redpacket') {
                     const rpAmt = m.rpTotal ? ` ¥${m.rpTotal}` : '';
@@ -5341,13 +5343,18 @@ ${groupTimeInfo}
             const poster = getChar(moment.charId);
             const api = getChatApi();
             if (!poster || !api || !api.url || !api.key) return;
+            // 只有和发帖角色互有人际关系的角色，才会出现在这条朋友圈的点赞/评论里。
+            // 发帖角色没有任何人际关系时，就没人来互动（不再随便抓陌生角色凑数）。
             let circle = state.characters.filter(c => c.id !== poster.id && !c.isBlocked && (
                 (poster.relationships || []).some(r => r.targetId === c.id) || (c.relationships || []).some(r => r.targetId === poster.id)
             ));
-            if (circle.length === 0) circle = state.characters.filter(c => c.id !== poster.id && !c.isBlocked).slice(0, 3);
+            if (circle.length === 0) return;
             await Promise.allSettled(circle.map(async friend => {
                 try {
-                    const prompt = `你是"${friend.name}"。你的朋友"${poster.name}"刚发了一条朋友圈：${moment.imageUrl ? '[配图]' : ''}"${moment.content}"。
+                    const rel = (friend.relationships || []).find(r => r.targetId === poster.id)
+                        || (poster.relationships || []).find(r => r.targetId === friend.id);
+                    const relText = rel ? `你和ta的关系：${rel.type || '认识'}，${rel.desc || ''}。` : '';
+                    const prompt = `你是"${friend.name}"，${friend.persona ? friend.persona.slice(0, 60) : '一个有自己性格的人'}。你的朋友"${poster.name}"刚发了一条朋友圈：${moment.imageUrl ? '[配图]' : ''}"${moment.content}"。${relText}
 以你和ta的关系、性格，你会怎么反应？从下面选一种，自然一点，别每次都又赞又评论：
 - 只点赞: 只输出 [赞]
 - 简短评论: 只输出 [评论: 你要说的话]
@@ -6178,6 +6185,7 @@ ${groupTimeInfo}
             $('editCharAvatarPreview').innerHTML = '🧸';
             delete $('editCharAvatarPreview').dataset.avatarUrl;
             $('editCharPersona').value = '';
+            if ($('editCharNote')) $('editCharNote').value = '';
             $('editCharOnline').value = '1';
             $('editCharMemory').value = state.settings.globalMemory || 15;
             if ($('editCharCallCd')) $('editCharCallCd').value = 5;
@@ -6208,6 +6216,7 @@ ${groupTimeInfo}
                 delete preview.dataset.avatarUrl;
             }
             $('editCharPersona').value = c.persona || '';
+            if ($('editCharNote')) $('editCharNote').value = c.note || '';
             $('editCharOnline').value = c.online ? '1' : '0';
             $('editCharMemory').value = c.memoryCount || state.settings.globalMemory || 15;
             if ($('editCharCallCd')) $('editCharCallCd').value = (c.callCooldownMin != null ? c.callCooldownMin : 5);
@@ -7599,6 +7608,7 @@ ${groupTimeInfo}
             $('customChatCssInput').value = state.settings.customCss || '';
 
             $('globalMemory').value = state.settings.globalMemory || 15;
+            if ($('momentRelOnly')) $('momentRelOnly').checked = !!state.settings.momentRelOnly;
             const themeRadios = document.querySelectorAll('input[name="themeColor"]');
             themeRadios.forEach(r => { r.checked = (r.value === state.settings.themeColor); });
         }
@@ -7647,6 +7657,7 @@ ${groupTimeInfo}
             api.temperature = Math.min(2, Math.max(0, temp));
             await db.apiConfigs.put(api);
             state.settings.globalMemory = parseInt($('globalMemory').value) || 15;
+            if ($('momentRelOnly')) state.settings.momentRelOnly = $('momentRelOnly').checked;
             await saveAll();
             renderSettings();
             showModal('成功', '聊天API已保存 ✅', '好的');
@@ -10432,7 +10443,9 @@ ${groupTimeInfo}
         var div = document.createElement('div');
         div.className = 'char-card';
         div.innerHTML = '<div class="avatar">' + avImg(c.avatar, '🧸') + '</div>' +
-            '<div class="info"><div class="name">' + esc(c.name) + '</div><div class="desc">' + esc((c.persona || '').slice(0, 30) || '没有描述') + '</div></div>' +
+            '<div class="info"><div class="name">' + esc(c.name) + '</div><div class="desc">' + esc((c.persona || '').slice(0, 30) || '没有描述') + '</div>' +
+            ((c.note && c.note.trim()) ? '<div class="desc" style="color:var(--primary-dark);opacity:0.85;">📝 ' + esc(c.note.trim().slice(0, 30)) + '</div>' : '') +
+            '</div>' +
             '<div class="tag ' + (c.isBlocked ? 'blocked' : '') + '">' + (c.isBlocked ? '🚫 已拉黑' : (c.online ? '🟢 在线' : '⚪ 离线')) + '</div>';
         div.addEventListener('click', function () { if (window.openCharEditor) window.openCharEditor(c.id); });
         div.__openEdit = function () { if (window.openCharEditor) window.openCharEditor(c.id); };
@@ -15705,6 +15718,17 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
             if (!api) { if (opts.alert) window.showModal('提示', '请先在设置里配置聊天 API', '好的'); return 0; }
             var blocked = {}; (moment.blockedIds || []).forEach(function (id) { blocked[id] = 1; });
             var all = (S().characters || []).filter(function (c) { return !c.isBlocked && !blocked[c.id] && c.id !== moment.charId; });
+            // 「只让人际关系里出现的人物点赞评论」开关：开启后，玩家发的圈只保留与该身份有关系的角色
+            // （角色 relationships 里 targetId 指向这个发帖身份，或发帖角色的关系里指向该角色）
+            try {
+                if (S().settings && S().settings.momentRelOnly && moment.isUser && moment.userId) {
+                    var relFiltered = all.filter(function (c) {
+                        return (c.relationships || []).some(function (r) { return r && r.targetId === moment.userId; });
+                    });
+                    // 有匹配到关系人物才收窄；一个都没有就保持原样，避免整片朋友圈没人理的死局
+                    if (relFiltered.length) all = relFiltered;
+                }
+            } catch (e) {}
             if (!all.length) { if (opts.alert) window.showModal('提示', '暂时没有可以回应的角色', '好的'); return 0; }
 
             var acted = 0;
@@ -16286,15 +16310,39 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
     var S=function(){return window.__state;};
     var DB=function(){return window.__db;};
     function esc(s){return (s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+    function pid(){return 'dp'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
     async function saveCustom(){try{await DB().settings.put(Object.assign({id:'main'},S().settings));}catch(e){}}
 
     var DEF_OTHER='2.5D 半写实插画渲染，介于二次元与三维之间，柔和通透的色彩与光影，精致细腻的动漫质感，干净的厚涂笔触；严禁真人照片质感、严禁写实摄影，no photorealistic, not a real photo, anime 2.5d illustration style';
 
-    // 重写图片生成：有自定义用自定义，没填用内置
+    // 迁移：把老的单条 drawCustom 转成词条列表，老玩家数据不丢
+    (function migrate(){
+      var s=S().settings; if(!s)return;
+      if(!Array.isArray(s.drawPresets))s.drawPresets=[];
+      if(s.drawCustom&&(s.drawCustom.person||s.drawCustom.other)&&!s.__drawMigrated){
+        var dup=s.drawPresets.some(function(p){return (p.person||'')===(s.drawCustom.person||'')&&(p.other||'')===(s.drawCustom.other||'');});
+        if(!dup){
+          var np={id:pid(),name:'我的提示词',person:s.drawCustom.person||'',other:s.drawCustom.other||''};
+          s.drawPresets.push(np);
+          if(!s.drawPresetId)s.drawPresetId=np.id;
+        }
+        s.__drawMigrated=true; saveCustom();
+      }
+    })();
+
+    // 取当前生效的词条；返回 null 表示用内置
+    function activePreset(){
+      var s=S().settings||{}; var id=s.drawPresetId; if(!id)return null;
+      var list=s.drawPresets||[];
+      for(var i=0;i<list.length;i++)if(list[i].id===id)return list[i];
+      return null;
+    }
+
+    // 重写图片生成：有选中词条用词条，没选/选内置则用内置
     var origGen=window.generateRealImage;
     window.generateRealImage=async function(description,char){
-      var custom=(S().settings&&S().settings.drawCustom)||{};
-      var hasCustom=(custom.person&&custom.person.trim())||(custom.other&&custom.other.trim());
+      var custom=activePreset();
+      var hasCustom=custom&&((custom.person&&custom.person.trim())||(custom.other&&custom.other.trim()));
       if(!hasCustom)return origGen(description,char);
       var drawApi=window.getDrawApi?window.getDrawApi():null;
       var prompt=description||'';
@@ -16331,29 +16379,191 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
       btn.addEventListener('click',openCustom);
     }
 
+    // —— 词条编辑面板：编辑时用工作副本，保存时才写回 ——
+    var work=[], curId='';
+
+    function findW(id){for(var i=0;i<work.length;i++)if(work[i].id===id)return work[i];return null;}
+
+    function syncInput(){
+      if(!curId)return;
+      var w=findW(curId); if(!w)return;
+      var n=document.getElementById('dcName'),p=document.getElementById('dcPerson'),o=document.getElementById('dcOther');
+      if(n)w.name=(n.value||'').trim()||'未命名';
+      if(p)w.person=(p.value||'').trim();
+      if(o)w.other=(o.value||'').trim();
+    }
+
+    function renderPanel(){
+      var wrap=document.getElementById('dcWrap'); if(!wrap)return;
+      var opts='<option value="">内置默认（不使用自定义）</option>';
+      for(var i=0;i<work.length;i++){opts+='<option value="'+work[i].id+'"'+(work[i].id===curId?' selected':'')+'>'+esc(work[i].name||'未命名')+'</option>';}
+      var cur=findW(curId);
+      var editHtml='';
+      if(curId&&cur){
+        editHtml=''+
+          '<div class="setting-row"><label>词条名称</label><input type="text" id="dcName" value="'+esc(cur.name||'')+'" placeholder="给这套提示词起个名字"></div>'+
+          '<div class="setting-row"><label>人物绘画提示词</label><textarea id="dcPerson" rows="3" placeholder="留空=内置（保持锁脸一致等）。可写：画风、人物特征、镜头…">'+esc(cur.person||'')+'</textarea></div>'+
+          '<div class="setting-row"><label>其他提示词（画风/画质/负面等）</label><textarea id="dcOther" rows="3" placeholder="留空=内置 2.5D 插画风格。可写：写实/厚涂/负面词…">'+esc(cur.other||'')+'</textarea></div>';
+      }else{
+        editHtml='<div style="font-size:12px;color:var(--text-secondary);line-height:1.6;padding:8px 0;">当前使用内置默认提示词。选择上方词条或点「新建」来自定义画风。</div>';
+      }
+      wrap.innerHTML=''+
+        '<div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:10px;">可保存多套提示词，用哪套就在上面选哪套；选「内置默认」则用系统内置。改完记得点底部「保存」。</div>'+
+        '<div class="setting-row"><label>使用中的词条</label><select id="dcSelect">'+opts+'</select>'+
+        '<div class="btn-row" style="margin-top:6px;"><button class="btn-secondary" id="dcNew" style="flex:1;">新建</button><button class="btn-secondary" id="dcDel" style="flex:1;"'+(curId?'':' disabled')+'>删除</button></div></div>'+
+        editHtml;
+      bindPanel();
+    }
+
+    function bindPanel(){
+      var sel=document.getElementById('dcSelect');
+      if(sel)sel.addEventListener('change',function(){syncInput();curId=sel.value;renderPanel();});
+      var nw=document.getElementById('dcNew');
+      if(nw)nw.addEventListener('click',function(){syncInput();var np={id:pid(),name:'提示词'+(work.length+1),person:'',other:''};work.push(np);curId=np.id;renderPanel();});
+      var dl=document.getElementById('dcDel');
+      if(dl)dl.addEventListener('click',function(){if(!curId)return;work=work.filter(function(w){return w.id!==curId;});curId=work.length?work[0].id:'';renderPanel();});
+    }
+
     function openCustom(){
-      var c=(S().settings&&S().settings.drawCustom)||{};
-      var body='<div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:10px;">填了就按你写的画，留空则用内置默认提示词。</div>'+
-        '<div class="setting-row"><label>人物绘画提示词</label><textarea id="dcPerson" rows="3" placeholder="留空=内置（保持锁脸一致等）。可写：画风、人物特征、镜头…">'+esc(c.person||'')+'</textarea></div>'+
-        '<div class="setting-row"><label>其他提示词（画风/画质/负面等）</label><textarea id="dcOther" rows="3" placeholder="留空=内置 2.5D 插画风格。可写：写实/厚涂/负面词…">'+esc(c.other||'')+'</textarea></div>';
-      window.showModal('自定义绘画提示词',body,'保存',async function(){
-        S().settings.drawCustom={person:(document.getElementById('dcPerson').value||'').trim(),other:(document.getElementById('dcOther').value||'').trim()};
+      var src=(S().settings&&S().settings.drawPresets)||[];
+      work=src.map(function(p){return {id:p.id,name:p.name,person:p.person,other:p.other};});
+      curId=(S().settings&&S().settings.drawPresetId)||'';
+      if(curId&&!findW(curId))curId='';
+      window.showModal('自定义绘画提示词','<div id="dcWrap"></div>','保存',async function(){
+        syncInput();
+        S().settings.drawPresets=work.map(function(p){return {id:p.id,name:p.name||'未命名',person:p.person||'',other:p.other||''};});
+        S().settings.drawPresetId=curId||'';
         await saveCustom();
-        window.showModal('已保存',((S().settings.drawCustom.person||S().settings.drawCustom.other)?'之后绘图将使用你的自定义提示词':'均留空，将使用内置默认提示词'),'好的');
+        var usingName=curId?((findW(curId)||{}).name||'未命名'):'内置默认';
+        window.showModal('已保存','当前绘图将使用：'+esc(usingName),'好的');
       },true);
-      setTimeout(function(){
-        var f=document.getElementById('genericModalFooter')||document.querySelector('#genericModal .modal-footer');
-        if(f&&!document.getElementById('dcClear')){
-          var cb=document.createElement('button');cb.className='btn-secondary';cb.id='dcClear';cb.textContent='清空恢复内置';cb.style.flex='1';
-          cb.addEventListener('click',async function(){S().settings.drawCustom={person:'',other:''};await saveCustom();var p=document.getElementById('dcPerson'),o=document.getElementById('dcOther');if(p)p.value='';if(o)o.value='';window.showModal('已清空','已恢复使用内置默认提示词','好的');});
-          f.insertBefore(cb,f.firstChild);
-        }
-      },50);
+      setTimeout(renderPanel,30);
     }
   }
   boot();
 })();
 </script>
+<!-- ============ 小手机 v6-画图提示词翻译：开启后画图前把中文提示词翻成英文（适配 NAI 等只认英文的接口） ============ -->
+<script id="phoneDrawTranslateJs">
+(function(){
+  if(window.__drawTranslatePatched)return;
+  window.__drawTranslatePatched=true;
+
+  var LS_KEY='phone_draw_translate';
+  function enabled(){ try{return localStorage.getItem(LS_KEY)==='1';}catch(e){return false;} }
+  function setEnabled(v){ try{localStorage.setItem(LS_KEY,v?'1':'0');}catch(e){} }
+  function hasCJK(s){ return typeof s==='string' && /[\u4e00-\u9fa5]/.test(s); }
+
+  // 取聊天 API（用它来翻译；画图接口本身不一定支持文本翻译）
+  function chatApi(){
+    var s=window.__state; if(!s)return null;
+    var a=(s.apiConfigs||[]).find(function(x){return x.type==='chat'&&x.id===s.currentChatApiId;})
+        ||(s.apiConfigs||[]).find(function(x){return x.type==='chat';});
+    return (a&&a.url&&a.key)?{url:a.url.replace(/\/+$/,''),key:a.key,model:a.model||'gpt-3.5-turbo'}:null;
+  }
+
+  // 保存原始 fetch，翻译请求直接走它，绕开所有画图/画风拦截，避免死循环
+  var origFetch=window.fetch;
+
+  // 简单的会话内缓存，避免同一段提示词反复翻译
+  var cache={};
+  async function translate(text){
+    if(!hasCJK(text)) return text;
+    if(cache[text]) return cache[text];
+    var api=chatApi();
+    if(!api) return null;
+    try{
+      var res=await origFetch.call(window, api.url+'/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
+        body:JSON.stringify({
+          model:api.model,
+          messages:[
+            {role:'system',content:'你是专门的图像生成提示词(prompt)翻译器。把用户给的中文图像提示词翻译成自然、准确的英文提示词：保留原有的逗号/顿号分隔结构，用英文逗号分隔各个标签或短句，保留画质词与风格词。只输出翻译后的英文提示词本身，不要任何解释、说明、引号或多余前后缀。'},
+            {role:'user',content:text}
+          ],
+          temperature:0.3,
+          max_tokens:800
+        })
+      });
+      if(!res.ok) return null;
+      var d=await res.json();
+      var out=(d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim();
+      if(out){ cache[text]=out; return out; }
+      return null;
+    }catch(e){ return null; }
+  }
+
+  // ---- fetch 拦截：画图请求发出前，把中文提示词翻成英文 ----
+  window.fetch=async function(input,init){
+    try{
+      if(enabled() && init && init.body && typeof init.body==='string'){
+        var url=(typeof input==='string')?input:(input&&input.url)||'';
+        // 1) 标准图片接口：body.prompt / body.negative_prompt
+        if(/\/images\/generations/i.test(url)){
+          var b=JSON.parse(init.body); var changed=false;
+          if(b && typeof b.prompt==='string' && hasCJK(b.prompt)){ var t=await translate(b.prompt); if(t){b.prompt=t;changed=true;} }
+          if(b && typeof b.negative_prompt==='string' && hasCJK(b.negative_prompt)){ var tn=await translate(b.negative_prompt); if(tn){b.negative_prompt=tn;changed=true;} }
+          if(changed) init=Object.assign({},init,{body:JSON.stringify(b)});
+        }
+        // 2) NovelAI：body.input（正面词）
+        else if(/\/ai\/generate-image/i.test(url)){
+          var b2=JSON.parse(init.body); var changed2=false;
+          if(b2 && typeof b2.input==='string' && hasCJK(b2.input)){ var t2=await translate(b2.input); if(t2){b2.input=t2;changed2=true;} }
+          if(b2 && b2.parameters && typeof b2.parameters.negative_prompt==='string' && hasCJK(b2.parameters.negative_prompt)){ var t2n=await translate(b2.parameters.negative_prompt); if(t2n){b2.parameters.negative_prompt=t2n;changed2=true;} }
+          if(changed2) init=Object.assign({},init,{body:JSON.stringify(b2)});
+        }
+        // 3) 用对话接口画图的中转：messages 里含“请画一张图：xxx”
+        else if(/\/chat\/completions/i.test(url) && /请画一张图/.test(init.body)){
+          var cb=JSON.parse(init.body); var changed3=false;
+          if(cb && Array.isArray(cb.messages)){
+            for(var i=0;i<cb.messages.length;i++){
+              var msg=cb.messages[i];
+              if(msg && typeof msg.content==='string' && /请画一张图/.test(msg.content) && hasCJK(msg.content)){
+                var mm=msg.content.match(/^(\s*请画一张图[：:]\s*)([\s\S]+)$/);
+                if(mm){ var tt=await translate(mm[2]); if(tt){ msg.content=mm[1]+tt; changed3=true; } }
+                else { var tt2=await translate(msg.content); if(tt2){ msg.content=tt2; changed3=true; } }
+              }
+            }
+            if(changed3) init=Object.assign({},init,{body:JSON.stringify(cb)});
+          }
+        }
+      }
+    }catch(e){ /* 翻译出错就按原文继续，不阻断画图 */ }
+    return origFetch.call(this,input,init);
+  };
+
+  // ---- 在画图 API 设置区注入「画图翻译：开/关」开关 ----
+  function label(){ return '画图翻译：'+(enabled()?'开（先译成英文 🌐）':'关'); }
+  function injectToggle(){
+    var saveBtn=document.getElementById('drawApiSaveBtn');
+    if(!saveBtn||document.getElementById('drawTranslateBtn'))return;
+    var btn=document.createElement('button');
+    btn.className='btn-secondary';btn.id='drawTranslateBtn';btn.style.width='100%';btn.style.marginTop='6px';
+    btn.textContent=label();
+    saveBtn.parentNode.insertBefore(btn,saveBtn);
+    btn.addEventListener('click',function(){
+      var body='<div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:12px;">开启后，每次画图前会先用你的<b>聊天 API</b>把中文提示词翻译成英文，再发给画图接口。适合 NovelAI 等只认英文提示词的服务。翻译失败时会按原文继续，不影响画图。</div>'+
+        '<div style="display:flex;flex-direction:column;gap:12px;">'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;"><input type="radio" name="drawTransSel" value="off" '+(enabled()?'':'checked')+'> 关（直接发送原始提示词）</label>'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;"><input type="radio" name="drawTransSel" value="on" '+(enabled()?'checked':'')+'> 🌐 开（画图前先翻译成英文）</label>'+
+        '</div>';
+      window.showModal('画图提示词翻译',body,'保存',function(){
+        var sel=document.querySelector('input[name="drawTransSel"]:checked');
+        setEnabled(sel && sel.value==='on');
+        btn.textContent=label();
+        window.showModal('已保存', enabled()?'之后画图会先把中文提示词翻译成英文再生成。':'已关闭画图翻译，将直接发送原始提示词。','好的');
+      },true);
+    });
+  }
+  function boot(){
+    if(!document.getElementById('drawApiSaveBtn')){setTimeout(boot,600);return;}
+    injectToggle();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+
 <!-- ============ 小手机 v6-画风开关：偏动漫 / 偏真人（最终拦截层，覆盖所有生图路径） ============ -->
 <script id="phoneRealismJs">
 (function(){
@@ -17900,6 +18110,7 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
         var preview=$('editCharAvatarPreview');
         var avatar=(preview&&(preview.dataset.avatarUrl|| (preview.querySelector('img')&&preview.querySelector('img').src) || (preview.textContent||'').trim()))||'🧸';
         var persona=($('editCharPersona').value||'').trim();
+        var note=$('editCharNote')?($('editCharNote').value||'').trim():'';
         var online=$('editCharOnline')?$('editCharOnline').value==='1':true;
         var timeAware=$('editCharTimeAware')?$('editCharTimeAware').value==='1':true;
         var timeZone=$('editCharTimeZone')?($('editCharTimeZone').value||''):'';
@@ -17917,11 +18128,11 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
         if(id){
           char=getChar(id);
           if(!char){window.showModal('提示','找不到该人设','好的');return;}
-          char.name=name;char.avatar=avatar;char.persona=persona;char.online=online;char.timeAware=timeAware;char.timeZone=timeZone;char.userTimeZone=userTimeZone;char.chatLang=chatLang;char.bilingual=bilingual;
+          char.name=name;char.avatar=avatar;char.persona=persona;char.note=note;char.online=online;char.timeAware=timeAware;char.timeZone=timeZone;char.userTimeZone=userTimeZone;char.chatLang=chatLang;char.bilingual=bilingual;
           char.memoryCount=memoryCount;char.callCooldownMin=callCooldownMin;char.isBlocked=isBlocked;char.worldBookId=worldBookId;char.userId=userId;
           char.lockface=lockface;
         }else{
-          char={id:uid(),name:name,avatar:avatar,persona:persona,online:online,timeAware:timeAware,timeZone:timeZone,userTimeZone:userTimeZone,chatLang:chatLang,bilingual:bilingual,memoryCount:memoryCount,callCooldownMin:callCooldownMin,isBlocked:isBlocked,worldBookId:worldBookId,userId:userId,relationships:[],lockface:lockface,createdAt:Date.now()};
+          char={id:uid(),name:name,avatar:avatar,persona:persona,note:note,online:online,timeAware:timeAware,timeZone:timeZone,userTimeZone:userTimeZone,chatLang:chatLang,bilingual:bilingual,memoryCount:memoryCount,callCooldownMin:callCooldownMin,isBlocked:isBlocked,worldBookId:worldBookId,userId:userId,relationships:[],lockface:lockface,createdAt:Date.now()};
           S().characters.push(char);
         }
         // 专属壁纸：同步并进本次保存，避免延时补写被页面切换/重渲染覆盖
@@ -34316,7 +34527,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             var file = e.target.files && e.target.files[0];
             if (!file) return;
             var chatId = S().currentChatId;
-            var name = file.name || '未命名文件';
+            var name = file.name || '文件';
             var size = file.size;
             var kind = extOf(name);
             // 文本类文件：读全文（限 200KB 以内，太大截断）
@@ -34437,6 +34648,30 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
         function extOf(name) { var m = (name || '').match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : '文件'; }
 
+        // 文件正文里的换行占位符：角色回复在拆行前，把 [文件:...] 块内部换行折叠成它，落卡片时再还原。
+        // 这样多行文件正文不会被 runCharReply 的 split('\n') 拆断，渲染不出文件卡。
+        var FILE_NL = '\u0001FILENL\u0001';
+
+        // 在生成回复被拆行「之前」保护多行文件块：把 [文件: 名 | 多行正文] 里的换行折叠成占位符
+        function protectFileBlocks(reply) {
+            if (typeof reply !== 'string' || reply.indexOf('[文件') < 0) return reply;
+            try {
+                return reply.replace(/\[文件[:：][\s\S]*?\]/g, function (block) {
+                    return block.replace(/\r?\n/g, FILE_NL);
+                });
+            } catch (e) { return reply; }
+        }
+        // 包装 generateReplyForChar：单聊回复文本在进入 runCharReply 拆行前先折叠文件块换行
+        if (typeof window.generateReplyForChar === 'function' && !window.generateReplyForChar.__fileWrap) {
+            var origGen = window.generateReplyForChar;
+            var wrapGen = async function (chatId, char) {
+                var reply = await origGen.apply(this, arguments);
+                return protectFileBlocks(reply);
+            };
+            wrapGen.__fileWrap = true;
+            window.generateReplyForChar = wrapGen;
+        }
+
         // ---------- 1. 拦截 [文件: 文件名 | 正文]（正文可选） ----------
         var origCommit = window.commitCharLine;
         window.commitCharLine = async function (chatId, char, line, ts) {
@@ -34445,7 +34680,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             var fm = s.match(/^\[文件[:：]\s*([^|\]]+?)\s*(?:\|\s*([\s\S]*?))?\]$/);
             if (fm) {
                 var name = (fm[1] || '').trim() || '未命名文件';
-                var text = (fm[2] || '').trim();
+                // 还原拆行前折叠的换行占位符，恢复多行正文
+                var text = (fm[2] || '').split(FILE_NL).join('\n').trim();
                 var truncated = false;
                 if (text.length > 60000) { text = text.slice(0, 60000); truncated = true; }
                 return {
@@ -34474,3 +34710,58 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 })();
 </script>
 <!-- ============ 角色发送文件 结束 ============ -->
+
+<!-- ============ 小手机 v5-90：图片参考兜底记录（修复"已发过照片却提示没发过"） ============ -->
+<script id="phoneV90Js">
+(function(){
+  function boot(){
+    if(!window.__state||typeof window.generateRealImage!=='function'){setTimeout(boot,500);return;}
+    if(window.__v90)return;window.__v90=true;
+    var S=function(){return window.__state;};
+
+    // 是否为可作参考的真实图片（排除占位图与空值）
+    function isRealImg(url){
+      if(!url||typeof url!=='string')return false;
+      if(url.indexOf('picsum.photos')>=0)return false;
+      return /^data:image\//.test(url)||/^https?:\/\//.test(url);
+    }
+
+    // 兜底记录：不管内部走哪条画图链路，只要产出真实图片就写入 genImages
+    function ensureRecord(char,description,url){
+      try{
+        if(!isRealImg(url))return;
+        var s=S();
+        if(!s.settings)s.settings={};
+        if(!Array.isArray(s.settings.genImages))s.settings.genImages=[];
+        // 去重：同一张 url 不重复记录
+        for(var i=0;i<s.settings.genImages.length;i++){
+          if(s.settings.genImages[i]&&s.settings.genImages[i].url===url)return;
+        }
+        var mkId=window.uid?window.uid:function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);};
+        s.settings.genImages.unshift({
+          id:mkId(),
+          charId:(char&&char.id)||null,
+          charName:(char&&char.name)||'',
+          ts:Date.now(),
+          desc:description||'',
+          prompt:'',
+          url:url
+        });
+        if(s.settings.genImages.length>18)s.settings.genImages=s.settings.genImages.slice(0,18);
+        if(char&&char.id){if(!s.settings.lastGen)s.settings.lastGen={};s.settings.lastGen[char.id]={ts:Date.now(),prompt:''};}
+        if(typeof window.saveSettings==='function'){window.saveSettings();}
+        else if(window.__db&&window.__db.settings){try{window.__db.settings.put(Object.assign({id:'main'},s.settings));}catch(e){}}
+      }catch(e){}
+    }
+
+    var prevGen=window.generateRealImage;
+    window.generateRealImage=async function(description,char){
+      var url=await prevGen(description,char);
+      ensureRecord(char,description,url);
+      return url;
+    };
+  }
+  boot();
+})();
+</script>
+<!-- ============ 小手机 v5-90 结束 ============ -->
