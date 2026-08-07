@@ -20572,6 +20572,15 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
               if (window.__ltTogetherWith && window.__ltTogetherWith.charId === chat.charId) { try { window.__ltTogetherWith = null; } catch (e2) {} }
               if (window.__ltResetTogether) { try { window.__ltResetTogether(chat.charId); } catch (e2) {} }
             } catch (e) {}
+            // 2c-2) 清一起看：删掉绑定了这个角色的书（书按 charId 绑定，只删这个角色的，不动别人的）
+            try {
+              var RT_LS = 'phone_rt_books_v1';
+              var books = JSON.parse(localStorage.getItem(RT_LS) || '[]');
+              if (Array.isArray(books) && books.length) {
+                var kept = books.filter(function (b) { return !b || b.charId !== chat.charId; });
+                if (kept.length !== books.length) localStorage.setItem(RT_LS, JSON.stringify(kept));
+              }
+            } catch (e) {}
             // 2d) 清通话记忆 vcMemory：它会被注入提示词，不清掉角色会“记得”重置前的通话内容
             //     （不能依赖 v6-38 那条延时监听：点“重置角色”只是弹确认框，此刻消息还在，延时检查会误判为未重置而跳过清理）
             try {
@@ -24663,7 +24672,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
   ];
   // 第3页应用
   var EXT3 = [
-    { key: 'jealous', label: '修罗场', svg: '<svg viewBox=\"0 0 24 24\"><circle cx=\"6.5\" cy=\"8\" r=\"2.6\"/><circle cx=\"17.5\" cy=\"8\" r=\"2.6\"/><circle cx=\"12\" cy=\"15.5\" r=\"3\"/><path d=\"M9.6 9.6 11 13M14.4 9.6 13 13\"/></svg>', open: function () { window.openJealous && window.openJealous(); } }
+    { key: 'jealous', label: '修罗场', svg: '<svg viewBox=\"0 0 24 24\"><circle cx=\"6.5\" cy=\"8\" r=\"2.6\"/><circle cx=\"17.5\" cy=\"8\" r=\"2.6\"/><circle cx=\"12\" cy=\"15.5\" r=\"3\"/><path d=\"M9.6 9.6 11 13M14.4 9.6 13 13\"/></svg>', open: function () { window.openJealous && window.openJealous(); } },
+    { key: 'readtogether', label: '一起看书', svg: '<svg viewBox=\"0 0 24 24\"><path d=\"M12 6.5C10.5 5 8 4.5 5 5v13c3-.5 5.5 0 7 1.5\"/><path d=\"M12 6.5C13.5 5 16 4.5 19 5v13c-3-.5-5.5 0-7 1.5\"/><path d=\"M12 6.5v13\"/></svg>', open: function () { window.openReadTogether && window.openReadTogether(); } }
   ];
 
   function iconEl(svg, label, onclick) {
@@ -34491,6 +34501,30 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         }
         function extOf(name) { var m = (name || '').match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : '文件'; }
 
+        // 智能解码：自动识别 UTF-8 / UTF-16 / GBK(GB18030) 等编码，避免中文 txt 乱码
+        function decodeBuffer(buf) {
+            var bytes = new Uint8Array(buf);
+            // 先看 BOM
+            if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+                return new TextDecoder('utf-8').decode(bytes.subarray(3));
+            }
+            if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+            }
+            if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+                return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+            }
+            // 无 BOM：严格按 UTF-8 试解，出现非法字节就回退到 GB18030（兼容 GBK/GB2312）
+            try {
+                return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+            } catch (e) {
+                try { return new TextDecoder('gb18030').decode(bytes); }
+                catch (e2) {
+                    try { return new TextDecoder('utf-8').decode(bytes); }
+                    catch (e3) { return ''; }
+                }
+            }
+        }
         // ---------- 1. 隐藏 file input + 功能栏「文件」按钮 ----------
         function ensureInput() {
             var inp = document.getElementById('chatFileInput');
@@ -34534,13 +34568,15 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             if (isTextFile(file)) {
                 var reader = new FileReader();
                 reader.onload = function (ev) {
-                    var text = String(ev.target.result || '');
+                    var text = '';
+                    try { text = decodeBuffer(ev.target.result); }
+                    catch (err) { text = ''; }
                     var truncated = false;
                     if (text.length > 60000) { text = text.slice(0, 60000); truncated = true; }
                     sendFile(chatId, name, size, kind, text, truncated);
                 };
                 reader.onerror = function () { sendFile(chatId, name, size, kind, '', false); };
-                reader.readAsText(file);
+                reader.readAsArrayBuffer(file);
             } else {
                 // 非文本文件：只带文件名/大小，让角色知道收到一个这样的文件
                 sendFile(chatId, name, size, kind, '', false);
@@ -34760,6 +34796,1415 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       ensureRecord(char,description,url);
       return url;
     };
+  }
+  boot();
+})();
+</script>
+<style id="readTogetherStyle">
+  #rt-app, #rtModal, #rtBall { font-family: var(--font, -apple-system, system-ui, sans-serif); box-sizing: border-box; }
+  #rt-app *, #rtModal * { box-sizing: border-box; }
+  #rt-app { position: absolute; inset: 0; z-index: 60; display: none; flex-direction: column; background: #fff; color: #262626; overflow: hidden; }
+  #rt-app.show { display: flex; }
+  .rt-top { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 12px 12px calc(11px + env(safe-area-inset-top, 0px)); padding-top: calc(12px + env(safe-area-inset-top, 0px)); background: #fff; border-bottom: 1px solid #dbdbdb; }
+  .rt-top .rt-back, .rt-top .rt-gear, .rt-top .rt-toc-btn { width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; color: #262626; font-size: 18px; cursor: pointer; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+  .rt-top .rt-back:active, .rt-top .rt-gear:active, .rt-top .rt-toc-btn:active { background: #f0f0f0; }
+  .rt-top .rt-toc-btn { display: none; font-size: 19px; }
+  .rt-top .rt-title { flex: 1; font-size: 16px; font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.3px; }
+  .rt-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* 书架 */
+  .rt-shelf { padding: 16px 14px 28px; }
+  .rt-shelf-title { font-size: 11px; color: #8e8e8e; margin: 4px 2px 14px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 600; }
+  .rt-book { display: flex; gap: 14px; align-items: center; padding: 13px 4px; border-bottom: 1px solid #efefef; cursor: pointer; }
+  .rt-book:active { background: #fafafa; }
+  .rt-book-cover { flex: 0 0 auto; width: 48px; height: 64px; border-radius: 4px; background: #262626; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 21px; }
+  .rt-book-info { flex: 1; min-width: 0; }
+  .rt-book-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #262626; }
+  .rt-book-meta { font-size: 12px; color: #8e8e8e; margin-top: 4px; }
+  .rt-book-prog { font-size: 11px; color: #c7c7c7; margin-top: 3px; }
+  .rt-book-del { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: #c7c7c7; font-size: 15px; cursor: pointer; }
+  .rt-book-del:active { background: #f0f0f0; color: #ed4956; }
+  .rt-empty { text-align: center; color: #c7c7c7; font-size: 13px; padding: 56px 22px; line-height: 1.9; }
+  .rt-import { position: relative; overflow: hidden; display: block; width: 100%; padding: 13px; border: 1px solid #262626; border-radius: 8px; background: #262626; color: #fff; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; margin-top: 20px; -webkit-tap-highlight-color: transparent; }
+  .rt-import:active { opacity: 0.82; }
+  /* 真实 file input 覆盖整个按钮：手指点到的是 input 本身，避开 vivo 等浏览器对 JS click() 隐藏 input 的拦截 */
+  .rt-import input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+  /* 目录面板 */
+  #rtTocPanel { position: absolute; inset: 0; z-index: 64; display: none; background: rgba(0,0,0,0.35); }
+  #rtTocPanel.show { display: block; }
+  .rt-toc-sheet { position: absolute; top: 0; bottom: 0; left: 0; width: 82%; max-width: 340px; background: #fff; display: flex; flex-direction: column; transform: translateX(-100%); animation: rtTocIn 0.24s cubic-bezier(0.22,0.9,0.3,1) forwards; }
+  @keyframes rtTocIn { to { transform: translateX(0); } }
+  .rt-toc-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px calc(16px); padding-top: calc(16px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid #efefef; }
+  .rt-toc-head h4 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+  .rt-toc-head span { font-size: 12px; color: #8e8e8e; }
+  .rt-toc-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0 calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .rt-toc-item { display: flex; align-items: baseline; gap: 10px; padding: 12px 18px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+  .rt-toc-item:active { background: #fafafa; }
+  .rt-toc-item.on { background: #f5f5f5; }
+  .rt-toc-item.on .rt-toc-t { font-weight: 700; }
+  .rt-toc-t { flex: 1; font-size: 14px; color: #262626; line-height: 1.5; word-break: break-word; }
+  .rt-toc-p { flex: 0 0 auto; font-size: 11px; color: #c7c7c7; }
+  .rt-toc-empty { text-align: center; color: #c7c7c7; font-size: 13px; padding: 44px 20px; line-height: 1.8; }
+  /* 阅读器 */
+  .rt-reader { position: absolute; inset: 0; z-index: 1; display: none; flex-direction: column; background: var(--rt-paper, #fff); }
+  .rt-reader.show { display: flex; }
+  .rt-reader-top { position: relative; z-index: 3; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 12px 12px calc(11px + env(safe-area-inset-top, 0px)); padding-top: calc(12px + env(safe-area-inset-top, 0px)); background: #fff; border-bottom: 1px solid #efefef; }
+  .rt-reader-top .rt-rd-btn { flex: 0 0 auto; padding: 7px 12px; border: 1px solid #dbdbdb; border-radius: 8px; background: #fff; color: #262626; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .rt-reader-top .rt-rd-btn:active { background: #f0f0f0; }
+  .rt-reader-title { flex: 1; text-align: center; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.3px; }
+  .rt-reader-page { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 18px 22px 90px; font-size: var(--rt-fs, 18px); line-height: 1.9; color: var(--rt-ink, #262626); white-space: pre-wrap; word-break: break-word; }
+  /* 下滑连续模式：底部翻页栏隐藏，页与页之间用分隔 */
+  .rt-reader.scroll-mode .rt-reader-foot { display: none; }
+  .rt-reader.scroll-mode .rt-reader-page { padding-bottom: 40px; }
+  .rt-scroll-sep { display: flex; align-items: center; gap: 10px; margin: 26px 0 20px; color: #c7c7c7; font-size: 11px; letter-spacing: 1px; }
+  .rt-scroll-sep::before, .rt-scroll-sep::after { content: ''; flex: 1; height: 1px; background: #efefef; }
+  .rt-scroll-end { text-align: center; color: #c7c7c7; font-size: 12px; padding: 24px 0 8px; }
+  /* 顶栏模式切换段 */
+  .rt-reader-mode { display: flex; gap: 4px; background: #f0f0f0; border-radius: 8px; padding: 3px; flex: 0 0 auto; }
+  .rt-reader-mode button { padding: 6px 10px; border: none; border-radius: 6px; background: transparent; font-size: 12px; color: #8e8e8e; cursor: pointer; white-space: nowrap; }
+  .rt-reader-mode button.on { background: #fff; color: #262626; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+  .rt-reader-page .rt-sent { cursor: pointer; }
+  .rt-reader-page .rt-sent.marked { background: linear-gradient(180deg, transparent 62%, rgba(38,38,38,0.13) 62%); border-radius: 2px; }
+  .rt-reader-page .rt-sent.marked.has { background: linear-gradient(180deg, transparent 60%, rgba(38,38,38,0.28) 60%); }
+  .rt-reader-foot { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(0deg, var(--rt-paper,#fff) 72%, transparent); }
+  .rt-pg-btn { flex: 0 0 auto; padding: 9px 16px; border: 1px solid #dbdbdb; border-radius: 8px; background: #fff; color: #262626; font-size: 14px; cursor: pointer; }
+  .rt-pg-btn:disabled { opacity: 0.3; }
+  .rt-pg-info { flex: 1; text-align: center; font-size: 12px; color: #8e8e8e; }
+  /* 悬浮小球 */
+  #rtBall { position: absolute; z-index: 62; right: 14px; bottom: 120px; width: 52px; height: 52px; border-radius: 50%; background: #262626; box-shadow: 0 4px 14px rgba(0,0,0,0.25); display: none; align-items: center; justify-content: center; cursor: pointer; color: #fff; touch-action: none; user-select: none; }
+  #rtBall.show { display: flex; }
+  #rtBall.dragging { transition: none; }
+  #rtBall svg { width: 25px; height: 25px; }
+  #rtBall .rt-ball-dot { position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ed4956; color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 700; box-shadow: 0 0 0 2px #fff; }
+  /* 微信风格通知横幅 */
+  #rtToast { position: absolute; z-index: 68; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.98); border: 1px solid #ececec; border-radius: 14px; box-shadow: 0 8px 26px rgba(0,0,0,0.18); cursor: pointer; opacity: 0; transform: translateY(-140%); transition: transform 0.32s cubic-bezier(0.22,0.9,0.3,1), opacity 0.32s; pointer-events: none; }
+  #rtToast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .rt-toast-ava { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; overflow: hidden; background: #efefef; display: flex; align-items: center; justify-content: center; font-size: 19px; color: #262626; }
+  .rt-toast-ava img { width: 100%; height: 100%; object-fit: cover; }
+  .rt-toast-body { flex: 1; min-width: 0; }
+  .rt-toast-name { font-size: 13px; font-weight: 700; color: #262626; margin-bottom: 2px; }
+  .rt-toast-text { font-size: 13px; color: #6a6a6a; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  /* 讨论面板（点开小球） */
+  #rtChat { position: absolute; inset: 0; z-index: 63; display: none; flex-direction: column; background: rgba(0,0,0,0.4); }
+  #rtChat.show { display: flex; }
+  .rt-chat-sheet { margin-top: auto; background: #fff; border-radius: 16px 16px 0 0; max-height: 82%; display: flex; flex-direction: column; overflow: hidden; animation: rtUp 0.26s cubic-bezier(0.22,0.9,0.3,1); }
+  @keyframes rtUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .rt-chat-head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #efefef; }
+  .rt-chat-ava { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: #efefef; display: flex; align-items: center; justify-content: center; font-size: 18px; flex: 0 0 auto; }
+  .rt-chat-ava img { width: 100%; height: 100%; object-fit: cover; }
+  .rt-chat-name { flex: 1; font-size: 15px; font-weight: 600; }
+  .rt-chat-name small { display: block; font-size: 11px; color: #8e8e8e; font-weight: 400; margin-top: 2px; }
+  .rt-chat-close { width: 30px; height: 30px; border: none; border-radius: 8px; background: #f0f0f0; color: #262626; font-size: 15px; cursor: pointer; }
+  .rt-chat-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px; }
+  .rt-msg { margin-bottom: 14px; display: flex; flex-direction: column; }
+  .rt-msg.me { align-items: flex-end; }
+  .rt-msg-quote { max-width: 84%; font-size: 12px; color: #8e8e8e; background: #fafafa; border-left: 3px solid #dbdbdb; padding: 6px 10px; border-radius: 0 8px 8px 0; margin-bottom: 5px; line-height: 1.5; }
+  .rt-msg-bub { max-width: 84%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .rt-msg.char .rt-msg-bub { background: #efefef; color: #262626; border-bottom-left-radius: 4px; }
+  .rt-msg.me .rt-msg-bub { background: #262626; color: #fff; border-bottom-right-radius: 4px; }
+  .rt-msg-time { font-size: 10px; color: #c7c7c7; margin-top: 4px; }
+  .rt-typing { font-size: 13px; color: #8e8e8e; padding: 4px 2px; }
+  .rt-chat-input { flex: 0 0 auto; display: flex; gap: 8px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #efefef; align-items: flex-end; }
+  .rt-chat-input textarea { flex: 1; resize: none; border: 1px solid #dbdbdb; border-radius: 20px; padding: 9px 14px; font-size: 14px; font-family: inherit; max-height: 90px; background: #fafafa; line-height: 1.5; }
+  .rt-chat-send { flex: 0 0 auto; padding: 9px 16px; border: none; border-radius: 20px; background: #262626; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .rt-chat-send:disabled { opacity: 0.4; }
+  .rt-chat-act { display: flex; gap: 8px; padding: 0 14px 8px; }
+  .rt-chat-act button { flex: 1; padding: 9px; border: 1px solid #dbdbdb; border-radius: 8px; background: #fff; color: #262626; font-size: 13px; cursor: pointer; }
+  /* 弹窗 */
+  #rtModal { position: absolute; inset: 0; z-index: 66; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); padding: 24px; }
+  #rtModal.show { display: flex; }
+  .rt-modal-box { width: 100%; max-width: 340px; background: #fff; border-radius: 14px; padding: 20px; max-height: 84%; overflow-y: auto; }
+  .rt-modal-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .rt-modal-row { margin-bottom: 14px; }
+  .rt-modal-row label { display: block; font-size: 13px; color: #262626; margin-bottom: 6px; font-weight: 500; }
+  .rt-modal-row input, .rt-modal-row select, .rt-modal-row textarea { width: 100%; border: 1px solid #dbdbdb; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; background: #fafafa; }
+  .rt-modal-row textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+  .rt-modal-hint { font-size: 12px; color: #8e8e8e; line-height: 1.6; margin-bottom: 12px; }
+  .rt-modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .rt-modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .rt-modal-cancel { background: #f0f0f0; color: #262626; }
+  .rt-modal-ok { background: #262626; color: #fff; }
+  .rt-seg { display: flex; gap: 4px; background: #f0f0f0; border-radius: 9px; padding: 3px; }
+  .rt-seg button { flex: 1; padding: 8px; border: none; border-radius: 7px; background: transparent; font-size: 13px; color: #8e8e8e; cursor: pointer; }
+  .rt-seg button.on { background: #fff; color: #262626; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+  .rt-wb-item { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: #fafafa; border: 1px solid #efefef; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+  .rt-wb-item input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #262626; }
+</style>
+<div id="rt-app">
+  <div class="rt-top">
+    <button class="rt-back" id="rtBack" type="button">‹</button>
+    <button class="rt-toc-btn" id="rtTocBtn" type="button">☰</button>
+    <div class="rt-title" id="rtTitle">一起看小说</div>
+    <button class="rt-gear" id="rtGear" type="button">⚙</button>
+  </div>
+  <div class="rt-body" id="rtBody"></div>
+  <div class="rt-reader" id="rtReader">
+    <div class="rt-reader-top">
+      <button class="rt-rd-btn" id="rtReaderBack" type="button">‹ 书架</button>
+      <div class="rt-reader-title" id="rtReaderTitle"></div>
+      <div class="rt-reader-mode" id="rtReaderMode">
+        <button data-mode="page" type="button">翻页</button>
+        <button data-mode="scroll" type="button">下滑</button>
+      </div>
+      <button class="rt-rd-btn" id="rtReaderToc" type="button">☰</button>
+    </div>
+    <div class="rt-reader-page" id="rtReaderPage"></div>
+    <div class="rt-reader-foot" id="rtReaderFoot">
+      <button class="rt-pg-btn" id="rtPrevPage" type="button">上一页</button>
+      <div class="rt-pg-info" id="rtPageInfo"></div>
+      <button class="rt-pg-btn" id="rtNextPage" type="button">下一页</button>
+    </div>
+  </div>
+</div>
+<div id="rtTocPanel">
+  <div class="rt-toc-sheet">
+    <div class="rt-toc-head">
+      <h4 id="rtTocTitle">目录</h4>
+      <span id="rtTocCount"></span>
+    </div>
+    <div class="rt-toc-list" id="rtTocList"></div>
+  </div>
+</div><div id="rtBall">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a1 1 0 0 1 1-1h6v16H5a1 1 0 0 1-1-1z"/><path d="M20 19V5a1 1 0 0 0-1-1h-6v16h6a1 1 0 0 0 1-1z"/></svg>
+  <span class="rt-ball-dot" id="rtBallDot" style="display:none;">0</span>
+</div>
+<div id="rtToast">
+  <div class="rt-toast-ava" id="rtToastAva">📖</div>
+  <div class="rt-toast-body">
+    <div class="rt-toast-name" id="rtToastName">角色</div>
+    <div class="rt-toast-text" id="rtToastText"></div>
+  </div>
+</div>
+<div id="rtChat">
+  <div class="rt-chat-sheet">
+    <div class="rt-chat-head">
+      <div class="rt-chat-ava" id="rtChatAva">📖</div>
+      <div class="rt-chat-name" id="rtChatName">角色<small id="rtChatSub"></small></div>
+      <button class="rt-chat-close" id="rtChatClose" type="button">✕</button>
+    </div>
+    <div class="rt-chat-list" id="rtChatList"></div>
+    <div class="rt-chat-act">
+      <button id="rtActPush" type="button">👀 让 TA 说说这页</button>
+    </div>
+    <div class="rt-chat-input">
+      <textarea id="rtChatInput" rows="1" placeholder="回复 TA…"></textarea>
+      <button class="rt-chat-send" id="rtChatSend" type="button">发送</button>
+    </div>
+  </div>
+</div>
+<div id="rtModal"><div class="rt-modal-box" id="rtModalBox"></div></div>
+<script id="readTogetherJs">
+(function () {
+  var LS = 'phone_rt_books_v1';
+  var API_LS = 'phone_rt_api';
+  var STYLE_LS = 'phone_rt_style';
+  var CHARSEL_LS = 'phone_rt_char';
+
+  var S = function () { return window.__state || {}; };
+  function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
+  function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
+  function $(id) { return document.getElementById(id); }
+  function avaHtml(a, fb) {
+    if (a && (a.indexOf('http') === 0 || a.indexOf('data:') === 0)) return '<img src="' + esc(a) + '" alt="">';
+    return esc(a || fb || '📖');
+  }
+  function fmtTime(ts) { var d = new Date(ts); var h = d.getHours(), m = d.getMinutes(); return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
+
+  // ---------- 智能解码（和文件读取共用一套逻辑，避免中文 txt 乱码） ----------
+  function decodeBuffer(buf) {
+    var bytes = new Uint8Array(buf);
+    if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return new TextDecoder('utf-8').decode(bytes.subarray(3));
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+    catch (e) { try { return new TextDecoder('gb18030').decode(bytes); } catch (e2) { try { return new TextDecoder('utf-8').decode(bytes); } catch (e3) { return ''; } } }
+  }
+
+  // ---------- 数据层 ----------
+  // book: { id, name, text, pages:[str], pageIdx, charId, chatId, discussions:{ pageIdx: [msg] }, marks:{ pageIdx: {sentIdx: {text, note}} }, syncMem, ts }
+  // 存储层：一本小说 text+pages 常有几 MB，localStorage 只有 ~5MB，塞进去会抛
+  // QuotaExceededError；旧代码 catch 后静默吞掉，于是"哪个浏览器都导不进、也不报错"。
+  // 改用 IndexedDB（容量几百 MB），并保持 load/save/getBook 等同步签名不变：
+  //   _books 内存缓存是唯一同步数据源；写操作同步更新内存 + 异步落 IndexedDB。
+  var _books = [];
+  var _dbReady = false;
+  var IDB_NAME = 'phone_rt_books_db', IDB_STORE = 'books', _idb = null;
+
+  function idbOpen(cb) {
+    if (_idb) { cb(_idb); return; }
+    try {
+      if (!window.indexedDB) { cb(null); return; }
+      var req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+      };
+      var done = false;
+      var finish = function (db) { if (done) return; done = true; cb(db); };
+      req.onsuccess = function (e) { _idb = e.target.result; finish(_idb); };
+      req.onerror = function () { finish(null); };
+      // 被其他标签页/版本升级阻塞时不会走 success/error，会一直挂着：兜底走 localStorage
+      req.onblocked = function () { finish(null); };
+      // 超时兜底：某些手机浏览器 open 会莫名卡住，2.5s 没回就降级，别让书架永远空白
+      setTimeout(function () { finish(_idb || null); }, 2500);
+    } catch (e) { cb(null); }
+  }
+  function idbGetAll(cb) {
+    idbOpen(function (db) {
+      if (!db) {
+        // IndexedDB 不可用（隐私模式等）：从 localStorage 兜底读
+        try { cb(JSON.parse(localStorage.getItem(LS) || '[]')); } catch (e) { cb(null); }
+        return;
+      }
+      try {
+        var st = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE);
+        var req = st.getAll();
+        req.onsuccess = function () { cb(req.result || []); };
+        req.onerror = function () { cb(null); };
+      } catch (e) { cb(null); }
+    });
+  }
+  // 整体覆盖式持久化：clear 后逐条 put，同一事务内原子完成
+  function idbPersist(list, onErr, onOk) {
+    idbOpen(function (db) {
+      if (!db) {
+        // IndexedDB 不可用：兜底写 localStorage。大书可能超 5MB 配额，
+        // 此时如实把错误报给用户（不再静默丢书）。
+        try { localStorage.setItem(LS, JSON.stringify(list || [])); onOk && onOk(); }
+        catch (e) { onErr && onErr(e); }
+        return;
+      }
+      try {
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        var st = tx.objectStore(IDB_STORE);
+        st.clear();
+        (list || []).forEach(function (b) { try { st.put(b); } catch (e) {} });
+        tx.oncomplete = function () { onOk && onOk(); };
+        tx.onerror = function () { onErr && onErr(tx.error || new Error('写入失败')); };
+        tx.onabort = function () { onErr && onErr(tx.error || new Error('写入中止')); };
+      } catch (e) { onErr && onErr(e); }
+    });
+  }
+
+  // 首次进入时：先从 IndexedDB 读；空则尝试迁移旧 localStorage 数据，迁移后清掉旧键腾空间
+  function initStore(cb) {
+    if (_dbReady) { cb && cb(); return; }
+    idbGetAll(function (books) {
+      if (books && books.length) { _books = books; _dbReady = true; cb && cb(); return; }
+      var legacy = [];
+      try { legacy = JSON.parse(localStorage.getItem(LS) || '[]'); } catch (e) { legacy = []; }
+      _books = Array.isArray(legacy) ? legacy : [];
+      _dbReady = true;
+      // 只有 IndexedDB 真正可用时才把旧 localStorage 数据迁进去并清掉旧键；
+      // 兜底模式下仍用 localStorage，不能删。
+      if (_books.length && _idb) { idbPersist(_books, null, function () { try { localStorage.removeItem(LS); } catch (e) {} }); }
+      cb && cb();
+    });
+  }
+
+  function load() { return _books; }
+  function save(list, onErr) { _books = list || []; idbPersist(_books, onErr); }
+  function getBook(id) { return _books.find(function (b) { return b.id === id; }); }
+  function saveBook(book, onErr) {
+    var i = _books.findIndex(function (b) { return b.id === book.id; });
+    if (i >= 0) _books[i] = book; else _books.push(book);
+    save(_books, onErr);
+  }
+  function delBook(id) { save(_books.filter(function (b) { return b.id !== id; })); }
+
+  // 把整本 txt 切成"页"。按字数切，尽量在段落/句子边界断开，保证一页在手机上读得舒服
+  var PAGE_SIZE = 620;
+  function paginate(text) {
+    text = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (!text) return [''];
+    var pages = [], i = 0, n = text.length;
+    while (i < n) {
+      var end = Math.min(i + PAGE_SIZE, n);
+      if (end < n) {
+        // 往后找一个自然断点（换行或句末标点），最多多带 180 字
+        var look = text.slice(end, Math.min(end + 180, n));
+        var brk = look.search(/[\n。！？!?…”]/);
+        if (brk >= 0) end = end + brk + 1;
+      }
+      pages.push(text.slice(i, end).trim());
+      i = end;
+    }
+    return pages.length ? pages : [''];
+  }
+
+  // 把一页正文切成"可点句子"，用于划线
+  function splitSentences(pageText) {
+    var raw = (pageText || '').split(/(?<=[。！？!?…”\n])/);
+    var out = [];
+    raw.forEach(function (s) { if (s !== '') out.push(s); });
+    return out.length ? out : [pageText || ''];
+  }
+
+  // ---------- 目录 ----------
+  // 章节标题识别：匹配"第X章/卷/回/节/幕 …""序章/楔子/尾声/番外/后记"等常见写法
+  var CHAP_RE = /^\s*(第\s*[0-9零一二三四五六七八九十百千两]+\s*[章卷回节幕篇集话]|序章|序言|楔子|引子|尾声|终章|后记|番外|附录|Chapter\s*\d+|CHAPTER\s*\d+)/i;
+  function looksLikeTitle(line) {
+    line = (line || '').trim();
+    if (!line) return false;
+    if (line.length > 30) return false;
+    return CHAP_RE.test(line);
+  }
+  // 为一本书生成目录：每一页给一个条目，标题优先取该页出现的章节标题，否则用页首摘要
+  function buildToc(book) {
+    var pages = (book && book.pages) || [];
+    var toc = [];
+    for (var p = 0; p < pages.length; p++) {
+      var lines = String(pages[p] || '').split('\n');
+      var title = '';
+      for (var k = 0; k < lines.length && k < 6; k++) {
+        if (looksLikeTitle(lines[k])) { title = lines[k].trim(); break; }
+      }
+      if (!title) {
+        // 取页首第一段非空文字做摘要
+        var snip = '';
+        for (var j = 0; j < lines.length; j++) { var t = lines[j].trim(); if (t) { snip = t; break; } }
+        snip = snip.replace(/\s+/g, ' ');
+        title = snip.length > 22 ? (snip.slice(0, 22) + '…') : (snip || '（空白页）');
+      }
+      toc.push({ page: p, title: title });
+    }
+    return toc;
+  }
+
+  function openToc() {
+    if (!cur) return;
+    renderToc();
+    $('rtTocPanel').classList.add('show');
+  }
+  function closeToc() { $('rtTocPanel').classList.remove('show'); }
+
+  function renderToc() {
+    if (!cur) return;
+    var toc = buildToc(cur);
+    $('rtTocTitle').textContent = '目录';
+    $('rtTocCount').textContent = '《' + cur.name + '》 · ' + toc.length + ' 页';
+    var curIdx = cur.pageIdx || 0;
+    var html = '';
+    if (!toc.length) {
+      html = '<div class="rt-toc-empty">这本书还没有内容</div>';
+    } else {
+      toc.forEach(function (it) {
+        var on = it.page === curIdx ? ' on' : '';
+        html += '<div class="rt-toc-item' + on + '" data-page="' + it.page + '">'
+          + '<div class="rt-toc-t">' + esc(it.title) + '</div>'
+          + '<div class="rt-toc-p">' + (it.page + 1) + '</div>'
+          + '</div>';
+      });
+    }
+    var list = $('rtTocList');
+    list.innerHTML = html;
+    list.querySelectorAll('[data-page]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var p = parseInt(el.getAttribute('data-page'), 10);
+        jumpToPage(p);
+      });
+    });
+    // 滚到当前页附近
+    var onEl = list.querySelector('.rt-toc-item.on');
+    if (onEl) setTimeout(function () { onEl.scrollIntoView({ block: 'center' }); }, 30);
+  }
+
+  function jumpToPage(p) {
+    if (!cur) return;
+    var n = (cur.pages || []).length;
+    p = Math.max(0, Math.min(n - 1, p));
+    var old = cur.pageIdx || 0;
+    closeToc();
+    if (p === old && readMode === 'page') return;
+    cur.pageIdx = p;
+    saveBook(cur);
+    renderPage();     // 两种模式统一：以目标页为中心重建并滚过去
+    updateBallDot();
+    if (p !== old) onPageChanged(old);
+  }
+
+  // ---------- API 配置：跟随聊天 API 或独立 ----------
+  function loadApi() { try { return JSON.parse(localStorage.getItem(API_LS) || '{"mode":"follow"}'); } catch (e) { return { mode: 'follow' }; } }
+  function saveApiCfg(a) { try { localStorage.setItem(API_LS, JSON.stringify(a)); } catch (e) {} }
+  function api() {
+    var cfg = loadApi();
+    if (cfg.mode === 'independent' && cfg.url && cfg.key) return { url: cfg.url.replace(/\/+$/, ''), key: cfg.key, model: cfg.model || 'gpt-3.5-turbo' };
+    var s = S(), list = s.apiConfigs || [];
+    var a = list.find(function (x) { return x.type === 'chat' && x.id === s.currentChatApiId; }) || list.find(function (x) { return x.type === 'chat'; });
+    return (a && a.url && a.key) ? { url: a.url.replace(/\/+$/, ''), key: a.key, model: a.model || 'gpt-3.5-turbo' } : null;
+  }
+
+  // ---------- 文风 / 讨论风格配置（勾世界书 + 自定义要求） ----------
+  function loadStyle() { try { return JSON.parse(localStorage.getItem(STYLE_LS) || '{"wbIds":[],"note":""}'); } catch (e) { return { wbIds: [], note: '' }; } }
+  function saveStyle(s) { try { localStorage.setItem(STYLE_LS, JSON.stringify({ wbIds: (s && s.wbIds) || [], note: (s && s.note) || '' })); } catch (e) {} }
+
+  // ---------- 玩家身份：让角色知道在和谁一起看小说 ----------
+  var IDENTITY_LS = 'phone_rt_identity';
+  // 现在存的是选中的身份 id（userId）；兼容旧格式（旧版存的是手填的 {name, persona}）
+  function loadIdentity() { try { return JSON.parse(localStorage.getItem(IDENTITY_LS) || '{}'); } catch (e) { return {}; } }
+  function saveIdentity(o) { try { localStorage.setItem(IDENTITY_LS, JSON.stringify(o || {})); } catch (e) {} }
+  // 取当前绑定的身份对象（从「我的身份」users 里）；没选或找不到返回 null
+  function currentUser() {
+    var id = loadIdentity();
+    if (id && id.userId) {
+      var u = (S().users || []).find(function (x) { return x.id === id.userId; });
+      if (u) return u;
+    }
+    return null;
+  }
+  // 组装成注入提示词的玩家身份段；没绑定就返回空串
+  function identityBlock() {
+    var u = currentUser();
+    if (u) {
+      var name = (u.name || '').trim();
+      var bio = (u.bio || '').trim();
+      if (!name && !bio) return '';
+      var out = '\n\n## 和你一起看书的人\n';
+      if (name) out += '这个人叫「' + name + '」，你就是在陪 TA 一起读。称呼、语气都要贴合你们的关系。\n';
+      if (bio) out += 'TA 的身份/设定：' + bio + '\n';
+      out += '记住你是在对 TA 说话，别把 TA 当成陌生读者。';
+      return out;
+    }
+    // 兼容旧的手填格式
+    var id = loadIdentity();
+    var oname = (id.name || '').trim(), opersona = (id.persona || '').trim();
+    if (!oname && !opersona) return '';
+    var o = '\n\n## 和你一起看书的人\n';
+    if (oname) o += '这个人叫「' + oname + '」，你就是在陪 TA 一起读。称呼、语气都要贴合你们的关系。\n';
+    if (opersona) o += 'TA 的身份/设定：' + opersona + '\n';
+    o += '记住你是在对 TA 说话，别把 TA 当成陌生读者。';
+    return o;
+  }
+
+  function styleBlock() {
+    var s = loadStyle();
+    var books = ((S().worldBooks) || []).filter(function (w) { return w && (s.wbIds || []).indexOf(w.id) >= 0; });
+    var parts = [];
+    books.forEach(function (w) { var c = (w.content || '').toString().trim(); if (c) parts.push('【' + (w.name || '设定') + '】\n' + c); });
+    var note = (s.note || '').trim();
+    if (!parts.length && !note) return '';
+    var out = '\n\n## 附加设定 / 讨论风格\n';
+    if (parts.length) out += parts.join('\n\n') + '\n';
+    if (note) out += (parts.length ? '\n' : '') + '玩家的额外要求：' + note + '\n';
+    return out;
+  }
+
+  // ---------- 记忆同步：写进角色的 phone_mem_<charId> ----------
+  function memGet(charId) { try { return JSON.parse(localStorage.getItem('phone_mem_' + charId) || '[]'); } catch (e) { return []; } }
+  function memSave(charId, arr) { try { localStorage.setItem('phone_mem_' + charId, JSON.stringify(arr)); } catch (e) {} }
+  function pushMemory(charId, text) {
+    if (!charId || !text) return;
+    var arr = memGet(charId);
+    arr.push({ id: uid(), content: text, timestamp: Date.now(), from: 'read_together' });
+    if (arr.length > 200) arr = arr.slice(-200);
+    memSave(charId, arr);
+  }
+
+  // ---------- 运行态 ----------
+  var cur = null;      // 当前打开的 book
+  var busy = false;    // AI 请求中
+  var selCharId = null; // 当前一起看的角色
+  var MODE_LS = 'phone_rt_mode';
+  var readMode = (function () { try { return localStorage.getItem(MODE_LS) === 'scroll' ? 'scroll' : 'page'; } catch (e) { return 'page'; } })(); // page | scroll
+  // 下滑模式懒加载窗口：已渲染的页区间 [loadedStart, loadedEnd)
+  var CHUNK = 3;              // 每批加载多少页
+  var loadedStart = 0, loadedEnd = 0;
+  var scrollBound = false;    // 滚动监听只绑一次
+
+  // ---------- 书架 ----------
+  function renderShelf() {
+    $('rtReader').classList.remove('show');
+    $('rtBody').style.display = '';
+    $('rtTitle').textContent = '一起看小说';
+    $('rtBall').classList.remove('show');
+    $('rtTocBtn').style.display = 'none';
+    closeToc();
+    var list = load();
+    var html = '<div class="rt-shelf">';
+    html += '<div class="rt-shelf-title">我的书架 · 导入 txt，邀角色一起看</div>';
+    if (!list.length) {
+      html += '<div class="rt-empty">书架还空着<br>导入一本 txt 小说，邀角色一起读，<br>TA 会在想聊的句子下划线，说说想法。</div>';
+    } else {
+      list.slice().reverse().forEach(function (b) {
+        var c = b.charId ? getChar(b.charId) : null;
+        var prog = b.pages && b.pages.length ? ('第 ' + ((b.pageIdx || 0) + 1) + ' / ' + b.pages.length + ' 页') : '';
+        html += '<div class="rt-book" data-open="' + b.id + '">'
+          + '<div class="rt-book-cover">📖</div>'
+          + '<div class="rt-book-info">'
+          + '<div class="rt-book-name">' + esc(b.name) + '</div>'
+          + '<div class="rt-book-meta">' + (c ? ('和 ' + esc(c.name) + ' 一起看') : '还没邀请角色') + '</div>'
+          + '<div class="rt-book-prog">' + prog + '</div>'
+          + '</div>'
+          + '<button class="rt-book-del" data-del="' + b.id + '" type="button">🗑</button>'
+          + '</div>';
+      });
+    }
+    html += '<label class="rt-import" id="rtImport">＋ 导入 txt 小说<input type="file" id="rtImportInput" accept=".txt,text/plain,*/*" multiple></label>';
+    html += '</div>';
+    $('rtBody').innerHTML = html;
+
+    bindImportInput();
+    $('rtBody').querySelectorAll('[data-open]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target.closest('[data-del]')) return;
+        openBook(el.getAttribute('data-open'));
+      });
+    });
+    $('rtBody').querySelectorAll('[data-del]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = el.getAttribute('data-del');
+        var b = getBook(id);
+        rtModal({ title: '删除《' + (b ? b.name : '') + '》？', hint: '这本书的阅读进度和讨论记录都会一起删除，不影响已存进角色记忆的内容。', okText: '删除', cancelText: '算了', onOk: function () { delBook(id); renderShelf(); } });
+      });
+    });
+  }
+
+  // ---------- 导入 txt ----------
+  // 关键：不再用 JS 合成 click() 去触发隐藏 input（vivo 官方浏览器等会拦截这种脚本点击，
+  // 表现为点了没反应、也没报错）。改成书架里放一个真实的 <input type=file>，手指直接点它。
+  function handleFiles(fileList, srcInput) {
+    var files = fileList ? Array.prototype.slice.call(fileList) : [];
+    var reset = function () { if (srcInput) { try { srcInput.value = ''; } catch (er) {} } };
+    if (!files.length) { reset(); return; }
+    // 先确保存储已就绪（内存缓存已从 IndexedDB 载入），否则写入会覆盖掉还没载入的旧书
+    initStore(function () {
+      var added = [], failed = [], pending = files.length, firstId = null;
+      files.forEach(function (f) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          var text = '';
+          try { text = decodeBuffer(ev.target.result); } catch (er) { text = ''; }
+          if (text.trim()) {
+            var name = (f.name || '未命名').replace(/\.txt$/i, '');
+            var book = { id: uid(), name: name, text: text, pages: paginate(text), pageIdx: 0, charId: null, chatId: null, discussions: {}, marks: {}, syncMem: false, ts: Date.now() };
+            // 只更新内存，稍后统一落库，避免多本一起导入时反复开事务
+            _books.push(book);
+            added.push(book);
+            if (!firstId) firstId = book.id;
+          } else {
+            failed.push(f.name || '未命名');
+          }
+          if (--pending === 0) done();
+        };
+        reader.onerror = function () { failed.push(f.name || '未命名'); if (--pending === 0) done(); };
+        try { reader.readAsArrayBuffer(f); }
+        catch (er) { failed.push(f.name || '未命名'); if (--pending === 0) done(); }
+      });
+      function done() {
+        reset();
+        if (!added.length) {
+          rtModal({ title: '读不出内容', hint: '这些文件里没读到文字，换成 txt 再试试。', okText: '好' });
+          return;
+        }
+        // 统一落 IndexedDB；写入成功/失败都在回调里给明确反馈，不再静默丢书
+        idbPersist(_books, function (err) {
+          // 写库失败：把刚加进内存的书回滚，避免界面显示"有书"但重开就没了
+          _books = _books.filter(function (b) { return added.indexOf(b) < 0; });
+          renderShelf();
+          rtModal({ title: '保存失败', hint: '书读出来了，但存到本机时出错了：' + (err && err.message ? err.message : '存储不可用') + '。可能是浏览器隐私模式或存储空间不足，换个模式或清点空间再试。', okText: '知道了' });
+        }, function () {
+          // 写库成功
+          renderShelf();
+          if (added.length === 1 && !failed.length) {
+            setTimeout(function () { openBook(firstId); }, 60);
+          } else {
+            var hint = '已导入 ' + added.length + ' 本，都放进书架了。';
+            if (failed.length) hint += '\n有 ' + failed.length + ' 个文件没读出文字：' + failed.join('、');
+            rtModal({ title: '导入完成', hint: hint, okText: '去书架看看' });
+          }
+        });
+      }
+    });
+  }
+
+  // 给书架里那个真实 input 绑 change（renderShelf 每次重画都会调用）
+  function bindImportInput() {
+    var inp = $('rtImportInput');
+    if (!inp || inp.__bound) return;
+    inp.__bound = true;
+    inp.addEventListener('change', function (e) {
+      var fl = (inp.files && inp.files.length) ? inp.files : (e.target && e.target.files);
+      handleFiles(fl, inp);
+    });
+  }
+
+  // 兜底：某些入口若还在调 pickFile（比如空书架的旧按钮），也走真实 input
+  function pickFile() {
+    var inp = $('rtImportInput');
+    if (inp) { try { inp.value = ''; } catch (e) {} inp.click(); }
+  }
+
+
+  // ---------- 打开一本书 ----------
+  function openBook(id) {
+    var book = getBook(id); if (!book) return;
+    cur = book;
+    if (!book.charId) { chooseChar(book); return; }
+    selCharId = book.charId;
+    enterReader();
+  }
+
+  // 选择一起看的角色
+  function chooseChar(book) {
+    var chars = S().characters || [];
+    if (!chars.length) { rtModal({ title: '还没有角色', hint: '先在手机里创建一个角色，才能邀请 TA 一起看小说。', okText: '好' }); return; }
+    var opts = chars.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('');
+    // 找与该角色的私聊，用于记忆同步落到同一个人
+    rtModal({
+      title: '邀请谁一起看《' + esc(book.name) + '》？',
+      bodyHtml: '<div class="rt-modal-row"><label>选择角色</label><select id="rtCharSel">' + opts + '</select></div>'
+        + '<div class="rt-modal-hint">TA 会一页页跟着看，在想讨论的句子下划线，说出对剧情、对这句话的想法。你随时能点右下角小球和 TA 聊。</div>',
+      okText: '开始一起看', cancelText: '取消',
+      onOk: function () {
+        var cid = $('rtCharSel').value;
+        book.charId = cid;
+        var chat = (S().chats || []).find(function (c) { return !c.isGroup && (c.charIds || []).indexOf(cid) >= 0; });
+        book.chatId = chat ? chat.id : null;
+        saveBook(book);
+        cur = book; selCharId = cid;
+        try { localStorage.setItem(CHARSEL_LS, cid); } catch (e) {}
+        enterReader();
+      }
+    });
+  }
+
+  // ---------- 阅读器 ----------
+  function backToShelf() {
+    // 从阅读器退回书架：先把当前页同步进记忆
+    if (cur) syncPageToMemory(cur.pageIdx || 0);
+    hideToast();
+    closeToc();
+    $('rtReader').classList.remove('show');
+    $('rtReader').classList.remove('scroll-mode');
+    $('rtBody').style.display = '';
+    $('rtBall').classList.remove('show');
+    closeChat();
+    renderShelf();
+  }
+
+  function enterReader() {
+    if (!cur) return;
+    $('rtBody').style.display = 'none';
+    $('rtReader').classList.add('show');
+    $('rtBall').classList.add('show');
+    $('rtReaderTitle').textContent = cur.name;
+    applyReadMode();
+    renderPage();
+    updateBallDot();
+    // 打开书就让角色读一次当前页（若这页还没读过）
+    var key = curPageKey();
+    var already = (cur.discussions || {})[key] && (cur.discussions[key] || []).some(function (m) { return m.who === 'char'; });
+    if (!already) setTimeout(function () { onPageChanged(-1); }, 400);
+  }
+
+  function applyReadMode() {
+    var rd = $('rtReader');
+    if (readMode === 'scroll') rd.classList.add('scroll-mode');
+    else rd.classList.remove('scroll-mode');
+    var mode = $('rtReaderMode');
+    if (mode) mode.querySelectorAll('[data-mode]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-mode') === readMode);
+    });
+  }
+
+  function setReadMode(m) {
+    if (m !== 'page' && m !== 'scroll') return;
+    if (m === readMode) return;
+    readMode = m;
+    try { localStorage.setItem(MODE_LS, m); } catch (e) {}
+    applyReadMode();
+    renderPage();
+  }
+
+  function curPageKey() { return String(cur.pageIdx || 0); }
+
+  // 渲染一页的句子 HTML，data-page 记录句子属于哪一页
+  function renderSentsHtml(pageIdx) {
+    var pageText = (cur.pages || [''])[pageIdx] || '';
+    var sents = splitSentences(pageText);
+    var marks = (cur.marks || {})[String(pageIdx)] || {};
+    var html = '';
+    sents.forEach(function (s, i) {
+      var mk = marks[i];
+      var cls = 'rt-sent' + (mk ? (mk.note ? ' marked has' : ' marked') : '');
+      html += '<span class="' + cls + '" data-page="' + pageIdx + '" data-sent="' + i + '">' + esc(s) + '</span>';
+    });
+    return html;
+  }
+
+  // 一页的完整块（下滑模式用）：分隔标题 + 句子
+  function pageBlockHtml(p) {
+    var h = '';
+    if (p > 0) h += '<div class="rt-scroll-sep">第 ' + (p + 1) + ' 页</div>';
+    h += '<div class="rt-page-block" data-block="' + p + '">' + renderSentsHtml(p) + '</div>';
+    return h;
+  }
+
+  function renderPage() {
+    if (!cur) return;
+    var pages = cur.pages || [''];
+    var idx = cur.pageIdx || 0;
+    var page = $('rtReaderPage');
+    ensureDelegation(page);
+    if (readMode === 'scroll') {
+      // 下滑模式：只渲染当前页附近的一批，滚动时再懒加载
+      loadedStart = Math.max(0, idx - 1);
+      loadedEnd = Math.min(pages.length, idx + CHUNK);
+      var html = '';
+      for (var p = loadedStart; p < loadedEnd; p++) html += pageBlockHtml(p);
+      if (loadedEnd >= pages.length) html += '<div class="rt-scroll-end">— 全书完 · 共 ' + pages.length + ' 页 —</div>';
+      page.innerHTML = html;
+      ensureScrollWatch(page);
+      // 滚到当前页
+      setTimeout(function () {
+        var blk = page.querySelector('[data-block="' + idx + '"]');
+        if (blk) blk.scrollIntoView();
+        else page.scrollTop = 0;
+      }, 30);
+    } else {
+      // 翻页模式：只渲染当前页
+      page.innerHTML = renderSentsHtml(idx);
+      page.scrollTop = 0;
+      $('rtPageInfo').textContent = (idx + 1) + ' / ' + pages.length;
+      $('rtPrevPage').disabled = idx <= 0;
+      $('rtNextPage').disabled = idx >= pages.length - 1;
+    }
+  }
+
+  // 事件委托：整个阅读区只绑一个 click，避免给上万句子各绑一个监听
+  function ensureDelegation(page) {
+    if (page.__rtDelegated) return;
+    page.__rtDelegated = true;
+    page.addEventListener('click', function (e) {
+      var el = e.target.closest ? e.target.closest('[data-sent]') : null;
+      if (!el || !page.contains(el)) return;
+      var p = parseInt(el.getAttribute('data-page'), 10);
+      var i = parseInt(el.getAttribute('data-sent'), 10);
+      onSentTap(p, i);
+    });
+  }
+
+  // 下滑模式滚动懒加载：接近底部追加后面的页，接近顶部补前面的页
+  function ensureScrollWatch(page) {
+    if (scrollBound) return;
+    scrollBound = true;
+    var ticking = false;
+    page.addEventListener('scroll', function () {
+      if (readMode !== 'scroll' || ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        ticking = false;
+        var pages = cur ? (cur.pages || []) : [];
+        // 接近底部：追加后面几页
+        if (loadedEnd < pages.length && page.scrollTop + page.clientHeight >= page.scrollHeight - 600) {
+          var addEnd = Math.min(pages.length, loadedEnd + CHUNK);
+          var frag = '';
+          for (var p = loadedEnd; p < addEnd; p++) frag += pageBlockHtml(p);
+          if (addEnd >= pages.length) frag += '<div class="rt-scroll-end">— 全书完 · 共 ' + pages.length + ' 页 —</div>';
+          var end = document.getElementById('rtScrollEndMark');
+          page.insertAdjacentHTML('beforeend', frag);
+          loadedEnd = addEnd;
+        }
+        // 接近顶部：补前面几页，并修正 scrollTop 防跳动
+        if (loadedStart > 0 && page.scrollTop <= 400) {
+          var addStart = Math.max(0, loadedStart - CHUNK);
+          var frag2 = '';
+          for (var q = addStart; q < loadedStart; q++) frag2 += pageBlockHtml(q);
+          var prevH = page.scrollHeight;
+          page.insertAdjacentHTML('afterbegin', frag2);
+          page.scrollTop += (page.scrollHeight - prevH);
+          loadedStart = addStart;
+        }
+        // 根据当前滚动位置更新 cur.pageIdx（用于讨论/记忆落点）
+        updateCurPageByScroll(page);
+      });
+    }, { passive: true });
+  }
+
+  function updateCurPageByScroll(page) {
+    var blocks = page.querySelectorAll('[data-block]');
+    var mid = page.scrollTop + page.clientHeight / 3;
+    var found = -1;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].offsetTop <= mid) found = parseInt(blocks[i].getAttribute('data-block'), 10);
+      else break;
+    }
+    if (found >= 0 && found !== (cur.pageIdx || 0)) {
+      var old = cur.pageIdx || 0;
+      cur.pageIdx = found;
+      saveBook(cur);
+      updateBallDot();
+      // 下滑到新页也让角色自动读这页
+      onPageChanged(old);
+    }
+  }
+
+  // 点句子：如果角色已经在这句划过线 → 展开 TA 的话；否则玩家可以自己标记想让 TA 聊的句子
+  function onSentTap(pageIdx, i) {
+    if (typeof pageIdx !== 'number' || isNaN(pageIdx)) pageIdx = cur.pageIdx || 0;
+    // 点了别的页的句子（下滑模式）：把当前页对齐过去，讨论/记忆都落到这一页
+    if (pageIdx !== (cur.pageIdx || 0)) {
+      cur.pageIdx = pageIdx;
+      saveBook(cur);
+      updateBallDot();
+    }
+    var sents = splitSentences((cur.pages || [''])[pageIdx] || '');
+    var marks = (cur.marks || {})[String(pageIdx)] || {};
+    var mk = marks[i];
+    if (mk && mk.note) {
+      openChat();
+      return;
+    }
+    var text = (sents[i] || '').trim();
+    if (!text) return;
+    rtModal({
+      title: '这句话',
+      bodyHtml: '<div class="rt-modal-hint">「' + esc(text.slice(0, 120)) + '」</div>',
+      okText: '问问 TA 怎么看', cancelText: '关闭',
+      onOk: function () { askAboutSentence(text); }
+    });
+  }
+
+  function gotoPage(delta) {
+    if (!cur) return;
+    var n = (cur.pages || []).length;
+    var next = Math.max(0, Math.min(n - 1, (cur.pageIdx || 0) + delta));
+    if (next === cur.pageIdx) return;
+    cur.pageIdx = next;
+    saveBook(cur);
+    renderPage();
+    updateBallDot();
+  }
+
+  // ---------- 悬浮小球提示数字：本页角色说了几条还没看 ----------
+  function unreadCount() {
+    if (!cur) return 0;
+    var arr = (cur.discussions || {})[curPageKey()] || [];
+    return arr.filter(function (m) { return m.who === 'char' && !m.seen; }).length;
+  }
+  function updateBallDot() {
+    var n = unreadCount();
+    var dot = $('rtBallDot');
+    if (n > 0) { dot.style.display = ''; dot.textContent = n > 99 ? '99+' : n; }
+    else dot.style.display = 'none';
+  }
+
+  // ---------- AI：角色读这一页并划线、发表看法 ----------
+  function charPersonaBlock() {
+    var c = getChar(cur.charId);
+    if (!c) return '';
+    var out = '你现在要扮演的角色：' + (c.name || '角色') + '。\n';
+    if (c.persona) out += '角色设定：\n' + c.persona + '\n';
+    var u = cur.chatId ? null : null;
+    return out;
+  }
+
+  function pageDiscussions() {
+    return (cur.discussions || {})[curPageKey()] || [];
+  }
+  function pushDiscussion(msg) {
+    cur.discussions = cur.discussions || {};
+    var key = curPageKey();
+    cur.discussions[key] = cur.discussions[key] || [];
+    cur.discussions[key].push(msg);
+    saveBook(cur);
+  }
+
+  // 让角色读当前页 → 划线 + 说想法。返回结构化：{ marks:[{sentence, note}], opening }
+  async function readPageByChar(extraHint) {
+    var a = api();
+    if (!a) { return { err: '还没配置 API。请点右上角设置，选择跟随聊天 API 或填独立 API。' }; }
+    var c = getChar(cur.charId);
+    var pageText = (cur.pages || [''])[cur.pageIdx || 0] || '';
+    var sents = splitSentences(pageText);
+    // 给句子编号，方便角色引用
+    var numbered = sents.map(function (s, i) { return '[' + i + '] ' + s.trim(); }).filter(function (s) { return s.replace(/^\[\d+\]\s*/, '').length; }).join('\n');
+    var prevNote = '';
+    var hist = pageDiscussions();
+    if (hist.length) prevNote = '\n\n（这一页你们已经聊过，别重复之前说过的，接着往下或换个角度）';
+
+    var sys = '你是一个有血有肉的人，正在和朋友一起读一本小说。你要扮演的角色如下：\n'
+      + '【角色】' + (c ? (c.name || '') : '') + '\n'
+      + (c && c.persona ? ('【人设】' + c.persona + '\n') : '')
+      + '\n你在陪玩家一页页读这本《' + cur.name + '》。你不是解说员，是一个真的在看小说、会被剧情牵动、有自己口味和脾气的人。\n'
+      + '\n## 你要做两件事\n'
+      + '1. 挑出这一页里你【最想聊的 1 到 3 句话】（可以是戳中你的、让你在意的、想吐槽的、有共鸣的、想猜后续的），在它们下面"划线"。\n'
+      + '2. 对每处划线，说一句你此刻真实的想法——像微信上戳朋友那样自然，短一点，有情绪、有态度，别写读后感、别写作文、别面面俱到。\n'
+      + '\n## 说话方式\n'
+      + '- 完全用' + (c ? (c.name || '这个角色') : '这个角色') + '的口吻、性格、语气，该毒舌毒舌，该温柔温柔。\n'
+      + '- 口语、简短、像真人发消息。不要"这段描写生动地体现了"这种腔调。\n'
+      + '- 只聊这一页看到的内容，不要剧透你还没读到的后文。\n'
+      + styleBlock()
+      + identityBlock()
+      + '\n\n## 输出格式（严格遵守，只输出 JSON，不要多余的话）\n'
+      + '{"marks":[{"n":句子编号(整数),"note":"你对这句话想说的话"}],"say":"划完线后，你想先跟玩家说的一句开场（可选，一句话，没有就留空）"}\n'
+      + 'marks 里的 n 必须是下面正文里出现过的编号，note 是你的真实反应。挑 1~3 句就好，宁缺毋滥。';
+
+    var userMsg = '这是这一页的正文，每句前面是编号：\n\n' + numbered + prevNote + (extraHint ? ('\n\n' + extraHint) : '');
+    try {
+      var res = await fetch(a.url + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key },
+        body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], temperature: 0.92, max_tokens: 900 })
+      });
+      if (!res.ok) return { err: 'HTTP ' + res.status };
+      var data = await res.json();
+      var raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim();
+      return { data: parseReadResult(raw, sents) };
+    } catch (e) { return { err: (e && e.message) || '网络错误' }; }
+  }
+
+  function parseReadResult(raw, sents) {
+    var t = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    var s = t.indexOf('{'); if (s > 0) t = t.slice(s);
+    var e = t.lastIndexOf('}'); if (e >= 0) t = t.slice(0, e + 1);
+    var obj = null;
+    try { obj = JSON.parse(t); } catch (err) {
+      try { obj = JSON.parse(t.replace(/，/g, ',').replace(/：/g, ':').replace(/[""]/g, '"')); } catch (e2) { obj = null; }
+    }
+    if (!obj) return { marks: [], say: raw.slice(0, 200) };
+    var marks = [];
+    (obj.marks || []).forEach(function (m) {
+      var n = parseInt(m.n, 10);
+      if (!isNaN(n) && n >= 0 && n < sents.length && m.note) {
+        marks.push({ n: n, sentence: (sents[n] || '').trim(), note: String(m.note).trim() });
+      }
+    });
+    return { marks: marks, say: (obj.say || '').toString().trim() };
+  }
+
+  // 应用角色的阅读结果：写划线 + 生成讨论消息
+  function applyReadResult(r) {
+    var key = curPageKey();
+    cur.marks = cur.marks || {};
+    cur.marks[key] = cur.marks[key] || {};
+    (r.marks || []).forEach(function (m) {
+      cur.marks[key][m.n] = { text: m.sentence, note: m.note };
+      pushDiscussion({ id: uid(), who: 'char', quote: m.sentence, text: m.note, ts: Date.now(), seen: false });
+    });
+    if (r.say) pushDiscussion({ id: uid(), who: 'char', text: r.say, ts: Date.now(), seen: false });
+    saveBook(cur);
+    if (readMode === 'scroll') {
+      // 下滑模式：只更新这一页的划线，不整块重渲染，避免打断滚动
+      var pageEl = $('rtReaderPage');
+      var blk = pageEl ? pageEl.querySelector('[data-block="' + (cur.pageIdx || 0) + '"]') : null;
+      if (blk) blk.innerHTML = renderSentsHtml(cur.pageIdx || 0);
+    } else {
+      renderPage();
+    }
+    updateBallDot();
+    // 角色读完这页有话说 → 微信风格通知弹出来。如果讨论面板已打开就不弹（用户正在看）
+    if (!$('rtChat').classList.contains('show')) {
+      var first = (r.say || '').trim();
+      if (!first && r.marks && r.marks.length) first = (r.marks[0].note || '').trim();
+      if (first) showToast(first);
+    }
+  }
+
+  // ---------- 讨论面板 ----------
+  function openChat() {
+    if (!cur) return;
+    hideToast();
+    var c = getChar(cur.charId);
+    $('rtChatAva').innerHTML = avaHtml(c && c.avatar, '📖');
+    var nameEl = $('rtChatName');
+    if (nameEl.firstChild && nameEl.firstChild.nodeType === 3) nameEl.firstChild.textContent = c ? c.name : '角色';
+    else nameEl.insertBefore(document.createTextNode(c ? c.name : '角色'), nameEl.firstChild);
+    $('rtChatSub').textContent = '正在一起看《' + cur.name + '》 · 第 ' + ((cur.pageIdx || 0) + 1) + ' 页';
+    // 标记本页角色消息已读
+    var arr = pageDiscussions();
+    arr.forEach(function (m) { if (m.who === 'char') m.seen = true; });
+    saveBook(cur);
+    updateBallDot();
+    renderChat();
+    $('rtChat').classList.add('show');
+  }
+  function closeChat() { $('rtChat').classList.remove('show'); }
+
+  // ---------- 微信风格通知横幅 ----------
+  var toastTimer = null;
+  function showToast(text) {
+    if (!cur || !text) return;
+    var t = $('rtToast'); if (!t) return;
+    var c = getChar(cur.charId);
+    $('rtToastAva').innerHTML = avaHtml(c && c.avatar, '📖');
+    $('rtToastName').textContent = c ? c.name : '角色';
+    $('rtToastText').textContent = String(text).replace(/\s+/g, ' ').trim();
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    // 6 秒后自动收起
+    toastTimer = setTimeout(hideToast, 6000);
+  }
+  function hideToast() { var t = $('rtToast'); if (t) t.classList.remove('show'); if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; } }
+
+  function renderChat() {
+    var list = $('rtChatList');
+    var arr = pageDiscussions();
+    if (!arr.length) {
+      list.innerHTML = '<div class="rt-empty" style="padding:30px 10px;">这一页 TA 还没开口<br>点下面「让 TA 说说这页」，或者你先说点什么。</div>';
+      return;
+    }
+    var html = '';
+    arr.forEach(function (m) {
+      if (m.who === 'char') {
+        html += '<div class="rt-msg char">';
+        if (m.quote) html += '<div class="rt-msg-quote">' + esc(m.quote.slice(0, 90)) + (m.quote.length > 90 ? '…' : '') + '</div>';
+        html += '<div class="rt-msg-bub">' + esc(m.text) + '</div>';
+        html += '<div class="rt-msg-time">' + fmtTime(m.ts) + '</div></div>';
+      } else {
+        html += '<div class="rt-msg me"><div class="rt-msg-bub">' + esc(m.text) + '</div><div class="rt-msg-time">' + fmtTime(m.ts) + '</div></div>';
+      }
+    });
+    if (busy) html += '<div class="rt-typing" id="rtTyping">对方正在看…</div>';
+    list.innerHTML = html;
+    list.scrollTop = list.scrollHeight;
+  }
+
+  // 玩家发消息 → 角色基于当前页 + 讨论上下文回应
+  async function sendReply() {
+    if (busy || !cur) return;
+    var inp = $('rtChatInput');
+    var txt = (inp.value || '').trim();
+    if (!txt) return;
+    inp.value = ''; inp.style.height = '';
+    pushDiscussion({ id: uid(), who: 'me', text: txt, ts: Date.now() });
+    busy = true; renderChat();
+    var r = await chatReply(txt);
+    busy = false;
+    if (r.err) { pushDiscussion({ id: uid(), who: 'char', text: '（没接上：' + r.err + '）', ts: Date.now(), seen: true }); renderChat(); return; }
+    pushDiscussion({ id: uid(), who: 'char', text: r.text, ts: Date.now(), seen: true });
+    renderChat();
+  }
+
+  async function chatReply(userLine) {
+    var a = api(); if (!a) return { err: '还没配置 API' };
+    var c = getChar(cur.charId);
+    var pageText = (cur.pages || [''])[cur.pageIdx || 0] || '';
+    var sys = '你在和玩家一起读小说《' + cur.name + '》，正读到某一页，你们在就这页内容边看边聊。\n'
+      + '你要扮演的角色：' + (c ? (c.name || '') : '') + '\n'
+      + (c && c.persona ? ('【人设】' + c.persona + '\n') : '')
+      + '\n完全用这个角色的口吻和性格聊天，像微信上和朋友边看边讨论那样：口语、简短、有真实反应和情绪，不要长篇大论、不要作文腔、不要旁白动作描写堆砌。只聊读到这里的内容，不剧透后文。'
+      + styleBlock()
+      + identityBlock()
+      + '\n\n## 这一页的正文（供你参考，别整段复述）\n' + pageText.slice(0, 1400);
+    var msgs = [{ role: 'system', content: sys }];
+    // 带上本页最近的讨论上下文
+    var hist = pageDiscussions().slice(-12);
+    hist.forEach(function (m) {
+      if (m.who === 'char') msgs.push({ role: 'assistant', content: (m.quote ? ('（划线：' + m.quote.slice(0, 40) + '）') : '') + m.text });
+      else msgs.push({ role: 'user', content: m.text });
+    });
+    // 最后一条如果就是刚发的，避免重复
+    if (!hist.length || hist[hist.length - 1].text !== userLine) msgs.push({ role: 'user', content: userLine });
+    try {
+      var res = await fetch(a.url + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key },
+        body: JSON.stringify({ model: a.model, messages: msgs, temperature: 0.9, max_tokens: 700 })
+      });
+      if (!res.ok) return { err: 'HTTP ' + res.status };
+      var data = await res.json();
+      return { text: (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim() || '……' };
+    } catch (e) { return { err: (e && e.message) || '网络错误' }; }
+  }
+
+  // 「让 TA 说说这页」按钮
+  async function pushCharRead() {
+    if (busy || !cur) return;
+    busy = true; renderChat();
+    var r = await readPageByChar();
+    busy = false;
+    if (r.err) { pushDiscussion({ id: uid(), who: 'char', text: '（没接上：' + r.err + '）', ts: Date.now(), seen: true }); renderChat(); return; }
+    // 面板已打开，直接标记已读
+    var key = curPageKey();
+    cur.marks = cur.marks || {}; cur.marks[key] = cur.marks[key] || {};
+    (r.data.marks || []).forEach(function (m) {
+      cur.marks[key][m.n] = { text: m.sentence, note: m.note };
+      pushDiscussion({ id: uid(), who: 'char', quote: m.sentence, text: m.note, ts: Date.now(), seen: true });
+    });
+    if (r.data.say) pushDiscussion({ id: uid(), who: 'char', text: r.data.say, ts: Date.now(), seen: true });
+    if (!(r.data.marks || []).length && !r.data.say) pushDiscussion({ id: uid(), who: 'char', text: '（这页好像没什么特别想说的，翻下一页吧）', ts: Date.now(), seen: true });
+    saveBook(cur); renderPage(); renderChat();
+  }
+
+  // 玩家点某句「问问 TA 怎么看」
+  async function askAboutSentence(sentence) {
+    openChat();
+    pushDiscussion({ id: uid(), who: 'me', text: '（指着这句）你怎么看这句：「' + sentence.slice(0, 60) + (sentence.length > 60 ? '…' : '') + '」', ts: Date.now() });
+    busy = true; renderChat();
+    var r = await chatReply('玩家指着这句话问你的看法：「' + sentence + '」。就这句说说你的想法。');
+    busy = false;
+    if (r.err) { pushDiscussion({ id: uid(), who: 'char', text: '（没接上：' + r.err + '）', ts: Date.now(), seen: true }); renderChat(); return; }
+    // 顺便把这句标成蓝色划线
+    var sents = splitSentences((cur.pages || [''])[cur.pageIdx || 0] || '');
+    var idx = sents.findIndex(function (s) { return s.trim() === sentence.trim(); });
+    if (idx >= 0) { var key = curPageKey(); cur.marks = cur.marks || {}; cur.marks[key] = cur.marks[key] || {}; cur.marks[key][idx] = { text: sentence, note: r.text }; }
+    pushDiscussion({ id: uid(), who: 'char', quote: sentence, text: r.text, ts: Date.now(), seen: true });
+    saveBook(cur); renderPage(); renderChat();
+  }
+
+  // ---------- 设置面板 ----------
+  function openSettings() {
+    var cfg = loadApi();
+    var st = loadStyle();
+    var wbs = (S().worldBooks) || [];
+    var indep = cfg.mode === 'independent';
+    var syncOn = cur && cur.syncMem;
+    var myId = loadIdentity();
+
+    var body = '';
+    body += '<div class="rt-modal-row"><label>讨论用的 API</label>'
+      + '<div class="rt-seg" id="rtApiSeg"><button data-m="follow"' + (indep ? '' : ' class="on"') + ' type="button">跟随聊天 API</button><button data-m="independent"' + (indep ? ' class="on"' : '') + ' type="button">独立配置</button></div></div>';
+    body += '<div id="rtApiFields" style="' + (indep ? '' : 'display:none;') + '">'
+      + '<div class="rt-modal-row"><label>接口地址</label><input id="rtApiUrl" value="' + esc(cfg.url || '') + '" placeholder="https://api.openai.com/v1"></div>'
+      + '<div class="rt-modal-row"><label>API Key</label><input id="rtApiKey" value="' + esc(cfg.key || '') + '" placeholder="sk-..."></div>'
+      + '<div class="rt-modal-row"><label>模型</label><input id="rtApiModel" value="' + esc(cfg.model || '') + '" placeholder="gpt-3.5-turbo"></div>'
+      + '</div>';
+
+
+    var rtUsers = (S().users || []);
+    var idOpts = '<option value="">-- 不绑定，普通读者 --</option>'
+      + rtUsers.map(function (u) { return '<option value="' + u.id + '"' + (myId.userId === u.id ? ' selected' : '') + '>' + esc(u.name || '未命名') + '</option>'; }).join('');
+    body += '<div class="rt-modal-row"><label>我用哪个身份陪 TA 看</label>';
+    if (rtUsers.length) {
+      body += '<select id="rtMyIdentity">' + idOpts + '</select>'
+        + '<div class="rt-modal-hint">选一个你在「我的身份」里创建好的身份，角色读小说、聊天时都会知道是在和这个身份的你一起看，称呼和语气会更贴合关系。</div></div>';
+    } else {
+      body += '<div class="rt-modal-hint">你还没有创建身份。先去手机首页「身份」里创建一个，就能选它来陪角色一起看了。</div></div>';
+    }
+    if (cur) {
+      body += '<div class="rt-modal-row"><label>把一起看的内容同步进 ' + esc((getChar(cur.charId) || {}).name || '角色') + ' 的记忆</label>'
+        + '<label class="rt-wb-item" style="background:#fff;"><input type="checkbox" id="rtSyncMem"' + (syncOn ? ' checked' : '') + '><span>开启后，翻页时会把这页的讨论提炼成一条记忆，存进 TA 的记忆里，线上线下聊天都能记得一起看过什么。</span></label></div>';
+    }
+
+    body += '<div class="rt-modal-row"><label>讨论风格 / 附加设定（勾世界书）</label>';
+    if (wbs.length) {
+      body += '<div style="max-height:150px;overflow-y:auto;">' + wbs.map(function (w) {
+        return '<label class="rt-wb-item"><input type="checkbox" data-wb="' + w.id + '"' + ((st.wbIds || []).indexOf(w.id) >= 0 ? ' checked' : '') + '><span>' + esc(w.name || '未命名') + '</span></label>';
+      }).join('') + '</div>';
+    } else {
+      body += '<div class="rt-modal-hint">还没有世界书条目</div>';
+    }
+    body += '</div>';
+    body += '<div class="rt-modal-row"><label>额外要求（可选）</label><textarea id="rtStyleNote" placeholder="比如：多毒舌一点 / 喜欢猜后续 / 关注人物心理">' + esc(st.note || '') + '</textarea></div>';
+
+    rtModal({
+      title: '设置', bodyHtml: body, okText: '保存', cancelText: '取消', wide: true,
+      onOk: function () {
+        var seg = $('rtApiSeg');
+        var mode = seg.querySelector('.on') ? seg.querySelector('.on').getAttribute('data-m') : 'follow';
+        var newCfg = { mode: mode };
+        if (mode === 'independent') { newCfg.url = ($('rtApiUrl').value || '').trim(); newCfg.key = ($('rtApiKey').value || '').trim(); newCfg.model = ($('rtApiModel').value || '').trim() || 'gpt-3.5-turbo'; }
+        saveApiCfg(newCfg);
+        var wbIds = [];
+        document.querySelectorAll('#rtModalBox [data-wb]').forEach(function (el) { if (el.checked) wbIds.push(el.getAttribute('data-wb')); });
+        saveStyle({ wbIds: wbIds, note: ($('rtStyleNote').value || '').trim() });
+        var mi = $('rtMyIdentity');
+        saveIdentity({ userId: mi ? (mi.value || '') : '' });
+        if (cur) { var sm = $('rtSyncMem'); cur.syncMem = !!(sm && sm.checked); saveBook(cur); }
+      }
+    });
+    setTimeout(function () {
+      var seg = $('rtApiSeg');
+      if (seg) seg.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          seg.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+          b.classList.add('on');
+          $('rtApiFields').style.display = b.getAttribute('data-m') === 'independent' ? '' : 'none';
+        });
+      });
+    }, 30);
+  }
+
+  // ---------- 翻页时把上一页讨论提炼进记忆 ----------
+  async function syncPageToMemory(pageIdx) {
+    if (!cur || !cur.syncMem || !cur.charId) return;
+    var arr = (cur.discussions || {})[String(pageIdx)] || [];
+    var charMsgs = arr.filter(function (m) { return m.who === 'char'; });
+    if (!charMsgs.length) return;
+    // 已同步过就跳过
+    cur.memDone = cur.memDone || {};
+    if (cur.memDone[String(pageIdx)]) return;
+    var pageText = (cur.pages || [''])[pageIdx] || '';
+    var convo = arr.map(function (m) {
+      var who = m.who === 'char' ? ((getChar(cur.charId) || {}).name || '对方') : '玩家';
+      return who + '：' + (m.quote ? ('（就「' + m.quote.slice(0, 30) + '」）') : '') + m.text;
+    }).join('\n');
+    var text = await summarizeForMemory(pageText, convo);
+    if (text) { pushMemory(cur.charId, text); cur.memDone[String(pageIdx)] = true; saveBook(cur); }
+  }
+
+  async function summarizeForMemory(pageText, convo) {
+    var a = api(); if (!a) return null;
+    var c = getChar(cur.charId);
+    var sys = '把下面这段"一起看小说时的讨论"提炼成一条简短记忆，供角色日后自然回忆。用第三人称客观记述，不写"我/你"，20~60字，一句话即可。只记真正发生过的讨论和态度，别编造。'
+      + '格式示例：和玩家一起看《书名》读到某段时，角色说了/觉得……';
+    var user = '书名：《' + cur.name + '》\n角色：' + (c ? c.name : '') + '\n\n这页大意（供参考）：' + pageText.slice(0, 400) + '\n\n讨论记录：\n' + convo;
+    try {
+      var res = await fetch(a.url + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.key },
+        body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0.5, max_tokens: 200 })
+      });
+      if (!res.ok) return null;
+      var data = await res.json();
+      return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim() || null;
+    } catch (e) { return null; }
+  }
+
+  // ---------- 通用弹窗 ----------
+  function rtModal(opt) {
+    var box = $('rtModalBox');
+    var modal = $('rtModal');
+    var actions = '<div class="rt-modal-actions">';
+    if (opt.cancelText) actions += '<button class="rt-modal-cancel" id="rtMCancel" type="button">' + esc(opt.cancelText) + '</button>';
+    actions += '<button class="rt-modal-ok" id="rtMOk" type="button"' + (opt.cancelText ? '' : ' style="flex:1;"') + '>' + esc(opt.okText || '好') + '</button></div>';
+    box.innerHTML = '<div class="rt-modal-title">' + esc(opt.title || '') + '</div>' + (opt.hint ? ('<div class="rt-modal-hint">' + opt.hint + '</div>') : '') + (opt.bodyHtml || '') + actions;
+    modal.classList.add('show');
+    var cancel = $('rtMCancel'); if (cancel) cancel.addEventListener('click', function () { modal.classList.remove('show'); if (opt.onCancel) opt.onCancel(); });
+    var ok = $('rtMOk'); if (ok) ok.addEventListener('click', function () { var r = opt.onOk && opt.onOk(); if (r !== false) modal.classList.remove('show'); });
+  }
+
+  // ---------- 翻到新页：自动让角色读这页 + 把旧页同步进记忆 ----------
+  var lastReadPage = -1;
+  async function onPageChanged(oldIdx) {
+    // 旧页同步记忆
+    if (oldIdx >= 0 && oldIdx !== cur.pageIdx) syncPageToMemory(oldIdx);
+    // 新页如果角色还没读过，自动读一次
+    var key = curPageKey();
+    var already = (cur.discussions || {})[key] && (cur.discussions[key] || []).some(function (m) { return m.who === 'char'; });
+    if (!already && !busy) {
+      busy = true; updateBallDot();
+      var r = await readPageByChar();
+      busy = false;
+      if (!r.err && r.data) applyReadResult(r.data);
+      else updateBallDot();
+    }
+  }
+
+  // ---------- 悬浮球拖动 + 点击 ----------
+  function bindBall() {
+    var ball = $('rtBall');
+    if (!ball || ball.__rtBound) return;
+    ball.__rtBound = true;
+    var moved = false, dragging = false, sx = 0, sy = 0, ox = 0, oy = 0, downTs = 0;
+    try { var pos = JSON.parse(localStorage.getItem('phone_rt_ball_pos') || 'null'); if (pos && pos.left) { ball.style.left = pos.left; ball.style.top = pos.top; ball.style.right = 'auto'; ball.style.bottom = 'auto'; } } catch (e) {}
+    function pointOf(e) { return (e.touches && e.touches[0]) ? e.touches[0] : ((e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e); }
+    function down(e) {
+      dragging = true; moved = false; downTs = Date.now();
+      var p = pointOf(e);
+      sx = p.clientX; sy = p.clientY;
+      var r = ball.getBoundingClientRect(); ox = r.left; oy = r.top;
+      ball.classList.add('dragging');
+    }
+    function move(e) {
+      if (!dragging) return;
+      var p = pointOf(e);
+      var dx = p.clientX - sx, dy = p.clientY - sy;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
+      if (!moved) return;
+      var scr = document.getElementById('screen') || document.body;
+      var b = scr.getBoundingClientRect();
+      var nx = ox + dx - b.left, ny = oy + dy - b.top;
+      nx = Math.max(2, Math.min(b.width - 56, nx)); ny = Math.max(2, Math.min(b.height - 56, ny));
+      ball.style.left = nx + 'px'; ball.style.top = ny + 'px'; ball.style.right = 'auto'; ball.style.bottom = 'auto';
+      if (e.cancelable) e.preventDefault();
+    }
+    var lastOpen = 0;
+    function tryOpen() {
+      var now = Date.now();
+      if (now - lastOpen < 400) return; // 去重：避免 up 与合成 click 双触发
+      lastOpen = now;
+      openChat();
+    }
+    function up() {
+      if (!dragging) return;
+      dragging = false;
+      ball.classList.remove('dragging');
+      if (moved) {
+        try { localStorage.setItem('phone_rt_ball_pos', JSON.stringify({ left: ball.style.left, top: ball.style.top })); } catch (e) {}
+      } else {
+        tryOpen();
+      }
+    }
+    // 拖动
+    ball.addEventListener('mousedown', down);
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+    ball.addEventListener('touchstart', down, { passive: true });
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', up);
+    // 点击兜底：拖动逻辑万一漏判，轻点也能打开
+    ball.addEventListener('click', function () { if (!moved) tryOpen(); moved = false; });
+  }
+
+  // ---------- 打开 / 关闭应用 ----------
+  function openApp() {
+    document.querySelectorAll('#screen .page.active').forEach(function (p) { p.classList.remove('active'); });
+    $('rt-app').classList.add('show');
+    cur = null;
+    // 先立即渲染一次书架，保证导入按钮和界面一定出现（哪怕存储还没就绪、或 IndexedDB 卡住）
+    renderShelf();
+    // 再确保书架数据从 IndexedDB 载入（含旧 localStorage 迁移），载入后刷新
+    initStore(function () { renderShelf(); });
+  }
+  function backToHome() {
+    // 关掉一起看的所有浮层
+    $('rtReader').classList.remove('show');
+    $('rtReader').classList.remove('scroll-mode');
+    $('rt-app').classList.remove('show');
+    $('rtBall').classList.remove('show');
+    closeToc();
+    closeChat();
+    // 回到桌面：优先 goHome，其次 showPage('home')，最后直接激活 home-page
+    if (typeof window.goHome === 'function') { try { window.goHome(); return; } catch (e) {} }
+    if (typeof window.showPage === 'function') { try { window.showPage('home'); return; } catch (e) {} }
+    try {
+      document.querySelectorAll('#screen .page.active').forEach(function (p) { p.classList.remove('active'); });
+      var hp = document.getElementById('home-page'); if (hp) hp.classList.add('active');
+    } catch (e) {}
+  }
+  function closeApp() { backToHome(); }
+  window.openReadTogether = openApp;
+
+  // ---------- 事件绑定 ----------
+  function bindUI() {
+    $('rtBack').addEventListener('click', function () {
+      if ($('rtReader').classList.contains('show')) { backToShelf(); }
+      else { closeApp(); }
+    });
+    $('rtGear').addEventListener('click', openSettings);
+    $('rtTocBtn').addEventListener('click', openToc);
+    $('rtReaderToc').addEventListener('click', openToc);
+    $('rtReaderBack').addEventListener('click', backToShelf);
+    $('rtToast').addEventListener('click', function () { hideToast(); openChat(); });
+    $('rtReaderMode').querySelectorAll('[data-mode]').forEach(function (b) {
+      b.addEventListener('click', function () { setReadMode(b.getAttribute('data-mode')); });
+    });
+    $('rtTocPanel').addEventListener('click', function (e) { if (e.target === $('rtTocPanel')) closeToc(); });
+    $('rtPrevPage').addEventListener('click', function () { var o = cur ? cur.pageIdx : -1; gotoPage(-1); if (cur && cur.pageIdx !== o) onPageChanged(o); });
+    $('rtNextPage').addEventListener('click', function () { var o = cur ? cur.pageIdx : -1; gotoPage(1); if (cur && cur.pageIdx !== o) onPageChanged(o); });
+    $('rtChatClose').addEventListener('click', closeChat);
+    $('rtChat').addEventListener('click', function (e) { if (e.target === $('rtChat')) closeChat(); });
+    $('rtChatSend').addEventListener('click', sendReply);
+    $('rtActPush').addEventListener('click', pushCharRead);
+    var ti = $('rtChatInput');
+    ti.addEventListener('input', function () { ti.style.height = 'auto'; ti.style.height = Math.min(90, ti.scrollHeight) + 'px'; });
+    ti.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } });
+    bindBall();
+  }
+
+  // ---------- 启动 ----------
+  function boot() {
+    if (!document.getElementById('rt-app')) { setTimeout(boot, 300); return; }
+    // 把浮层移进 #screen，跟随手机边框
+    try {
+      var scr = document.getElementById('screen');
+      if (scr) ['rt-app', 'rtTocPanel', 'rtBall', 'rtToast', 'rtChat', 'rtModal'].forEach(function (id) { var n = document.getElementById(id); if (n && n.parentElement !== scr) scr.appendChild(n); });
+    } catch (e) {}
+    bindUI();
   }
   boot();
 })();
