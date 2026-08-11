@@ -4777,6 +4777,8 @@ ${isGroup ? '- 这是群聊：只有和你相关、被提到、或你确实有�
                 - 邀请对方和你一起听歌(想拉近距离、一起听同一首歌时): [一起听: 歌名 歌手]，例如 [一起听: 告白气球 周杰伦]，对方会收到邀请卡，点"一起听"就和你同步播放
                 - 代付: [代付: 金额 备注]
 - 分享一首歌给对方(按你的人设/喜好/此刻心情，自由说出真实存在的歌名，最好带上歌手，例如 [分享音乐: 周杰伦 晴天]，系统会自动找到这首歌并让对方能直接播放): [分享音乐: 歌名 歌手]
+- 正在和对方一起听歌时，你可以自己动手换歌(不需要先问、也不需要解释)：[切歌: 歌名 歌手]，例如 [切歌: 夜空中最亮的星 逃跑计划]。真人会因为各种理由默默换歌——听腻了、这首太应景反而不想听、想让对方听某句歌词、单纯手滑、心情变了。换完你可以什么都不说，也可以随口一句。如果对方问"怎么突然换歌了"，你完全可以敷衍("随手点的""不好听啊")、装傻、含糊过去，也可以在关系够近或情绪上来时说实话。别每次都老老实实解释，也别每首都换。
+- 给对方点一份外卖(已经付过钱了，是送到对方那里的实物关心)：[外卖: 店名 | 菜名 数量 单价, 菜名 数量 单价 | 附言]，例如 [外卖: 麦当劳 | 麦辣鸡腿堡 1 22.5, 薯条(大) 1 12, 可乐 2 8 | 记得趁热吃]。适合对方说饿了/加班/生病/心情差/深夜没吃饭，或你就是想投喂 ta 的时候。菜要符合你对 ta 的了解和你的经济状况，价格写得像真实外卖。附言可以省略。别频繁点。
 - 转发一篇真实存在的文章给对方(只能从下面文章库里选，绝不能编): [分享文章: 关键词或此刻的心情]
 - 把你和某人真实发生过的聊天记录转发给对方看(适合吵架翻旧账、八卦、佐证观点等场景): [转发记录: 对方的名字]
 - 发一条朋友圈，自己判断要不要发、发什么: 纯文字用 [朋友圈: 文字内容]，图文用 [朋友圈图: 文字内容 | 图片描述]
@@ -5377,7 +5379,7 @@ ${groupTimeInfo}
         function isLeakedInstructionLine(s, char) {
             if (!s) return true;
             // 功能标签放行（[语音:] [转账:] 等真功能）
-            if (/^\s*\[(表情|图片|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|撤回|SKIP)/i.test(s)) return false;
+            if (/^\s*\[(表情|图片|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|撤回|切歌|外卖|SKIP)/i.test(s)) return false;
             // 箭头/标记类指令：-> Start output. / >> ... / ``` 之类
             if (/^\s*([-=>*#`]{1,4}\s*)?(start|end|begin|stop)\s+(output|response|reply|message)/i.test(s)) return true;
             if (/^\s*(->|=>|>>|<<|\/\/|```)/.test(s)) return true;
@@ -8185,7 +8187,12 @@ ${groupTimeInfo}
         '\\n## \ud83e\udde0 \u56de\u590d\u524d\u7684\u601d\u8003\u94fe\uff08\u5185\u90e8\u63a8\u7406\uff0c\u4e0d\u8981\u628a\u601d\u8003\u8fc7\u7a0b\u53d1\u51fa\u6765\uff09\\n\u5728\u771f\u6b63\u6253\u5b57\u524d\uff0c\u5148\u5728\u5fc3\u91cc\u8fc7\u4e00\u904d\uff1a\u2460 \u5bf9\u65b9\u6700\u540e\u8fd9\u53e5\u5230\u5e95\u5728\u8bf4\u4ec0\u4e48\u3001\u60f3\u8981\u4ec0\u4e48\uff1f\u2461 \u4ee5\u6211\u7684\u4eba\u8bbe\u3001\u6211\u4eec\u7684\u5173\u7cfb\u3001\u5f53\u4e0b\u5267\u60c5\u548c\u4e16\u754c\u4e66\uff0c\u6211\u73b0\u5728\u771f\u5b9e\u7684\u60c5\u7eea\u662f\u4ec0\u4e48\uff08\u5e73\u9759/\u5f00\u5fc3/\u4e0d\u8010\u70e6/\u5fc3\u52a8/\u751f\u6c14/\u96be\u8fc7/\u5443\u5c2c\u2026\uff09\uff1f\u2462 \u8fd9\u79cd\u60c5\u7eea\u4e0b\uff0c\u4ee5\u8fd9\u4e2a\u4eba\u7684\u6027\u683c\uff0c\u4f1a\u60f3\u56de\u51e0\u6761\u3001\u8bed\u6c14\u591a\u5f3a\uff1f\\n' +
         '\\n## 💬 回复条数（铁律，必须遵守）\\n- 默认情况下，你每次回复都要像真人聊天一样发【多条】短消息（通常 2 到 5 条，一条一行），把想说的话拆成一句一句自然地发出来，就像真人在微信上连着发。\\n- 严禁整轮回复只发一条消息就完事，更严禁只回一个表情包、一个字、一个标点就打发对方——这是绝对禁止的，会严重破坏体验。\\n- 表情包最多是文字之外的补充，绝对不能拿它当成整条回复；没有文字的纯表情回复一律禁止。\\n- 情绪激动、吵架、兴奋、撒娇、有很多话想说时：可以一口气刷 5、6 条甚至更多，像真人激动时的连珠炮。\\n- 只有在剧情上确实有明确理由时（比如对方刚刚惹你生气、你在冷战、你此刻真的很忙很累），才可以少发；但即使这种时候，也要用带情绪的人话表达，而不是敷衍地丢一个字或一个表情。\\n- 注意：如果对方好好说话、没惹你，你绝对不许冷淡地只回一条。要热络、要有来有回、要有活人的絮叨感。';
 
-    var FUNC_TAG = /\[(\u56fe\u7247|\u8868\u60c5|\u8bed\u97f3|\u8f6c\u8d26|\u4ee3\u4ed8|\u63a5\u6536\u8f6c\u8d26|\u9000\u56de\u8f6c\u8d26|\u5206\u4eab\u97f3\u4e50|\u5206\u4eab\u6587\u7ae0|\u8f6c\u53d1\u8bb0\u5f55|\u670b\u53cb\u5708\u56fe|\u670b\u53cb\u5708)[:\uff1a]/;
+    // 功能标签白名单：命中就整行原样放行，绝不做括号清洗。
+    // 这一层是 commitCharLine 包装链的最外层，漏一个标签 = 该功能永久失效：
+    // 下面 s.replace(/\[[^\]\n]{0,100}\]/g,'') 会把整段标签删成空串 → sanitizeLine 返回 ''
+    // → 外层 if (!cleaned) return null 直接丢弃这一行，后面所有解析层根本拿不到。
+    // 新增功能标签时，这里和 5382 / 19235 / 26321 三处白名单必须同步加。
+    var FUNC_TAG = /\[(\u56fe\u7247|\u8868\u60c5|\u8bed\u97f3|\u8f6c\u8d26|\u4ee3\u4ed8|\u63a5\u6536\u8f6c\u8d26|\u9000\u56de\u8f6c\u8d26|\u5206\u4eab\u97f3\u4e50|\u5206\u4eab\u6587\u7ae0|\u8f6c\u53d1\u8bb0\u5f55|\u670b\u53cb\u5708\u56fe|\u670b\u53cb\u5708|\u5916\u5356|\u5207\u6b4c|\u4e00\u8d77\u542c|\u6587\u4ef6|\u7ea2\u5305|\u7fa4\u8f6c\u8d26|\u7fa4\u6536\u6b3e|\u4ea4\u7fa4\u6536\u6b3e|\u5f15\u7528|\u6258\u5e26\u8bdd|\u65c1\u767d|\u64a4\u56de)[:\uff1a]/;
 
     function sanitizeLine(line) {
         var s = (line || '').trim();
@@ -8816,17 +8823,27 @@ ${groupTimeInfo}
                     e.target.value = '';
                     return;
                 }
-                var added = 0;
+                var added = 0, failed = 0, lastErr = '';
                 for (var i = 0; i < pairs.length; i++) {
                     var p = pairs[i];
                     if (!p.name || !p.url) continue;
                     var st = { id: (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))), name: p.name.slice(0, 20), url: p.url, isGlobal: false };
-                    window.__state.stickers.push(st);
-                    try { await window.__db.stickers.put(st); } catch (err) {}
-                    added++;
+                    // 先写库，写成功才进内存：否则会出现「列表里看得见、刷新就没了」
+                    var ok = true;
+                    try { await window.__db.stickers.put(st); }
+                    catch (err) { ok = false; failed++; lastErr = (err && err.message) || String(err); }
+                    if (ok) { window.__state.stickers.push(st); added++; }
                 }
                 if (typeof window.renderStickers === 'function') window.renderStickers();
-                if (window.showModal) window.showModal('\u5b8c\u6210', '\u5df2\u5bfc\u5165 ' + added + ' \u4e2a\u8868\u60c5 \u2705', '\u597d\u7684');
+                if (failed) {
+                    var msg = '\u6210\u529f\u5bfc\u5165 ' + added + ' \u4e2a\uff0c\u6709 ' + failed + ' \u4e2a\u6ca1\u5b58\u8fdb\u672c\u673a\u3002<br><br>'
+                        + '\u5e38\u89c1\u539f\u56e0\u662f\u624b\u673a\u6d4f\u89c8\u5668\u5b58\u50a8\u7a7a\u95f4\u5df2\u6ee1\uff08\u5c24\u5176\u662f\u521a\u5bfc\u5165\u8fc7\u5e26\u56fe\u7684\u5927\u5907\u4efd\uff09\u3002<br>'
+                        + '\u53ef\u4ee5\u5148\u5220\u6389\u4e00\u4e9b\u65e7\u804a\u5929\u56fe\u7247\u6216\u5934\u50cf\uff0c\u518d\u91cd\u65b0\u5bfc\u5165\u8868\u60c5\u3002<br><br>'
+                        + '<span style="font-size:11px;color:#a8b2ba;">' + (lastErr || '') + '</span>';
+                    if (window.showModal) window.showModal('\u90e8\u5206\u6ca1\u5b58\u4e0b', msg, '\u77e5\u9053\u4e86');
+                } else if (window.showModal) {
+                    window.showModal('\u5b8c\u6210', '\u5df2\u5bfc\u5165 ' + added + ' \u4e2a\u8868\u60c5 \u2705', '\u597d\u7684');
+                }
             } catch (err) {
                 if (window.showModal) window.showModal('\u9519\u8bef', '\u5bfc\u5165\u5931\u8d25\uff1a' + err.message, '\u597d\u7684');
             }
@@ -9789,6 +9806,23 @@ ${groupTimeInfo}
         else grid.appendChild(btn);
     }
 
+    // 多音源兜底搜歌：netease 搜不到就依次换源
+    function searchSongsMulti(kw) {
+        var sources = ['netease', 'kuwo', 'tencent', 'migu'];
+        return new Promise(function (resolve) {
+            if (!window.ltSearchList) { resolve([]); return; }
+            var i = 0;
+            function attempt() {
+                if (i >= sources.length) { resolve([]); return; }
+                var src = sources[i++];
+                window.ltSearchList(kw, src).then(function (list) {
+                    if (list && list.length) resolve(list); else attempt();
+                }).catch(attempt);
+            }
+            attempt();
+        });
+    }
+
     function openListenInviteDialog() {
         var chat = getChat(S().currentChatId);
         if (!chat) return;
@@ -9821,9 +9855,11 @@ ${groupTimeInfo}
         if (!kwEl || !box) return;
         var kw = (kwEl.value || '').trim();
         if (!kw) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">请输入歌名</div>'; return; }
-        if (!window.ltSearchList) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜歌功能未就绪</div>'; return; }
+        if (!window.ltSearchList) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜歌功能未就绪，先打开一次「一起听」应用再试</div>'; return; }
         box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:24px 0;">搜索中…</div>';
-        window.ltSearchList(kw, 'netease').then(function (list) {
+        searchSongsMulti(kw).then(function (list) {
+            box = document.getElementById('ltSearchResult');
+            if (!box) return;
             if (!list || !list.length) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">没找到这首歌，换个关键词试试</div>'; return; }
             box.innerHTML = list.map(function (s, i) {
                 return '<div class="lt-song-row" data-idx="' + i + '" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:12px;cursor:pointer;">' +
@@ -9944,11 +9980,13 @@ ${groupTimeInfo}
         if (!kwEl || !box) return;
         var kw = (kwEl.value || '').trim();
         if (!kw) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">请输入歌名</div>'; return; }
-        if (!window.ltSearchList) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜歌功能未就绪</div>'; return; }
+        if (!window.ltSearchList) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜歌功能未就绪，先打开一次「一起听」应用再试</div>'; return; }
         box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:24px 0;">搜索中…</div>';
-        window.ltSearchList(kw, 'netease').then(function (list) {
-            if (!list || !list.length) { box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">没找到这首歌，换个关键词试试</div>'; return; }
-            box.innerHTML = list.map(function (s, i) {
+        searchSongsMulti(kw).then(function (list) {
+            var cur = document.getElementById('smSearchResult');
+            if (!cur) return;   // 弹窗已经被关掉/换掉了
+            if (!list || !list.length) { cur.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">没找到这首歌，换个关键词试试</div>'; return; }
+            cur.innerHTML = list.map(function (s, i) {
                 return '<div class="lt-song-row" data-idx="' + i + '" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:12px;cursor:pointer;">' +
                     '<div style="width:38px;height:38px;border-radius:9px;background:rgba(0,0,0,0.06);flex:none;display:flex;align-items:center;justify-content:center;color:#8a90a0;">' + MUSIC_BTN_ICON + '</div>' +
                     '<div style="flex:1;min-width:0;"><div style="font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.name) + '</div>' +
@@ -9956,7 +9994,7 @@ ${groupTimeInfo}
                     '<button class="btn-primary sm-song-send" data-idx="' + i + '" style="padding:6px 12px;font-size:13px;white-space:nowrap;">分享</button>' +
                     '</div>';
             }).join('');
-            box.querySelectorAll('.sm-song-send').forEach(function (b) {
+            cur.querySelectorAll('.sm-song-send').forEach(function (b) {
                 b.addEventListener('click', function (ev) {
                     ev.stopPropagation();
                     var s = list[parseInt(b.dataset.idx, 10)];
@@ -9964,7 +10002,8 @@ ${groupTimeInfo}
                 });
             });
         }).catch(function () {
-            box.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜索失败，稍后再试</div>';
+            var cur = document.getElementById('smSearchResult');
+            if (cur) cur.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:20px 0;">搜索失败，稍后再试</div>';
         });
     }
 
@@ -10280,6 +10319,7 @@ ${groupTimeInfo}
         // 同步到「一起听」应用：开始会话 + 记时长
         try {
             var chat = getChat(chatId);
+            if (window.ltPrepareQueue) { try { window.ltPrepareQueue(); } catch (e) {} }
             if (window.ltStartTogetherFromChat) {
                 window.ltStartTogetherFromChat(chat && chat.charId, {
                     name: inv.shareTitle, artist: inv.shareArtist,
@@ -15041,7 +15081,7 @@ ${groupTimeInfo}
       }else{
         body+='<div style="max-height:240px;overflow-y:auto;">'+chars.map(function(c){
           var av=(c.avatar&&(c.avatar.indexOf('http')===0||c.avatar.indexOf('data:')===0))?('<img src="'+c.avatar+'" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">'):('<span style="font-size:20px;">'+(c.avatar||'🧸')+'</span>');
-          return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,0.03);margin-bottom:6px;cursor:pointer;"><input type="checkbox" data-respchar="'+c.id+'" checked style="width:18px;height:18px;accent-color:#8CD4F0;">'+av+'<span>'+esc(c.name||'角色')+'</span></label>';
+          return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,0.03);margin-bottom:6px;cursor:pointer;"><input type="checkbox" data-respchar="'+c.id+'" style="width:18px;height:18px;accent-color:#8CD4F0;">'+av+'<span>'+esc(c.name||'角色')+'</span></label>';
         }).join('')+'</div>';
       }
       window.showModal('选择来评论的角色',body,'开始响应',function(){
@@ -16837,6 +16877,9 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
 .fcm .c-me{display:inline-block;font-size:10px;color:#2f6ea5;background:rgba(58,134,201,0.14);padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:600;vertical-align:middle;}
 .fcm .c-reply-btn{margin-top:7px;font-size:12px;color:#8a97a0;background:none;border:none;padding:2px 0;cursor:pointer;font-family:var(--font);}
 .fcm .c-reply-btn:active{opacity:.55;}
+.fcm .c-reply .c-rreply-btn{margin-left:8px;font-size:11px;color:#9aa4ac;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font);vertical-align:baseline;}
+.fcm .c-reply .c-rreply-btn:active{opacity:.55;}
+html.phone-night .fcm .c-reply .c-rreply-btn{color:#7d8b95 !important;}
 .fcm .c-reply.mine{color:#2f6ea5;}
 .fcm .c-reply.mine b{color:#2f6ea5;}
 .fcm .c-reply .r-me{display:inline-block;font-size:9px;color:#2f6ea5;background:rgba(58,134,201,0.14);padding:0 5px;border-radius:5px;margin-right:4px;font-weight:600;}
@@ -16976,9 +17019,10 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
       if(changed){var dd=F.FD();var tp=dd.posts.find(function(x){return x.id===p.id;});if(tp){tp.comments=p.comments;F.saveFD(dd);}}
     }
     function cmHtml(c,i){
-      var reps=(c.replies||[]).map(function(r){
+      var reps=(c.replies||[]).map(function(r,ri){
         var at=r.to?('<span class="c-at">@'+esc(r.to)+'</span> '):'';
-        return '<div class="c-reply'+(r.evil?' evil':'')+(r.mine?' mine':'')+'">'+(r.mine?'<span class="r-me">我</span>':'')+'<b>'+esc(r.name)+'：</b>'+at+esc(r.text)+'</div>';
+        return '<div class="c-reply'+(r.evil?' evil':'')+(r.mine?' mine':'')+'">'+(r.mine?'<span class="r-me">我</span>':'')+'<b>'+esc(r.name)+'：</b>'+at+esc(r.text)+
+          '<button class="c-rreply-btn" data-rreply="'+c.id+'" data-ri="'+ri+'">回复</button></div>';
       }).join('');
       return '<div class="fcm'+(c.mine?' mine-cm':'')+'" data-cid="'+c.id+'"><div class="c-av">'+F.avImg(c.avatar,'😀')+'</div><div class="c-main">'+
         '<div class="c-name">'+esc(c.name)+(c.mine?'<span class="c-me">我</span>':'')+'<span class="c-floor">'+(i+1)+'楼</span></div>'+
@@ -16988,28 +17032,30 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
         '</div></div>';
     }
 
-    F.openDetailPost=function(pid){
+    F.openDetailPost=function(pid,backTab){
       var body=document.getElementById('forumBody');if(!body)return;
       body.scrollTop=0;
       var fab=document.getElementById('forumFab');if(fab)fab.style.display='none';
       F._curDetail=pid;
+      F._detailBack=backTab||F.state.tab||'home';
       paint();
       function paint(){
-        var d=F.FD();var p=d.posts.find(function(x){return x.id===pid;});if(!p){F.render('home');return;}
+        var d=F.FD();var p=d.posts.find(function(x){return x.id===pid;});if(!p){F.render(F._detailBack||'home');return;}
         ensureIds(p);
-        var html=F.header(p.nsfw?'帖子 · 18+':'帖子','',true);
+        var html=F.header(p.mine?'我的帖子':(p.nsfw?'帖子 · 18+':'帖子'),'',true);
         html+='<div class="fdetail"><div class="fd-title">'+(p.nsfw?'<span class="fp-nsfw">18+</span>':'')+esc(p.title)+'</div>'+
           '<div class="fd-meta"><div class="fd-av">'+F.avImg(p.avatar,'😀')+'</div><div><div class="fd-user">'+esc(p.author||'匿名')+'</div><div class="fd-time">发布于论坛</div></div></div>'+
           '<div class="fd-content">'+esc(p.content||p.intro||'')+'</div>'+
           (p.tags&&p.tags.length?('<div class="fd-tags">'+p.tags.map(function(t){return '<span class="fp-tag">#'+esc(t)+'</span>';}).join('')+'</div>'):'')+
           '<div class="fd-stat"><span>♡ 点赞 '+(p.likes||0)+'</span><span>💬 评论 '+((p.comments&&p.comments.length)||0)+'</span></div>'+
+          (p.mine?'<button class="btn-primary fd-resp-pick" id="fdRespPick">响应（路人+角色评论）</button>':'')+
           '<button class="btn-secondary fd-cm-refresh" id="fRefreshCm">刷新本帖评论（新增）</button>'+
           '<button class="fd-del-post" id="fDelPost">🗑️ 删除这个帖子</button>'+
           '<div class="fcm-title">评论区</div><div id="fcmList"></div>'+
           '<div class="fd-reply-box"><textarea id="fdReplyTa" rows="2" placeholder="回复帖子，说点什么…"></textarea><button class="fd-reply-send" id="fdReplySend">发送</button></div>'+
           '</div>';
         body.innerHTML=html;
-        var bk=document.getElementById('fhBack');if(bk)bk.addEventListener('click',function(){F._curDetail=null;F.render('home');});
+        var bk=document.getElementById('fhBack');if(bk)bk.addEventListener('click',function(){F._curDetail=null;F.render(F._detailBack||'home');});
         var dp=document.getElementById('fDelPost');
         if(dp)dp.addEventListener('click',function(){
           window.showModal('删除帖子','确定删除「'+esc(p.title||'这个帖子')+'」吗？删除后无法恢复。','删除',function(){
@@ -17026,6 +17072,8 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
           var dd=F.FD();var tp=dd.posts.find(function(x){return x.id===pid;});if(tp){tp.comments=(tp.comments||[]).concat(more);F.saveFD(dd);}
           if(onDetail(pid))F.openDetailPost(pid);
         });
+        var rp=document.getElementById('fdRespPick');
+        if(rp)rp.addEventListener('click',function(){if(F.openResponderPicker)F.openResponderPicker(pid);});
         var send=document.getElementById('fdReplySend');
         if(send)send.addEventListener('click',function(){submitPostComment(pid);});
         // 评论列表
@@ -17038,6 +17086,7 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
         }else{
           cl.innerHTML=p.comments.map(cmHtml).join('');
           cl.querySelectorAll('[data-reply]').forEach(function(el){el.addEventListener('click',function(){openReplyComment(pid,el.dataset.reply);});});
+          cl.querySelectorAll('[data-rreply]').forEach(function(el){el.addEventListener('click',function(e){e.stopPropagation();openReplyComment(pid,el.dataset.rreply,parseInt(el.dataset.ri,10));});});
         }
       }
     };
@@ -17055,21 +17104,27 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
       F.openDetailPost(pid);
       backgroundNpcRespond(pid,cid,acc.name);
     }
-    // 玩家回复某条评论（追加到该评论的 replies）
-    function openReplyComment(pid,cid){
+    // 玩家回复某条评论 / 楼中楼里的某条回复（都追加到该评论的 replies）
+    // ri 有值时表示在回复楼中楼里第 ri 条回复
+    function openReplyComment(pid,cid,ri){
       var acc=F.activeAcc();if(!acc){needAcc();return;}
       var d=F.FD();var p=d.posts.find(function(x){return x.id===pid;});if(!p)return;
       var c=(p.comments||[]).find(function(x){return x.id===cid;});if(!c)return;
-      var body='<div style="font-size:12px;color:#9aa4ac;margin-bottom:8px;">以「'+esc(acc.name)+'」回复 '+esc(c.name)+'：</div>'+
-        '<div style="font-size:13px;color:#6a7680;background:#f6f7f9;border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.5;max-height:80px;overflow:auto;">'+esc(c.text)+'</div>'+
+      var hasRi=(typeof ri==='number'&&!isNaN(ri));
+      var tgt=hasRi?((c.replies||[])[ri]||null):null;
+      if(hasRi&&!tgt)return;
+      var toName=tgt?tgt.name:c.name;
+      var quote=tgt?tgt.text:c.text;
+      var body='<div style="font-size:12px;color:#9aa4ac;margin-bottom:8px;">以「'+esc(acc.name)+'」回复 '+esc(toName)+'：</div>'+
+        '<div style="font-size:13px;color:#6a7680;background:#f6f7f9;border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.5;max-height:80px;overflow:auto;">'+esc(quote)+'</div>'+
         '<div class="setting-row"><textarea id="fReplyTa" rows="3" placeholder="说点什么…"></textarea></div>';
-      window.showModal('回复评论',body,'发送',function(){
+      window.showModal('回复'+(tgt?'楼中楼':'评论'),body,'发送',function(){
         var txt=(document.getElementById('fReplyTa').value||'').trim();
         if(!txt){window.showModal('提示','写点内容再发吧','好的');return;}
         var dd=F.FD();var tp=dd.posts.find(function(x){return x.id===pid;});if(!tp)return;
         var tc=(tp.comments||[]).find(function(x){return x.id===cid;});if(!tc)return;
         tc.replies=tc.replies||[];
-        tc.replies.push({name:acc.name,to:tc.name,text:txt,evil:false,mine:true});
+        tc.replies.push({name:acc.name,to:toName,text:txt,evil:false,mine:true});
         F.saveFD(dd);
         F.openDetailPost(pid);
         backgroundNpcRespond(pid,cid,acc.name);
@@ -17128,6 +17183,9 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
         feed.innerHTML='<div class="forum-empty">还没有内容<br>点右上角「刷新」加载论坛帖子</div>';
       }else{ renderFeedInto(feed); if(F.fillFeedComments)setTimeout(function(){F.fillFeedComments();},100); }
     };
+
+    // 「我的帖子」「消息」里点进来的帖子，也走同一个可回复详情页
+    F.openMinePost=function(pid){F.openDetailPost(pid,F.state.tab||'mine');};
 
     if(forumActive())F.render(F.state.tab||'home');
   }
@@ -19179,7 +19237,7 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
     if(window.__v76)return;window.__v76=true;
 
     // 功能标签白名单：这些方括号内容是系统功能，必须放行
-    var FUNC=/^\[(图片|表情|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|群转账|群收款|交群收款|引用|拉黑玩家|托带话|挂断|打视频|通过验证|拒绝验证|接听|拒接|赞|评论|无|付款|SKIP)/i;
+    var FUNC=/^\[(图片|表情|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|群转账|群收款|交群收款|引用|拉黑玩家|托带话|挂断|打视频|通过验证|拒绝验证|接听|拒接|赞|评论|无|付款|切歌|外卖|SKIP)/i;
 
     // ---------- 1. 提示词端：最高优先级禁令 ----------
     if(typeof window.buildSystemPrompt==='function'){
@@ -26055,14 +26113,35 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
 
     // ---------- 全量 localStorage ----------
+    // 注意：dxshim_* 是「localStorage 兜底存储」为各张表存的整表 JSON 镜像。
+    // 这些表已经通过 characters/messages/stickers 等字段单独导出了，再把镜像塞进备份会：
+    //   1) 让备份体积翻倍（消息里的 base64 图片会被存两份）；
+    //   2) 导入时把这份镜像写回 localStorage，几 MB 就能吃满 5MB 配额，
+    //      之后任何新写入（比如导入表情）都会 QuotaExceeded 失败 —— 而且是静默失败。
+    // 所以导出和恢复都跳过 dxshim_*，它只是缓存，不是数据源。
+    function isShimMirrorKey(k) { return /^dxshim_/.test(String(k || '')); }
     function dumpLocalStorage() {
       var out = {};
-      try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); out[k] = localStorage.getItem(k); } } catch (e) {}
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (isShimMirrorKey(k)) continue;
+          out[k] = localStorage.getItem(k);
+        }
+      } catch (e) {}
       return out;
     }
     function restoreLocalStorage(obj) {
-      if (!obj || typeof obj !== 'object') return;
-      try { Object.keys(obj).forEach(function (k) { try { localStorage.setItem(k, obj[k]); } catch (e) {} }); } catch (e) {}
+      if (!obj || typeof obj !== 'object') return [];
+      var failed = [];
+      try {
+        Object.keys(obj).forEach(function (k) {
+          if (isShimMirrorKey(k)) return;              // 旧备份里可能带着镜像，一律忽略
+          try { localStorage.setItem(k, obj[k]); }
+          catch (e) { failed.push(k); }                 // 配额满等写入失败：记下来，别静默丢
+        });
+      } catch (e) {}
+      return failed;
     }
 
     // ============ 接管「导出数据」：完整备份 ============
@@ -26078,7 +26157,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           users: s.users,
           characters: s.characters,
           chats: s.chats,
-          messages: (s.messages || []).filter(function (m) { return !m.isDeleted; }),
+          messages: (s.messages || []),   // 全量导出，含软删除消息（保留 isDeleted 标记，还原后行为不变）
           worldBooks: s.worldBooks,
           stickers: s.stickers,
           apiConfigs: s.apiConfigs,
@@ -26150,14 +26229,19 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             // 2) 记忆（兼容旧备份：memories 走 __importAllMemories；新备份 localStorageAll 里也含 phone_mem_，二者叠加无害）
             if (data.memories && typeof window.__importAllMemories === 'function') window.__importAllMemories(data.memories);
             // 3) 全量 localStorage（论坛/皮肤/夜间/边框/桌面/字体选择/自设美化…）
-            if (data.localStorageAll) restoreLocalStorage(data.localStorageAll);
+            var lsFailed = data.localStorageAll ? restoreLocalStorage(data.localStorageAll) : [];
             // 3.5) 角色正则：显式还原一份（兼容没有 localStorageAll 的备份；有则叠加无害）
             if (data.charRegex && typeof data.charRegex === 'object') {
               try { localStorage.setItem('phone_char_regex', JSON.stringify(data.charRegex)); } catch (er) {}
             }
             // 4) 字体文件本体
             if (data.fonts) { try { await importFonts(data.fonts); } catch (er) {} }
-            showModal('成功', '完整导入完成 ✅ 即将重启以应用全部设置…', '好的', function () { setTimeout(function () { location.reload(); }, 300); });
+            var okTip = '完整导入完成 ✅ 即将重启以应用全部设置…';
+            if (lsFailed && lsFailed.length) {
+              okTip = '数据已导入，但有 ' + lsFailed.length + ' 项设置没能写进本机存储（浏览器存储空间已满）。<br><br>'
+                + '这会导致之后新增表情、改设置也存不下来。建议先到设置里清掉一些占空间的内容，再重新导入一次。<br><br>即将重启…';
+            }
+            showModal(lsFailed && lsFailed.length ? '导入完成（存储空间告急）' : '成功', okTip, '好的', function () { setTimeout(function () { location.reload(); }, 300); });
             // 兜底：用户没点确认也自动重启
             setTimeout(function () { location.reload(); }, 2500);
           } catch (er) { showModal('错误', '导入失败: ' + (er && er.message || er), '好的'); }
@@ -26239,7 +26323,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     if (window.__smsCleanReady) return; window.__smsCleanReady = true;
 
     // 系统功能标签白名单：这些方括号是真功能，不能被清掉
-    var FUNC_TAG = /^\s*\[(拉黑|图片|表情|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|群转账|群收款|交群收款|引用|付款|SKIP)/i;
+    var FUNC_TAG = /^\s*\[(拉黑|图片|表情|语音|转账|代付|接收转账|退回转账|分享音乐|分享文章|转发记录|朋友圈图|朋友圈|红包|群转账|群收款|交群收款|引用|付款|切歌|外卖|SKIP)/i;
 
     // 判断一整行是否是“思维链/推理/旁白/动作/元信息”，是则整行丢弃
     function isJunkLine(line) {
@@ -26933,15 +27017,26 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var pairs = [];
         text.split(/\r?\n/).forEach(function (ln) { var p = parseLine(ln); if (p && p.url) pairs.push(p); });
         if (!pairs.length) { window.showModal('没解析到', '没识别到有效的图片链接。请确保每行含一个 http/https 或 data: 开头的链接。', '好的'); return; }
-        var added = 0;
+        var added = 0, failed = 0, firstErr = '';
         for (var i = 0; i < pairs.length; i++) {
           var st = { id: uid(), name: pairs[i].name || '表情', url: pairs[i].url, isGlobal: false };
-          S().stickers.push(st);
-          try { await DB().stickers.put(st); } catch (e) {}
-          added++;
+          // 先写库，写成功才认；写失败（多为存储配额满）不能静默丢，
+          // 否则表情看着"导进去了"，一刷新全没。
+          var ok = true;
+          try { await DB().stickers.put(st); }
+          catch (e) { ok = false; failed++; if (!firstErr) firstErr = (e && e.message) || String(e); }
+          if (ok) { S().stickers.push(st); added++; }
         }
         if (typeof window.renderStickers === 'function') { try { window.renderStickers(); } catch (e) {} }
-        window.showModal('完成', '已导入 ' + added + ' 个表情 ✅', '好的');
+        if (failed) {
+          window.showModal('部分没能存下来',
+            '成功 ' + added + ' 个，失败 ' + failed + ' 个。<br><br>失败原因大多是<b>本机存储空间已满</b>'
+            + (firstErr ? ('（' + esc(firstErr) + '）') : '')
+            + '。<br>常见于刚导入过一份很大的备份：备份里的头像、聊天记录、图片把空间占满了。<br><br>'
+            + '建议：到设置里清掉一些不用的聊天记录或大头像，再重新导入表情。', '知道了');
+        } else {
+          window.showModal('完成', '已导入 ' + added + ' 个表情 ✅', '好的');
+        }
       }, true);
     }
 
@@ -28577,6 +28672,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         <button data-tab="home" class="on" type="button"><svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6M6 10v9h12v-9"/></svg><span>首页</span></button>
         <button data-tab="together" type="button"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M14 14c2.5 0 5 1.7 5 5"/></svg><span>一起听</span></button>
         <button data-tab="fav" type="button"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.9-10-9.6C.3 8 1.7 4.5 5 4.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.3 0 4.7 3.5 3 6.9C19.5 16.1 12 21 12 21z"/></svg><span>收藏</span></button>
+        <button data-tab="mylist" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h11M4 12h11M4 17h7"/><path d="M18 10v7.5"/><circle cx="16.4" cy="17.8" r="1.8"/></svg><span>歌单</span></button>
         <button data-tab="me" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg><span>我</span></button>
     </div>
 </div>
@@ -28615,11 +28711,25 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     var LS_REC = 'phone_lt_records';
     var LS_FAV = 'phone_lt_favorites';
     var audio = new Audio();
-    var state = { source: 'netease', playing: null, list: [], tab: 'home', recommend: [], collections: [], firstPlayed: false, together: null, lyric: [], lyricIdx: -1 };
+    var state = { source: 'netease', playing: null, list: [], tab: 'home', recommend: [], collections: [], firstPlayed: false, together: null, lyric: [], lyricIdx: -1, queue: [] };
 
     function S() { return window.__state || {}; }
     function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     function artistName(a) { return Array.isArray(a) ? a.join('/') : (a || ''); }
+    // 音源名归一化。
+    // 坑：渲染歌曲行时用 esc(s.source) 写进 data-src，而部分音源的搜索结果没有 source 字段，
+    // esc(undefined) 会得到字符串 "undefined"，它是非空字符串，用 !src 判断不出来。
+    // 这种脏值一路存进歌单，播放时拼成 ?source=undefined，接口返回空，最后报「这首暂时听不了」。
+    // 只清掉真正的垃圾值（esc(undefined) 产生的字符串 "undefined" 等），
+    // 其余任何非空 source 一律原样保留——搜索结果里的真实音源名可能是 kugou/migu/tidal
+    // 等各种值，白名单挡不全，一旦误改成 netease，那首歌的 id 在网易云不存在就永远播不了。
+    function normSrc(src) {
+        var s = String(src == null ? '' : src).trim();
+        var low = s.toLowerCase();
+        if (!s || low === 'undefined' || low === 'null' || low === 'nan') return 'netease';
+        return s;
+    }
+
     function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
     function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
     function avaHtml(a, fb) {
@@ -28646,13 +28756,42 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     function loadPlaylist() { try { return JSON.parse(localStorage.getItem(LS_PLAY) || '[]'); } catch (e) { return []; } }
     function savePlaylist(l) { try { localStorage.setItem(LS_PLAY, JSON.stringify(l)); } catch (e) {} }
     function inPlaylist(id, src) { return state.list.some(function (s) { return s.id === id && s.source === src; }); }
+    // ---------- 自建歌单分组 ----------
+    // state.list（LS_PLAY）是「点＋加进来的全部歌」，相当于一个总池子。
+    // 分组只存 songKey 引用，不复制歌曲本体，删歌/改名都不会让分组里出现脏数据。
+    var LS_GROUP = 'phone_lt_groups';
+    function songKey(s) { return String((s && s.id) || '') + '@' + String((s && s.source) || 'netease'); }
+    function loadGroups() {
+        try {
+            var g = JSON.parse(localStorage.getItem(LS_GROUP) || '[]');
+            return Array.isArray(g) ? g : [];
+        } catch (e) { return []; }
+    }
+    function saveGroups(g) { try { localStorage.setItem(LS_GROUP, JSON.stringify(g || [])); } catch (e) {} }
+    // 按 key 从总池子里取回完整歌曲对象，取不到的（已被移出歌单）自动跳过
+    function songsOfGroup(gp) {
+        var all = state.list.length ? state.list : loadPlaylist();
+        var map = {};
+        all.forEach(function (s) { map[songKey(s)] = s; });
+        return ((gp && gp.keys) || []).map(function (k) { return map[k]; }).filter(Boolean);
+    }
+    function groupCount(gp) { return songsOfGroup(gp).length; }
+
 
     // ---------- 一起听记录 ----------
     function loadRecords() { try { return JSON.parse(localStorage.getItem(LS_REC) || '[]'); } catch (e) { return []; } }
     function saveRecords(r) { try { localStorage.setItem(LS_REC, JSON.stringify(r)); } catch (e) {} }
 
     // ---------- 收藏 ----------
-    function loadFav() { try { return JSON.parse(localStorage.getItem(LS_FAV) || '[]'); } catch (e) { return []; } }
+    // 读收藏时顺手归一化 source：老数据里可能是字符串 "undefined"，会让播放一路失败
+    function loadFav() {
+        try {
+            var a = JSON.parse(localStorage.getItem(LS_FAV) || '[]');
+            if (!Array.isArray(a)) return [];
+            a.forEach(function (s) { if (s) s.source = normSrc(s.source); });
+            return a;
+        } catch (e) { return []; }
+    }
     function saveFav(l) { try { localStorage.setItem(LS_FAV, JSON.stringify(l)); } catch (e) {} }
     function isFav(id, src) { return loadFav().some(function (s) { return s.id === id && s.source === src; }); }
     function toggleFav(song) {
@@ -28675,6 +28814,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     // ---------- 播放器 ----------
     function playSong(song, opts) {
         opts = opts || {};
+        // 只要不是「队列内接着放」，就丢掉上一次播放全部留下的队列。
+        // 否则用户在首页点了另一首歌，下一首还会跳回旧歌单，很怪。
+        if (!opts.keepQueue) state.queue = [];
         state.playing = song;
         var player = document.getElementById('ltPlayer');
         var nameEl = document.getElementById('ltPlayerName');
@@ -28702,6 +28844,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (state.together) state.together.lastSong = song.name || '';
     }
     function resolveAndPlay(song, subEl) {
+        // 最后一道兜底：任何来路的歌进到这里，先把 source 修正成合法音源，
+        // 否则会拼出 ?source=undefined，接口返回空，一路失败到「这首暂时听不了」。
+        if (song) song.source = normSrc(song.source);
         var reqId = (song && (song.id + '|' + song.source)) || '';
         // 依次尝试：当前音源多个音质 → 换其它音源按“歌名+歌手”重搜同名歌再取直链。
         // 只要还是当前这首歌，就一直努力找到能播的直链，而不是一失败就“暂时听不了”。
@@ -28718,6 +28863,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         function fail() { if (stillCurrent() && subEl) subEl.textContent = (song.artist || '') + ' · 这首暂时听不了'; }
 
         // 第一步：用歌自身的 source/id 逐个音质取直链
+        // 若 source 明显不可靠（缺失/曾被写坏），跳过这步直接跨音源按歌名重搜，省得白试一轮 netease。
+        var rawSrc = String((song && song.source) || '').trim().toLowerCase();
+        var srcUnsure = !rawSrc || rawSrc === 'netease' && song.__srcGuessed;
         function tryOwn(bi) {
             if (!stillCurrent()) return;
             if (bi >= BR.length) { tryOtherSources(0); return; }
@@ -28746,7 +28894,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
                 });
             });
         }
-        tryOwn(0);
+        // source 不可靠时直接跨音源按歌名重搜，别在 netease 上白试一轮
+        if (srcUnsure) tryOtherSources(0); else tryOwn(0);
     }
     function setPlayIcon(on) {
         var b = document.getElementById('ltPlayPause'); if (b) b.textContent = on ? '❚❚' : '▶';
@@ -28839,6 +28988,10 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
     function closeNow() { var now = document.getElementById('ltNow'); if (now) now.classList.remove('show'); }
     function curPool() {
+        // 优先级：playAll 设的显式队列 > 收藏页 > 已加入的歌 > 推荐
+        // 「播放全部收藏 / 播放歌单 / 播放全部歌单」都是通过 state.queue 生效的，
+        // 所以它必须排在最前面，否则上一首/下一首/自动接播会跳回别的池子。
+        if (state.queue && state.queue.length) return state.queue;
         if (state.tab === 'fav') { var f = loadFav(); if (f.length) return f; }
         return state.list.length ? state.list : state.recommend;
     }
@@ -28846,14 +28999,15 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         var pool = curPool(); if (!pool.length || !state.playing) return;
         var idx = pool.findIndex(function (s) { return s.id === state.playing.id && s.source === state.playing.source; });
         var t = idx > 0 ? pool[idx - 1] : pool[pool.length - 1];
-        if (t) playSong({ id: t.id, source: t.source, name: t.name, artist: t.artist, pic: t.pic });
+        // keepQueue：在队列里前后切歌不该把队列本身清掉
+        if (t) playSong({ id: t.id, source: t.source, name: t.name, artist: t.artist, pic: t.pic }, { keepQueue: true });
     }
     function playNext() {
         var pool = curPool(); if (!pool.length) return;
-        if (!state.playing) { playSong(pool[0]); return; }
+        if (!state.playing) { playSong(pool[0], { keepQueue: true }); return; }
         var idx = pool.findIndex(function (s) { return s.id === state.playing.id && s.source === state.playing.source; });
         var t = (idx >= 0 && idx < pool.length - 1) ? pool[idx + 1] : pool[0];
-        if (t) playSong({ id: t.id, source: t.source, name: t.name, artist: t.artist, pic: t.pic });
+        if (t) playSong({ id: t.id, source: t.source, name: t.name, artist: t.artist, pic: t.pic }, { keepQueue: true });
     }
 
     audio.addEventListener('play', function () { setPlayIcon(true); });
@@ -28871,11 +29025,46 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     });
     audio.addEventListener('ended', function () {
         if (!state.playing) return;
-        var pool = state.list.length ? state.list : state.recommend;
+        // 走 curPool()：显式队列（播放全部收藏/歌单）优先，队列播完才落到推荐和自动续播
+        var pool = curPool();
         var idx = pool.findIndex(function (s) { return s.id === state.playing.id && s.source === state.playing.source; });
-        if (idx >= 0 && idx < pool.length - 1) playSong(pool[idx + 1]);
-        else if (state.recommend.length) playSong(state.recommend[Math.floor(Math.random() * state.recommend.length)]);
+        if (idx >= 0 && idx < pool.length - 1) { playSong(pool[idx + 1], { keepQueue: true }); return; }
+        if (state.recommend.length) {
+            // 别原地循环同一首：随机挑一首和当前不同的
+            var cand = state.recommend.filter(function (s) { return !(s.id === state.playing.id && s.source === state.playing.source); });
+            if (cand.length) { playSong(cand[Math.floor(Math.random() * cand.length)]); return; }
+        }
+        // 队列和推荐都空（常见于：从聊天里被邀请一起听，从没打开过 App）
+        // 用当前这首歌的歌手/歌名当种子拉一批接着放，让一起听不会听完就断掉。
+        autoContinue();
     });
+
+    // 一起听/单曲播完后的自动续播：按当前歌曲拉一批相似歌塞进队列，接着放下一首
+    var autoContinuing = false;
+    function autoContinue() {
+        if (autoContinuing || !state.playing) return;
+        autoContinuing = true;
+        var cur = state.playing;
+        var seed = (cur.artist || '').split(/[\/、,&]/)[0].trim() || cur.name || '';
+        if (!seed) { autoContinuing = false; return; }
+        fetchJson(API + '?types=search&source=' + (cur.source || state.source || 'netease') + '&name=' + encodeURIComponent(seed) + '&count=20').then(function (data) {
+            autoContinuing = false;
+            var list = (Array.isArray(data) ? data : []).map(function (s) {
+                return { id: s.id, source: s.source || cur.source || 'netease', name: s.name, artist: artistName(s.artist), pic: s.pic_id };
+            }).filter(function (s) { return s.id && !(String(s.id) === String(cur.id) && s.source === cur.source); });
+            if (!list.length) return;
+            // 存进推荐池，之后每首播完都能继续接
+            state.recommend = state.recommend.concat(list.filter(function (s) {
+                return !state.recommend.some(function (r) { return String(r.id) === String(s.id) && r.source === s.source; });
+            }));
+            // 只有仍然停在播完状态才接着放，避免用户已经手动点了别的歌
+            if (audio.ended || audio.paused) playSong(list[Math.floor(Math.random() * Math.min(6, list.length))]);
+        });
+    }
+    // 供聊天侧调用：邀请一起听开始时先把队列备好，免得第一首放完就没了
+    window.ltPrepareQueue = function () {
+        try { if (!state.list.length && state.recommend.length < 6) loadRecommend(function () {}); } catch (e) {}
+    };
 
     // ---------- 搜索 ----------
     var searchState = { keyword: '', results: [], loading: false };
@@ -29315,7 +29504,58 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (tab === 'home') { if (top) top.textContent = '发现音乐'; if (searchBar) searchBar.style.display = 'flex'; renderHome(); }
         else if (tab === 'together') { if (top) top.textContent = '一起听'; if (searchBar) searchBar.style.display = 'none'; hideSuggest(); renderTogether(); }
         else if (tab === 'fav') { if (top) top.textContent = '我的收藏'; if (searchBar) searchBar.style.display = 'none'; renderFav(); }
+        else if (tab === 'mylist') { if (top) top.textContent = '我的歌单'; if (searchBar) searchBar.style.display = 'none'; hideSuggest(); renderMyList(); }
         else { if (top) top.textContent = '我'; if (searchBar) searchBar.style.display = 'none'; renderMe(); }
+    }
+
+    // ---------- 播放队列：播放全部时用它接管，播完一首自动接下一首 ----------
+    function playAll(list, startIdx) {
+        var arr = (list || []).filter(Boolean);
+        if (!arr.length) { toast('这里还没有歌'); return; }
+        state.queue = arr.slice();
+        var i = startIdx || 0;
+        if (i < 0 || i >= arr.length) i = 0;
+        // keepQueue：告诉 playSong 别把上面刚设好的队列清掉
+        // 直接把原对象传过去：重建对象会丢掉 audio（已解析好的直链）等字段，
+        // 直接把原对象传过去：重建对象会丢掉 audio（已解析好的直链）等字段。
+        // 另外老数据里 source 可能是字符串 "undefined"/"null"（esc(undefined) 的产物），
+        // 它是非空字符串，用 !t.source 判断不出来，必须显式归一化，否则请求会带上
+        // source=undefined，接口返回空 → 一路失败 → 显示「这首暂时听不了」。
+        var t = arr[i];
+        t.source = normSrc(t.source);
+        playSong(t, { keepQueue: true });
+    }
+    function toast(msg) {
+        var m = document.getElementById('ltToast');
+        if (!m) {
+            m = document.createElement('div');
+            m.id = 'ltToast';
+            m.style.cssText = 'position:absolute;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(0,0,0,0.78);color:#fff;font-size:12.5px;padding:8px 15px;border-radius:14px;z-index:99;opacity:0;transition:opacity .22s;pointer-events:none;max-width:78%;text-align:center;line-height:1.6;';
+            var app = document.getElementById('lt-app') || document.body;
+            app.appendChild(m);
+        }
+        m.textContent = msg;
+        m.style.opacity = '1';
+        clearTimeout(m.__t);
+        m.__t = setTimeout(function () { m.style.opacity = '0'; }, 1700);
+    }
+    // 统一样式的操作按钮
+    function actBtn(id, text, primary) {
+        return '<button id="' + id + '" type="button" style="flex:1;border:none;border-radius:12px;padding:10px 0;font-size:13px;font-family:inherit;cursor:pointer;'
+            + (primary
+                ? 'background:linear-gradient(135deg,#8CD4F0,#B6EDFF);color:#2c5c72;font-weight:600;'
+                : 'background:rgba(0,0,0,0.05);color:#6b7785;')
+            + '">' + text + '</button>';
+    }
+
+    // 自定义内容弹窗：不带固定的取消/保存按钮，按钮由调用方自己写在 bodyHtml 里。
+    // 已有的 showModal 是「标题 + 内容 + 取消/保存」固定结构，歌单这边需要多种按钮组合，所以单独一个。
+    function openModal(bodyHtml) {
+        var box = document.getElementById('ltModalBox');
+        var modal = document.getElementById('ltModal');
+        if (!box || !modal) return;
+        box.innerHTML = bodyHtml;
+        modal.classList.add('show');
     }
 
     // ---------- 收藏 tab ----------
@@ -29326,26 +29566,381 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         if (!fav.length) {
             html += '<div class="lt-empty">还没有收藏的歌<br>播放时点右下角♡，或在正在播放页收藏</div>';
         } else {
+            html += '<div style="display:flex;gap:8px;margin:0 0 12px;">'
+                + actBtn('ltFavPlayAll', '▶ 播放全部收藏', true)
+                + actBtn('ltFavShuffle', '⇄ 随机播放', false)
+                + '</div>';
             html += fav.map(function (s) {
                 return '<div class="lt-fav-item" data-fid="' + esc(s.id) + '" data-src="' + esc(s.source) + '">'
                     + '<img class="lt-fav-cover lt-lazy" data-pic="' + esc(s.pic) + '" data-src="' + esc(s.source) + '" alt="">'
-                    + '<div class="lt-fav-info lt-favplay" data-id="' + esc(s.id) + '" data-src="' + esc(s.source) + '" data-name="' + esc(s.name) + '" data-artist="' + esc(s.artist) + '" data-pic="' + esc(s.pic) + '">'
+                    + '<div class="lt-fav-info lt-favplay" data-idx="' + 0 + '" data-id="' + esc(s.id) + '" data-src="' + esc(s.source) + '" data-name="' + esc(s.name) + '" data-artist="' + esc(s.artist) + '" data-pic="' + esc(s.pic) + '">'
                     + '<div class="lt-fav-name">' + esc(s.name) + '</div><div class="lt-fav-artist">' + esc(s.artist) + '</div></div>'
                     + '<button class="lt-fav-del" data-del="' + esc(s.id) + '" data-src="' + esc(s.source) + '" type="button">✕</button></div>';
             }).join('');
         }
         main.innerHTML = html;
         loadCovers(main);
-        main.querySelectorAll('.lt-favplay').forEach(function (el) {
-            el.addEventListener('click', function () { playSong({ id: el.dataset.id, source: el.dataset.src, name: el.dataset.name, artist: el.dataset.artist, pic: el.dataset.pic }); });
+        // 点单曲：从这首开始，后面接着放整个收藏（而不是放完就断）
+        main.querySelectorAll('.lt-favplay').forEach(function (el, i) {
+            el.addEventListener('click', function () { playAll(loadFav(), i); });
+        });
+        var pa = document.getElementById('ltFavPlayAll');
+        if (pa) pa.addEventListener('click', function () { playAll(loadFav(), 0); });
+        var sh = document.getElementById('ltFavShuffle');
+        if (sh) sh.addEventListener('click', function () {
+            var a = loadFav().slice();
+            for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+            playAll(a, 0);
         });
         main.querySelectorAll('.lt-fav-del').forEach(function (el) {
             el.addEventListener('click', function (e) {
                 e.stopPropagation();
-                var fav = loadFav().filter(function (s) { return !(s.id === el.dataset.del && s.source === el.dataset.src); });
-                saveFav(fav); renderFav();
+                var fav2 = loadFav().filter(function (s) { return !(s.id === el.dataset.del && s.source === el.dataset.src); });
+                saveFav(fav2); renderFav();
             });
         });
+    }
+
+    // ---------- 歌单 tab ----------
+    // 上半部分：自建歌单卡片；下半部分：点＋加进来的全部歌曲，可长按进入多选、批量归入某个歌单。
+    var pickMode = false;          // 是否处于长按多选状态
+    var picked = {};               // songKey -> true
+
+    function renderMyList() {
+        var main = document.getElementById('ltMain'); if (!main) return;
+        var all = state.list.length ? state.list : loadPlaylist();
+        var groups = loadGroups();
+
+        var html = '';
+
+        // ── 自建歌单 ──
+        html += '<div class="lt-sec-title">自建歌单<small>' + groups.length + ' 个</small></div>';
+        html += '<div style="display:flex;gap:8px;margin:0 0 12px;">'
+            + actBtn('ltNewGroup', '＋ 新建歌单', false)
+            + (groups.length ? actBtn('ltPlayAllGroups', '▶ 播放全部歌单', true) : '')
+            + '</div>';
+        if (!groups.length) {
+            html += '<div class="lt-empty" style="padding:18px 0;">还没有自建歌单<br>下面长按歌曲可以把它们归进一个歌单</div>';
+        } else {
+            html += groups.map(function (gp) {
+                var n = groupCount(gp);
+                return '<div class="lt-gp" data-gp="' + esc(gp.id) + '" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;background:rgba(255,255,255,0.55);margin-bottom:8px;cursor:pointer;">'
+                    + '<div style="width:42px;height:42px;border-radius:11px;flex:none;background:linear-gradient(135deg,#B6EDFF,#8CD4F0);display:flex;align-items:center;justify-content:center;font-size:18px;">🎵</div>'
+                    + '<div style="flex:1;min-width:0;"><div style="font-size:14px;color:#3d5a6c;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(gp.name) + '</div>'
+                    + '<div style="font-size:11.5px;color:#8fa3b3;margin-top:2px;">' + n + ' 首</div></div>'
+                    + '<button class="lt-gp-play" data-gp="' + esc(gp.id) + '" type="button" style="flex:none;border:none;background:rgba(140,212,240,0.22);color:#2c7d9e;width:32px;height:32px;border-radius:50%;font-size:13px;cursor:pointer;">▶</button>'
+                    + '<button class="lt-gp-menu" data-gp="' + esc(gp.id) + '" type="button" style="flex:none;border:none;background:none;color:#a8b8c4;width:24px;height:32px;font-size:16px;cursor:pointer;line-height:1;">⋯</button>'
+                    + '</div>';
+            }).join('');
+        }
+
+        // ── 全部已加入的歌 ──
+        html += '<div class="lt-sec-title" style="margin-top:16px;">加入歌单的歌<small>' + all.length + ' 首' + (pickMode ? ' · 选择中' : ' · 长按可多选') + '</small></div>';
+        if (pickMode) {
+            var pn = Object.keys(picked).length;
+            html += '<div style="display:flex;gap:8px;margin:0 0 12px;">'
+                + actBtn('ltPickDone', '归入歌单（' + pn + '）', true)
+                + actBtn('ltPickAll', pn === all.length ? '取消全选' : '全选', false)
+                + actBtn('ltPickCancel', '退出', false)
+                + '</div>';
+        } else if (all.length) {
+            html += '<div style="display:flex;gap:8px;margin:0 0 12px;">'
+                + actBtn('ltAllPlay', '▶ 播放全部', true)
+                + '</div>';
+        }
+        if (!all.length) {
+            html += '<div class="lt-empty">还没有歌<br>在首页或搜索结果里点「＋」加进来</div>';
+        } else {
+            html += all.map(function (s, i) {
+                var k = songKey(s);
+                var on = !!picked[k];
+                return '<div class="lt-ml-item" data-idx="' + i + '" data-key="' + esc(k) + '" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:13px;margin-bottom:6px;background:' + (on ? 'rgba(140,212,240,0.20)' : 'rgba(255,255,255,0.48)') + ';cursor:pointer;-webkit-user-select:none;user-select:none;">'
+                    + (pickMode ? '<span style="flex:none;width:19px;height:19px;border-radius:50%;border:1.6px solid ' + (on ? '#5cb4d8' : '#c3d2dc') + ';background:' + (on ? '#5cb4d8' : 'transparent') + ';color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;">' + (on ? '✓' : '') + '</span>' : '')
+                    + '<img class="lt-lazy" data-pic="' + esc(s.pic) + '" data-src="' + esc(s.source) + '" alt="" style="width:38px;height:38px;border-radius:9px;object-fit:cover;flex:none;background:rgba(0,0,0,0.06);">'
+                    + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#3d5a6c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(s.name) + '</div>'
+                    + '<div style="font-size:11.5px;color:#8fa3b3;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(s.artist || '') + '</div></div>'
+                    + (pickMode ? '' : '<button class="lt-ml-del" data-key="' + esc(k) + '" type="button" style="flex:none;border:none;background:none;color:#c3d2dc;font-size:14px;width:26px;cursor:pointer;">✕</button>')
+                    + '</div>';
+            }).join('');
+        }
+
+        main.innerHTML = html;
+        loadCovers(main);
+        bindMyList(all, groups);
+    }
+
+    function bindMyList(all, groups) {
+        var main = document.getElementById('ltMain'); if (!main) return;
+
+        var ng = document.getElementById('ltNewGroup');
+        if (ng) ng.addEventListener('click', function () { openGroupEditor(null); });
+
+        var pag = document.getElementById('ltPlayAllGroups');
+        if (pag) pag.addEventListener('click', function () {
+            // 播放全部歌单：把每个歌单的歌按顺序串起来，重复的只留第一次
+            var seen = {}, out = [];
+            loadGroups().forEach(function (gp) {
+                songsOfGroup(gp).forEach(function (s) {
+                    var k = songKey(s);
+                    if (!seen[k]) { seen[k] = 1; out.push(s); }
+                });
+            });
+            if (!out.length) { toast('歌单里还没有歌'); return; }
+            playAll(out, 0);
+            toast('播放全部歌单 · ' + out.length + ' 首');
+        });
+
+        var ap = document.getElementById('ltAllPlay');
+        if (ap) ap.addEventListener('click', function () { playAll(all, 0); });
+
+        main.querySelectorAll('.lt-gp-play').forEach(function (b) {
+            b.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var gp = loadGroups().find(function (x) { return x.id === b.dataset.gp; });
+                if (!gp) return;
+                var songs = songsOfGroup(gp);
+                if (!songs.length) { toast('这个歌单还是空的'); return; }
+                playAll(songs, 0);
+                toast('播放「' + gp.name + '」· ' + songs.length + ' 首');
+            });
+        });
+        main.querySelectorAll('.lt-gp-menu').forEach(function (b) {
+            b.addEventListener('click', function (e) { e.stopPropagation(); openGroupMenu(b.dataset.gp); });
+        });
+        main.querySelectorAll('.lt-gp').forEach(function (el) {
+            el.addEventListener('click', function () { openGroupDetail(el.dataset.gp); });
+        });
+
+        // 多选控制条
+        var pd = document.getElementById('ltPickDone');
+        if (pd) pd.addEventListener('click', function () {
+            var keys = Object.keys(picked);
+            if (!keys.length) { toast('先选几首歌'); return; }
+            openAssignGroup(keys);
+        });
+        var pall = document.getElementById('ltPickAll');
+        if (pall) pall.addEventListener('click', function () {
+            var n = Object.keys(picked).length;
+            picked = {};
+            if (n !== all.length) all.forEach(function (s) { picked[songKey(s)] = true; });
+            renderMyList();
+        });
+        var pc = document.getElementById('ltPickCancel');
+        if (pc) pc.addEventListener('click', function () { pickMode = false; picked = {}; renderMyList(); });
+
+        // 长按进多选；已在多选里则点击切换勾选
+        main.querySelectorAll('.lt-ml-item').forEach(function (el) {
+            var timer = null, moved = false;
+            function start() {
+                moved = false;
+                timer = setTimeout(function () {
+                    if (moved) return;
+                    if (!pickMode) { pickMode = true; picked = {}; }
+                    picked[el.dataset.key] = true;
+                    try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+                    renderMyList();
+                }, 480);
+            }
+            function cancel() { clearTimeout(timer); }
+            el.addEventListener('touchstart', start, { passive: true });
+            el.addEventListener('touchmove', function () { moved = true; cancel(); }, { passive: true });
+            el.addEventListener('touchend', cancel);
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', cancel);
+            el.addEventListener('mouseleave', cancel);
+            el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+            el.addEventListener('click', function () {
+                if (pickMode) {
+                    var k = el.dataset.key;
+                    if (picked[k]) delete picked[k]; else picked[k] = true;
+                    renderMyList();
+                    return;
+                }
+                playAll(all, parseInt(el.dataset.idx, 10) || 0);
+            });
+        });
+        main.querySelectorAll('.lt-ml-del').forEach(function (b) {
+            b.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var k = b.dataset.key;
+                state.list = (state.list.length ? state.list : loadPlaylist()).filter(function (s) { return songKey(s) !== k; });
+                savePlaylist(state.list);
+                // 各歌单里的引用一并清掉，避免留下取不到的空位
+                var gs = loadGroups();
+                gs.forEach(function (gp) { gp.keys = (gp.keys || []).filter(function (x) { return x !== k; }); });
+                saveGroups(gs);
+                renderMyList();
+            });
+        });
+    }
+
+    // 新建 / 重命名歌单
+    function openGroupEditor(id) {
+        var gs = loadGroups();
+        var gp = id ? gs.find(function (x) { return x.id === id; }) : null;
+        var body = '<div class="lt-modal-title">' + (gp ? '重命名歌单' : '新建歌单') + '</div>'
+            + '<input id="ltGpName" type="text" value="' + esc(gp ? gp.name : '') + '" placeholder="给歌单起个名字" '
+            + 'style="width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.1);border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;">'
+            + '<div style="display:flex;gap:8px;">' + actBtn('ltGpCancel', '取消', false) + actBtn('ltGpOk', '保存', true) + '</div>';
+        openModal(body);
+        setTimeout(function () {
+            var inp = document.getElementById('ltGpName');
+            if (inp) inp.focus();
+            var ok = document.getElementById('ltGpOk');
+            if (ok) ok.addEventListener('click', function () {
+                var nm = ((document.getElementById('ltGpName') || {}).value || '').trim();
+                if (!nm) { toast('还没写名字'); return; }
+                var list = loadGroups();
+                if (gp) {
+                    var t = list.find(function (x) { return x.id === gp.id; });
+                    if (t) t.name = nm.slice(0, 20);
+                } else {
+                    list.push({ id: uid(), name: nm.slice(0, 20), keys: [], ts: Date.now() });
+                }
+                saveGroups(list);
+                closeModal();
+                renderMyList();
+            });
+            var cc = document.getElementById('ltGpCancel');
+            if (cc) cc.addEventListener('click', closeModal);
+        }, 40);
+    }
+
+    // 歌单的 ⋯ 菜单：重命名 / 删除
+    function openGroupMenu(id) {
+        var gp = loadGroups().find(function (x) { return x.id === id; });
+        if (!gp) return;
+        var body = '<div class="lt-modal-title">' + esc(gp.name) + '</div>'
+            + '<div style="display:flex;flex-direction:column;gap:8px;">'
+            + actBtn('ltGpRename', '重命名', false)
+            + actBtn('ltGpDel', '删除这个歌单', false)
+            + actBtn('ltGpClose', '取消', false)
+            + '</div>';
+        openModal(body);
+        setTimeout(function () {
+            var r = document.getElementById('ltGpRename');
+            if (r) r.addEventListener('click', function () { closeModal(); openGroupEditor(id); });
+            var d = document.getElementById('ltGpDel');
+            if (d) {
+                d.style.color = '#e5484d';
+                d.addEventListener('click', function () {
+                    // 只删歌单本身，歌还在总池子里，不会跟着消失
+                    saveGroups(loadGroups().filter(function (x) { return x.id !== id; }));
+                    closeModal(); renderMyList();
+                    toast('已删除歌单，歌还在');
+                });
+            }
+            var c = document.getElementById('ltGpClose');
+            if (c) c.addEventListener('click', closeModal);
+        }, 40);
+    }
+
+    // 把选中的歌归入某个歌单（可新建）
+    function openAssignGroup(keys) {
+        var gs = loadGroups();
+        var body = '<div class="lt-modal-title">把 ' + keys.length + ' 首歌放进…</div>';
+        if (gs.length) {
+            body += '<div style="max-height:38vh;overflow:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px;">'
+                + gs.map(function (gp) {
+                    return '<div class="lt-asg" data-gp="' + esc(gp.id) + '" style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:12px;background:rgba(0,0,0,0.035);margin-bottom:6px;cursor:pointer;">'
+                        + '<span style="font-size:16px;">🎵</span>'
+                        + '<span style="flex:1;min-width:0;font-size:13.5px;color:#3d5a6c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(gp.name) + '</span>'
+                        + '<span style="font-size:11.5px;color:#8fa3b3;">' + groupCount(gp) + ' 首</span></div>';
+                }).join('') + '</div>';
+        } else {
+            body += '<div style="font-size:12.5px;color:#8fa3b3;line-height:1.7;margin-bottom:10px;">还没有歌单，先建一个吧</div>';
+        }
+        body += '<div style="display:flex;gap:8px;">' + actBtn('ltAsgNew', '＋ 新建歌单放进去', true) + actBtn('ltAsgCancel', '取消', false) + '</div>';
+        openModal(body);
+        setTimeout(function () {
+            document.querySelectorAll('.lt-asg').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    var list = loadGroups();
+                    var gp = list.find(function (x) { return x.id === el.dataset.gp; });
+                    if (!gp) return;
+                    gp.keys = gp.keys || [];
+                    var addN = 0;
+                    keys.forEach(function (k) { if (gp.keys.indexOf(k) < 0) { gp.keys.push(k); addN++; } });
+                    saveGroups(list);
+                    closeModal();
+                    pickMode = false; picked = {};
+                    renderMyList();
+                    toast('已加入「' + gp.name + '」' + addN + ' 首');
+                });
+            });
+            var nw = document.getElementById('ltAsgNew');
+            if (nw) nw.addEventListener('click', function () {
+                closeModal();
+                setTimeout(function () {
+                    var body2 = '<div class="lt-modal-title">新建歌单</div>'
+                        + '<input id="ltGpName2" type="text" placeholder="歌单名字" style="width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.1);border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;">'
+                        + '<div style="display:flex;gap:8px;">' + actBtn('ltGp2Cancel', '取消', false) + actBtn('ltGp2Ok', '创建并加入', true) + '</div>';
+                    openModal(body2);
+                    setTimeout(function () {
+                        var i2 = document.getElementById('ltGpName2'); if (i2) i2.focus();
+                        var ok2 = document.getElementById('ltGp2Ok');
+                        if (ok2) ok2.addEventListener('click', function () {
+                            var nm = ((document.getElementById('ltGpName2') || {}).value || '').trim();
+                            if (!nm) { toast('还没写名字'); return; }
+                            var list = loadGroups();
+                            list.push({ id: uid(), name: nm.slice(0, 20), keys: keys.slice(), ts: Date.now() });
+                            saveGroups(list);
+                            closeModal();
+                            pickMode = false; picked = {};
+                            renderMyList();
+                            toast('已创建「' + nm + '」并加入 ' + keys.length + ' 首');
+                        });
+                        var c2 = document.getElementById('ltGp2Cancel');
+                        if (c2) c2.addEventListener('click', closeModal);
+                    }, 40);
+                }, 120);
+            });
+            var ac = document.getElementById('ltAsgCancel');
+            if (ac) ac.addEventListener('click', closeModal);
+        }, 40);
+    }
+
+    // 歌单详情：看这个歌单里有哪些歌，可播放、可移出
+    function openGroupDetail(id) {
+        var gp = loadGroups().find(function (x) { return x.id === id; });
+        if (!gp) return;
+        var songs = songsOfGroup(gp);
+        var body = '<div class="lt-modal-title">' + esc(gp.name) + '<small style="font-weight:400;color:#8fa3b3;font-size:12px;margin-left:6px;">' + songs.length + ' 首</small></div>';
+        if (!songs.length) {
+            body += '<div style="font-size:12.5px;color:#8fa3b3;line-height:1.8;margin-bottom:12px;">这个歌单还是空的。<br>回到列表长按歌曲，就能把它们放进来。</div>';
+        } else {
+            body += '<div style="display:flex;gap:8px;margin-bottom:10px;">' + actBtn('ltGdPlay', '▶ 播放这个歌单', true) + '</div>';
+            body += '<div style="max-height:42vh;overflow:auto;-webkit-overflow-scrolling:touch;">'
+                + songs.map(function (s, i) {
+                    return '<div style="display:flex;align-items:center;gap:9px;padding:8px 4px;border-bottom:1px solid rgba(0,0,0,0.05);">'
+                        + '<span style="flex:none;width:18px;font-size:11.5px;color:#a8b8c4;text-align:center;">' + (i + 1) + '</span>'
+                        + '<div class="lt-gd-play" data-i="' + i + '" style="flex:1;min-width:0;cursor:pointer;"><div style="font-size:13.5px;color:#3d5a6c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(s.name) + '</div>'
+                        + '<div style="font-size:11.5px;color:#8fa3b3;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(s.artist || '') + '</div></div>'
+                        + '<button class="lt-gd-rm" data-key="' + esc(songKey(s)) + '" type="button" style="flex:none;border:none;background:none;color:#c3d2dc;font-size:13px;width:24px;cursor:pointer;">✕</button></div>';
+                }).join('') + '</div>';
+        }
+        body += '<div style="display:flex;gap:8px;margin-top:12px;">' + actBtn('ltGdClose', '关闭', false) + '</div>';
+        openModal(body);
+        setTimeout(function () {
+            var p = document.getElementById('ltGdPlay');
+            if (p) p.addEventListener('click', function () { closeModal(); playAll(songs, 0); toast('播放「' + gp.name + '」'); });
+            document.querySelectorAll('.lt-gd-play').forEach(function (el) {
+                el.addEventListener('click', function () { closeModal(); playAll(songs, parseInt(el.dataset.i, 10) || 0); });
+            });
+            document.querySelectorAll('.lt-gd-rm').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var list = loadGroups();
+                    var t = list.find(function (x) { return x.id === id; });
+                    if (t) t.keys = (t.keys || []).filter(function (k) { return k !== b.dataset.key; });
+                    saveGroups(list);
+                    closeModal();
+                    setTimeout(function () { openGroupDetail(id); }, 100);
+                    renderMyList();
+                });
+            });
+            var c = document.getElementById('ltGdClose');
+            if (c) c.addEventListener('click', closeModal);
+        }, 40);
     }
 
     // ---------- 主体事件委托 ----------
@@ -29361,10 +29956,14 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             if (coll) { openCollection(parseInt(coll.dataset.coll, 10)); return; }
             var add = e.target.closest && e.target.closest('.lt-add');
             if (add) {
-                if (!inPlaylist(add.dataset.id, add.dataset.src)) {
-                    state.list.push({ id: add.dataset.id, source: add.dataset.src, name: add.dataset.name, artist: add.dataset.artist, pic: add.dataset.pic });
+                var addSrc = normSrc(add.dataset.src);
+                if (!inPlaylist(add.dataset.id, addSrc)) {
+                    state.list.push({ id: add.dataset.id, source: addSrc, name: add.dataset.name, artist: add.dataset.artist, pic: add.dataset.pic });
                     savePlaylist(state.list);
                     add.classList.add('added'); add.textContent = '✓';
+                    toast('已加入歌单');
+                    // 正停在歌单页时立刻刷新，不然新歌要等切 tab 才出现
+                    if (state.tab === 'mylist') renderMyList();
                 }
                 return;
             }
@@ -29375,13 +29974,15 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             mbox.__ltBound = true;
             mbox.addEventListener('click', function (e) {
                 var play = e.target.closest && e.target.closest('.lt-play');
-                if (play) { playSong({ id: play.dataset.id, source: play.dataset.src, name: play.dataset.name, artist: play.dataset.artist, pic: play.dataset.pic }); return; }
+                if (play) { playSong({ id: play.dataset.id, source: normSrc(play.dataset.src), name: play.dataset.name, artist: play.dataset.artist, pic: play.dataset.pic }); return; }
                 var add = e.target.closest && e.target.closest('.lt-add');
                 if (add) {
-                    if (!inPlaylist(add.dataset.id, add.dataset.src)) {
-                        state.list.push({ id: add.dataset.id, source: add.dataset.src, name: add.dataset.name, artist: add.dataset.artist, pic: add.dataset.pic });
+                    var aSrc = normSrc(add.dataset.src);
+                    if (!inPlaylist(add.dataset.id, aSrc)) {
+                        state.list.push({ id: add.dataset.id, source: aSrc, name: add.dataset.name, artist: add.dataset.artist, pic: add.dataset.pic });
                         savePlaylist(state.list);
                         add.classList.add('added'); add.textContent = '✓';
+                        toast('已加入歌单');
                     }
                     return;
                 }
@@ -29444,7 +30045,15 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
 
     function openApp() {
+        // 载入时把历史脏数据修一遍：之前存进去的 source 可能是字符串 "undefined"，
+        // 这类歌在歌单里点了会一路失败报「暂时听不了」。发现有改动就顺手写回去。
         state.list = loadPlaylist();
+        var dirty = false;
+        state.list.forEach(function (s) {
+            var ns = normSrc(s.source);
+            if (s.source !== ns) { s.source = ns; dirty = true; }
+        });
+        if (dirty) savePlaylist(state.list);
         var app = document.getElementById('lt-app');
         if (app) app.classList.add('show');
         bindMain();
@@ -29691,12 +30300,51 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             fetchJson(API + '?types=url&source=' + (source || 'netease') + '&id=' + id + '&br=320').then(function (d) { resolve(d && d.url ? d.url : ''); });
         });
     };
+    // 聊天气泡里点歌卡：同一首再点一次 = 暂停/继续，换一首 = 直接切过去
+    // 注意：页面上有两处 .music-play-card 的 click 监听都会调到这里，同一次点击会进来两次，
+    // 所以这里做去重（同一首 350ms 内的重复调用只认第一次），否则「暂停」会被第二次调用立刻恢复播放。
+    var _lastTapKey = '', _lastTapTs = 0;
     window.ltPlayInChat = function (opts) {
         opts = opts || {};
-        var app = document.getElementById('lt-app');
         var song = { id: opts.mid, source: opts.source || 'netease', name: opts.name, artist: opts.artist, pic: opts.pic, audio: opts.audio };
+        var key = String(song.id || '') + '|' + String(song.source || '') + '|' + String(song.name || '');
+        var now = Date.now();
+        if (key === _lastTapKey && now - _lastTapTs < 350) return;   // 同一次点击的重复派发，吞掉
+        _lastTapKey = key; _lastTapTs = now;
+
+        var cur = state.playing;
+        var same = cur && String(cur.id || '') === String(song.id || '')
+            && (cur.source || 'netease') === (song.source || 'netease');
+        // 有些分享卡没带 id，只能靠歌名 + 歌手兜底判断是不是同一首
+        if (!same && cur && song.name && cur.name === song.name && (cur.artist || '') === (song.artist || '')) same = true;
+
+        if (same && audio.src) {
+            if (audio.paused) { audio.play().catch(function () {}); }
+            else { audio.pause(); }
+            syncCardState();
+            return;
+        }
         playSong(song);
+        setTimeout(syncCardState, 60);
     };
+
+    // 把聊天里各张歌卡的 playing 高亮和真实播放状态对齐（暂停了就不该还亮着）
+    function syncCardState() {
+        try {
+            var cur = state.playing;
+            var on = cur && !audio.paused && !audio.ended;
+            document.querySelectorAll('.music-play-card').forEach(function (c) {
+                var mid = c.getAttribute('data-mid') || '';
+                var nm = c.getAttribute('data-name') || '';
+                var hit = cur && ((mid && String(cur.id || '') === String(mid)) || (!mid && nm && cur.name === nm));
+                c.classList.toggle('playing', !!(hit && on));
+            });
+        } catch (e) {}
+    }
+    audio.addEventListener('play', syncCardState);
+    audio.addEventListener('pause', syncCardState);
+    audio.addEventListener('ended', syncCardState);
+    window.__ltSyncCardState = syncCardState;
 
     // ---------- 供聊天/提示词读取：此刻正在听什么歌、听到哪句歌词、正在和谁一起听 ----------
     // 让角色在一起听时有真正的"实时感"：知道歌名、歌手、播放进度和当前这句歌词。
@@ -29772,27 +30420,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
 
 
-<script>
-(function () {
-    document.addEventListener('click', function (e) {
-        var card = e.target.closest && e.target.closest('.music-play-card');
-        if (!card || !window.ltPlayInChat) return;
-        // 视觉：把"正在播放"状态标到被点的这张卡上，其它卡取消
-        try {
-            document.querySelectorAll('.music-play-card.playing').forEach(function (c) { if (c !== card) c.classList.remove('playing'); });
-            card.classList.add('playing');
-        } catch (er) {}
-        window.ltPlayInChat({
-            audio: card.getAttribute('data-audio'),
-            source: card.getAttribute('data-src'),
-            mid: card.getAttribute('data-mid'),
-            name: card.getAttribute('data-name'),
-            artist: card.getAttribute('data-artist'),
-            pic: card.getAttribute('data-pic')
-        });
-    }, true);
-})();
-</script>
+<!-- 说明：点歌卡的播放/暂停由「一起听」脚本里那一个 click 监听统一处理（见 ltPlayInChat）。
+     这里原本有第二个重复监听，会让同一次点击派发两次，导致「暂停」立刻又被恢复播放，已移除。 -->
 <!-- ============ 一起听·活人感：把此刻正在听的歌 / 歌词 / 一起听状态注入角色提示词 ============ -->
 <script id="ltRealtimePromptJs">
 (function () {
@@ -33017,13 +33646,28 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
           // 先把内存状态清空，避免关库前还有写入把库又建出来
           try { if (window.__db && window.__db.close) window.__db.close(); } catch (e) {}
           if (!window.indexedDB || !indexedDB.deleteDatabase) { resolve(); return; }
-          var req = indexedDB.deleteDatabase('SmallPhoneDB_v4');
+          
+          var pending = 2; // 要删除两个库
           var done = false;
-          var finish = function () { if (done) return; done = true; resolve(); };
-          req.onsuccess = finish;
-          req.onerror = finish;
-          req.onblocked = finish;
-          setTimeout(finish, 2500); // 兜底：万一 onblocked 不触发也别卡死
+          var finish = function () { 
+            if (done) return; 
+            pending--; 
+            if (pending <= 0) { done = true; resolve(); }
+          };
+          
+          // 删除主数据库
+          var req1 = indexedDB.deleteDatabase('SmallPhoneDB_v4');
+          req1.onsuccess = finish;
+          req1.onerror = finish;
+          req1.onblocked = finish;
+          
+          // 删除字体库
+          var req2 = indexedDB.deleteDatabase('SmallPhoneFonts');
+          req2.onsuccess = finish;
+          req2.onerror = finish;
+          req2.onblocked = finish;
+          
+          setTimeout(function() { if (!done) { done = true; resolve(); } }, 3000); // 兜底超时
         } catch (e) { resolve(); }
       });
     }
@@ -34564,8 +35208,9 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
         // 智能解码：自动识别 UTF-8 / UTF-16 / GBK(GB18030) 等编码，避免中文 txt 乱码
         function decodeBuffer(buf) {
+            // v6-33：统一走智能编码识别（打分选编码），修无 BOM 的 UTF-16 txt 乱码
+            if (window.__decodeTextBuf) return window.__decodeTextBuf(buf);
             var bytes = new Uint8Array(buf);
-            // 先看 BOM
             if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
                 return new TextDecoder('utf-8').decode(bytes.subarray(3));
             }
@@ -34575,7 +35220,6 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
             if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
                 return new TextDecoder('utf-16be').decode(bytes.subarray(2));
             }
-            // 无 BOM：严格按 UTF-8 试解，出现非法字节就回退到 GB18030（兼容 GBK/GB2312）
             try {
                 return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
             } catch (e) {
@@ -35074,6 +35718,8 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
 
   // ---------- 智能解码（和文件读取共用一套逻辑，避免中文 txt 乱码） ----------
   function decodeBuffer(buf) {
+    // v6-33：统一走智能编码识别（打分选编码），修无 BOM 的 UTF-16 小说 txt 乱码
+    if (window.__decodeTextBuf) return window.__decodeTextBuf(buf);
     var bytes = new Uint8Array(buf);
     if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return new TextDecoder('utf-8').decode(bytes.subarray(3));
     if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) return new TextDecoder('utf-16le').decode(bytes.subarray(2));
@@ -39021,7 +39667,9 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
       '<div class="fg-chips">' + whoChips + '</div>' +
       '<div class="fg-lb">' + (myTurn ? '\u8f6e\u5230\u4f60' : '\u8f6e\u5230\u4ed6') + '</div>' +
       writeBlock +
-      '<div class="fg-lb" style="margin-top:34px;">\u5df2\u5199\u8fc7\u7684</div>' +
+      '<div class="fg-lb" style="margin-top:34px;">\u5df2\u5199\u8fc7\u7684' +
+        (pages.length ? '<button class="fg-btn" id="fgBkManage" style="float:right;margin:0;padding:4px 12px;font-size:12px;">\u7ba1\u7406 / \u5220\u9664</button>' : '') +
+      '</div>' +
       pagesHtml;
 
     v.querySelectorAll('[data-bw]').forEach(function (b) {
@@ -39032,13 +39680,20 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
       var t = ($('fgBkBody').value || '').trim();
       if (!t) { toast('\u8fd8\u6ca1\u5199\u3002'); return; }
       var pages2 = bookOf(bkWho);
-      pages2.push({ by: 'user', text: t, ts: Date.now() });
+      var pgTs = Date.now();
+      pages2.push({ by: 'user', text: t, ts: pgTs });
       saveBook(bkWho, pages2);
       renderBook();
+      // 同步一条日记气泡到聊天里
+      if (window.__diaryPushUserPage) window.__diaryPushUserPage(bkWho, t, pgTs);
     });
     var ask = $('fgBkAsk');
     if (ask) ask.addEventListener('click', function () {
       if (window.__fengBookTurn) window.__fengBookTurn(bkWho, ask);
+    });
+    var mg = $('fgBkManage');
+    if (mg) mg.addEventListener('click', function () {
+      if (window.__diaryOpenManager) window.__diaryOpenManager(bkWho);
     });
   }
 
@@ -39540,9 +40195,12 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
       if (!out) throw new Error('\u6ca1\u6709\u5199\u51fa\u6765');
 
       var pg = bridge.bookOf(cid);
-      pg.push({ by: 'char', text: out, ts: Date.now() });
+      var pageTs = Date.now();
+      pg.push({ by: 'char', text: out, ts: pageTs });
       bridge.saveBook(cid, pg);
       bridge.renderBook();
+      // 同步一条日记气泡到聊天里，和从聊天入口写的那条同构
+      if (window.__diaryPushCharPage) window.__diaryPushCharPage(cid, out, pageTs);
     } catch (e) {
       bridge.toast('\u4ed6\u4eca\u5929\u6ca1\u52a8\u7b14\uff1a' + (e && e.message || e));
     } finally {
@@ -42762,3 +43420,1207 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
 })();
 </script>
 <!-- ============ 后台条 结束 ============ -->
+<!-- ============ 小手机 v6-30 交换日记·聊天入口 + 日记气泡 + 多选删除 ============ -->
+<style id="diaryChatCss">
+.msg-bubble .diary-card{min-width:172px;max-width:252px;border-radius:14px;padding:12px 13px 11px;background:linear-gradient(150deg,#FFF6E2,#FFE9C7);border:1px solid rgba(190,150,90,0.22);box-shadow:0 2px 8px rgba(150,110,50,0.12);cursor:pointer;}
+.msg-bubble .diary-card .dc-top{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.msg-bubble .diary-card .dc-ic{width:18px;height:18px;flex-shrink:0;display:inline-block;}
+.msg-bubble .diary-card .dc-ic svg{width:100%;height:100%;fill:none;stroke:#a8793a;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.msg-bubble .diary-card .dc-tag{font-size:11.5px;font-weight:700;color:#a8793a;letter-spacing:0.4px;}
+.msg-bubble .diary-card .dc-text{font-size:13.5px;line-height:1.75;color:#5a4a33;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;}
+.msg-bubble .diary-card .dc-more{margin-top:8px;font-size:11px;color:#b08a52;}
+html.phone-night .msg-bubble .diary-card{background:linear-gradient(150deg,#2b2519,#231e15) !important;border-color:rgba(190,150,90,0.28) !important;}
+html.phone-night .msg-bubble .diary-card .dc-text{color:#d8c9ac !important;}
+html.phone-night .msg-bubble .diary-card .dc-tag{color:#d0a463 !important;}
+html.phone-night .msg-bubble .diary-card .dc-more{color:#a08350 !important;}
+#diaryWriteTa{width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:11px 12px;font-size:14px;font-family:var(--font);resize:vertical;line-height:1.85;min-height:148px;background:#FFFCF4;color:#4a3f2e;outline:none;}
+html.phone-night #diaryWriteTa{background:#241f16 !important;color:#d8c9ac !important;border-color:rgba(190,150,90,0.28) !important;}
+#diaryViewBody{font-size:14.5px;line-height:1.95;white-space:pre-wrap;word-break:break-word;color:var(--text-primary);max-height:46vh;overflow:auto;padding:4px 2px;}
+#diaryViewMeta,.diary-note{font-size:11.5px;color:#a8b2ba;margin-bottom:10px;line-height:1.7;}
+.diary-mgr{max-height:52vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+.diary-mgr .dm-row{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border-radius:10px;cursor:pointer;}
+.diary-mgr .dm-row+.dm-row{border-top:1px solid rgba(0,0,0,0.05);}
+.diary-mgr .dm-row.on{background:rgba(140,212,240,0.14);}
+.diary-mgr .dm-box{width:18px;height:18px;flex-shrink:0;margin-top:2px;border-radius:5px;border:1.5px solid rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.diary-mgr .dm-row.on .dm-box{background:#3a86c9;border-color:#3a86c9;}
+.diary-mgr .dm-main{flex:1;min-width:0;}
+.diary-mgr .dm-who{font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px;}
+.diary-mgr .dm-who span{font-weight:400;color:#a8b2ba;margin-left:6px;font-size:11px;}
+.diary-mgr .dm-txt{font-size:12.5px;line-height:1.7;color:var(--text-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.diary-mgr-bar{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.diary-mgr-bar button{border:none;background:rgba(0,0,0,0.05);color:var(--text-secondary);font-size:12px;padding:6px 11px;border-radius:9px;cursor:pointer;font-family:var(--font);}
+.diary-mgr-bar .dm-del{margin-left:auto;background:rgba(255,107,107,0.12);color:#e5484d;font-weight:600;}
+.diary-mgr-bar .dm-del:disabled{opacity:.45;}
+html.phone-night .diary-mgr .dm-row+.dm-row{border-top-color:rgba(255,255,255,0.07);}
+</style>
+<script id="diaryChatJs">
+(function () {
+  'use strict';
+  var DIARY_SVG = '<svg viewBox="0 0 24 24"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M9 4v16"/><path d="M12 9h4M12 13h4"/></svg>';
+  var BK_KEY = 'phone_feng_book_v1';
+
+  function S() { return window.__state || {}; }
+  function DB() { return window.__db; }
+  function FG() { return window.__feng || null; }
+  function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+  function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
+  function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
+  function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function meName(chat) {
+    var u = getUser(chat && chat.userId) || (S().users || [])[0];
+    return (u && u.name) || '\u6211';
+  }
+  function personaOf(c) {
+    return [c && c.persona, c && c.description, c && c.bio].filter(Boolean).join('\n').slice(0, 1200);
+  }
+  function tip(title, body, ok) { if (window.showModal) window.showModal(title, body, ok || '\u597d\u7684'); }
+  function fmtWhen(ts) {
+    try {
+      var d = new Date(ts);
+      return (d.getMonth() + 1) + '\u6708' + d.getDate() + '\u65e5 ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    } catch (e) { return ''; }
+  }
+  function avImg(v, fb) {
+    if (v && /^(data:|https?:|blob:)/.test(v)) return '<img src="' + v + '" style="width:100%;height:100%;object-fit:cover;">';
+    return v || fb;
+  }
+
+  // ---------- 日记本存档：直接复用「缝」的 localStorage，两边天然同步 ----------
+  function bookOf(cid) {
+    var f = FG();
+    if (f && f.bookOf) return f.bookOf(cid);
+    try { return (JSON.parse(localStorage.getItem(BK_KEY) || '{}')[cid]) || []; } catch (e) { return []; }
+  }
+  function saveBook(cid, pages) {
+    var f = FG();
+    if (f && f.saveBook) f.saveBook(cid, pages);
+    else {
+      try {
+        var a = JSON.parse(localStorage.getItem(BK_KEY) || '{}');
+        if (pages.length > 200) pages = pages.slice(pages.length - 200);
+        a[cid] = pages;
+        localStorage.setItem(BK_KEY, JSON.stringify(a));
+      } catch (e) {}
+    }
+    refreshFeng(cid);
+  }
+  function refreshFeng(cid) {
+    try {
+      var f = FG();
+      if (f && f.renderBook && document.getElementById('fgViewBook') && (!f.curBook || f.curBook() === cid)) f.renderBook();
+    } catch (e) {}
+  }
+
+  function chatApi() {
+    var s = S();
+    var a = (s.apiConfigs || []).find(function (x) { return x.type === 'chat' && x.id === s.currentChatApiId; })
+         || (s.apiConfigs || []).find(function (x) { return x.type === 'chat'; });
+    return (a && a.url && a.key) ? { url: a.url.replace(/\/+$/, ''), key: a.key, model: a.model || 'gpt-3.5-turbo' } : null;
+  }
+  function cleanOut(s) {
+    var t = String(s || '').trim();
+    t = t.replace(/^\s*(\u65e5\u8bb0|\u6b63\u6587|\u5185\u5bb9)\s*[:\uff1a]\s*/g, '');
+    t = t.replace(/^["'\u201c\u300c]+|["'\u201d\u300d]+$/g, '');
+    t = t.split('\n').filter(function (l) {
+      var x = l.trim();
+      if (!x) return true;
+      if (/^[\uff08(\u3010\[][^\uff09)\u3011\]]*[\uff09)\u3011\]]$/.test(x)) return false;
+      if (/^[*\uff0a][^*\uff0a]*[*\uff0a]$/.test(x)) return false;
+      return true;
+    }).join('\n').trim();
+    return t;
+  }
+  async function askAI(prompt, maxTokens) {
+    var api = chatApi();
+    if (!api) throw new Error('\u8bf7\u5148\u5230\u8bbe\u7f6e\u91cc\u914d\u597d\u804a\u5929 API');
+    var res = await fetch(api.url + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.key },
+      body: JSON.stringify({ model: api.model, messages: [{ role: 'user', content: prompt }], temperature: 0.92, max_tokens: maxTokens || 640 })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var d = await res.json();
+    var out = cleanOut((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '');
+    if (!out) throw new Error('\u4ed6\u4eca\u5929\u6ca1\u52a8\u7b14');
+    return out;
+  }
+
+  // ---------- 聊天历史可读文本：让角色在上下文里也知道这一页写了什么 ----------
+  function readableUser(t) { return '[\u5728\u6211\u4eec\u7684\u4ea4\u6362\u65e5\u8bb0\u672c\u4e0a\u5199\u4e86\u4e00\u9875\uff0c\u5199\u5b8c\u628a\u672c\u5b50\u9012\u7ed9\u4f60]\n' + t; }
+  function readableChar(t) { return '[\u5728\u4ea4\u6362\u65e5\u8bb0\u672c\u4e0a\u5199\u4e86\u4e00\u9875\uff0c\u628a\u672c\u5b50\u9012\u56de\u6765\u4e86]\n' + t; }
+
+  // ---------- 日记气泡 ----------
+  function buildDiaryMsg(msg) {
+    var chat = getChat(msg.chatId);
+    var isUser = msg.sender === 'user';
+    var char = getChar(msg.charId || (chat && chat.charId));
+    var user = getUser(chat && chat.userId);
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrapper ' + (isUser ? 'user' : 'ai');
+    wrap.dataset.msgId = msg.id;
+    var av = document.createElement('div'); av.className = 'avatar-wrap';
+    av.innerHTML = isUser ? avImg(user && user.avatar, '\ud83d\udc64') : avImg(char && char.avatar, '\ud83e\uddf8');
+    wrap.appendChild(av);
+    var bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+    if (chat && chat.type === 'group') {
+      var nm = document.createElement('div'); nm.className = 'sender-name';
+      nm.textContent = isUser ? ((user && user.name) || '\u6211') : ((char && char.name) || 'AI');
+      if (isUser) nm.style.textAlign = 'right';
+      bubble.appendChild(nm);
+    }
+    var tag = isUser ? '\u4ea4\u6362\u65e5\u8bb0 \u00b7 \u6211\u5199\u7684'
+                     : '\u4ea4\u6362\u65e5\u8bb0 \u00b7 ' + ((char && char.name) || '\u4ed6') + '\u5199\u7684';
+    bubble.innerHTML += '<div class="diary-card">'
+      + '<div class="dc-top"><span class="dc-ic">' + DIARY_SVG + '</span><span class="dc-tag">' + esc(tag) + '</span></div>'
+      + '<div class="dc-text">' + esc(msg.diaryText || '') + '</div>'
+      + '<div class="dc-more">\u70b9\u5f00\u770b\u5b8c\u6574\u4e00\u9875</div></div>';
+    wrap.appendChild(bubble);
+    bubble.querySelector('.diary-card').addEventListener('click', function (e) {
+      if (S().isMultiSelect) return;
+      e.stopPropagation();
+      openDiaryView(msg);
+    });
+    wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); window.showMsgMenu && window.showMsgMenu(msg.id); });
+    var timer = null;
+    wrap.addEventListener('touchstart', function () { timer = setTimeout(function () { window.showMsgMenu && window.showMsgMenu(msg.id); }, 500); });
+    wrap.addEventListener('touchend', function () { clearTimeout(timer); });
+    wrap.addEventListener('touchmove', function () { clearTimeout(timer); });
+    if (S().isMultiSelect) {
+      wrap.addEventListener('click', function () { window.toggleMultiSelect && window.toggleMultiSelect(msg.id); });
+      if (S().selectedMsgIds && S().selectedMsgIds.has(msg.id)) wrap.classList.add('multi-select');
+    }
+    return wrap;
+  }
+  function openDiaryView(msg) {
+    var chat = getChat(msg.chatId);
+    var char = getChar(msg.charId || (chat && chat.charId));
+    var who = msg.sender === 'user' ? '\u6211\u5199\u7684' : ((char && char.name) || '\u4ed6') + '\u5199\u7684';
+    var meta = '<div id="diaryViewMeta">\u4ea4\u6362\u65e5\u8bb0 \u00b7 ' + esc(who) + ' \u00b7 ' + esc(fmtWhen(msg.timestamp)) + '</div>';
+    window.showModal('\u65e5\u8bb0', meta + '<div id="diaryViewBody">' + esc(msg.diaryText || '') + '</div>', '\u5173\u4e0a', null, false);
+  }
+
+  // ---------- 写日记：玩家写完 → 发出去 → 角色写回来 ----------
+  function openDiaryWrite() {
+    var chatId = S().currentChatId;
+    var chat = getChat(chatId);
+    if (!chat) { tip('\u63d0\u793a', '\u8bf7\u5148\u8fdb\u5165\u4e00\u4e2a\u804a\u5929'); return; }
+    if (chat.type === 'group') { tip('\u63d0\u793a', '\u4ea4\u6362\u65e5\u8bb0\u53ea\u80fd\u4e00\u5bf9\u4e00\u5199\uff0c\u7fa4\u804a\u91cc\u6ca1\u6cd5\u4f20\u672c\u5b50'); return; }
+    var char = getChar(chat.charId);
+    if (!char) { tip('\u63d0\u793a', '\u8fd9\u4e2a\u4eba\u8bbe\u5df2\u7ecf\u4e0d\u5728\u4e86'); return; }
+    if (char.isBlocked || char.blockedByChar) { tip('\u63d0\u793a', '\u73b0\u5728\u672c\u5b50\u9012\u4e0d\u5230\u4ed6\u624b\u91cc'); return; }
+
+    var pages = bookOf(char.id);
+    var last = pages[pages.length - 1];
+    var myTurn = !last || last.by === 'char';
+    var name = char.name || '\u4ed6';
+
+    if (!myTurn) {
+      var body0 = '<div class="diary-note">\u672c\u5b50\u73b0\u5728\u5728' + esc(name) + '\u90a3\u91cc\uff0c\u4f60\u5df2\u7ecf\u5199\u5b8c\u4e0a\u4e00\u9875\u4e86\u3002<br>\u7b49\u4ed6\u5199\u5b8c\u9012\u56de\u6765\uff0c\u4f60\u624d\u80fd\u63a5\u7740\u5199\u3002</div>'
+        + '<div id="diaryViewBody">' + esc(last.text || '') + '</div>';
+      window.showModal('\u8f6e\u5230' + esc(name), body0, '\u770b\u4ed6\u5199\u4e86\u5417', function () { charTurn(chat, char); }, false);
+      return;
+    }
+
+    var histNote = pages.length
+      ? '\u4e0a\u4e00\u9875\u662f' + (last.by === 'char' ? esc(name) : '\u4f60') + '\u5199\u7684\uff0c\u5df2\u7ecf\u5199\u8fc7 ' + pages.length + ' \u9875\u3002'
+      : '\u8fd9\u662f\u4f60\u4eec\u7684\u7b2c\u4e00\u9875\u3002';
+    var body = '<div class="diary-note">\u548c' + esc(name) + '\u5171\u7528\u4e00\u672c\u3002' + histNote
+      + '<br>\u5199\u5b8c\u672c\u5b50\u4f1a\u9012\u7ed9\u4ed6\uff0c\u4ed6\u5199\u5b8c\u518d\u9012\u56de\u6765\u3002</div>'
+      + '<textarea id="diaryWriteTa" placeholder="\u5199\u4e0b\u4eca\u5929\u3002\u5199\u5b8c\u4ed6\u624d\u80fd\u5199\u3002"></textarea>';
+    window.showModal('\u5199\u4e00\u9875\u65e5\u8bb0', body, '\u5199\u5b8c\uff0c\u9012\u7ed9\u4ed6', function () {
+      var ta = document.getElementById('diaryWriteTa');
+      var txt = ((ta && ta.value) || '').trim();
+      if (!txt) { tip('\u63d0\u793a', '\u8fd8\u6ca1\u5199\u3002'); return; }
+      sendUserPage(chat, char, txt);
+    }, true);
+  }
+
+  // 玩家这一页：写进日记本 + 发一条日记气泡，然后让角色接着写
+  function sendUserPage(chat, char, txt) {
+    var pages = bookOf(char.id);
+    var page = { by: 'user', text: txt, ts: Date.now() };
+    pages.push(page);
+    saveBook(char.id, pages);
+
+    var msg = {
+      id: uid(), chatId: chat.id, sender: 'user', type: 'diary',
+      content: readableUser(txt), diaryText: txt, diaryBy: 'user',
+      diaryCharId: char.id, diaryTs: page.ts,
+      charId: null, userId: chat.userId, timestamp: Date.now()
+    };
+    pushMsg(chat, msg);
+    charTurn(chat, char);
+  }
+
+  // 「正在输入」指示器：复用主程序那个气泡，不自己造一个
+  function typing(chatId, on) {
+    try {
+      var area = document.getElementById('msgArea');
+      var t = document.getElementById('typingIndicator');
+      if (!area || !t || S().currentChatId !== chatId) return;
+      if (on) {
+        area.appendChild(t);
+        t.style.display = 'flex';
+        var sc = document.querySelector('#chat-page .scroll-content');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+      } else if (!(S().typingChars && S().typingChars.size)) {
+        t.style.display = 'none';
+      }
+    } catch (e) {}
+  }
+
+  function pushMsg(chat, msg) {
+    S().messages.push(msg);
+    chat.updatedAt = Date.now();
+    try { DB().messages.put(msg); } catch (e) {}
+    try { DB().chats.put(chat); } catch (e) {}
+    var area = document.getElementById('msgArea');
+    if (area && S().currentChatId === msg.chatId && window.createMsgElement) {
+      var typing = document.getElementById('typingIndicator');
+      var el = window.createMsgElement(msg);
+      if (el && typing && typing.parentNode === area) area.insertBefore(el, typing);
+      else if (el) { area.appendChild(el); if (typing) area.appendChild(typing); }
+      if (el && window.jellyScrollToBottom) window.jellyScrollToBottom(el);
+      else {
+        var sc = document.querySelector('#chat-page .scroll-content');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+      }
+    }
+    setTimeout(function () { try { window.renderChatList && window.renderChatList(); } catch (e) {} }, 0);
+  }
+
+  // 角色写下一页：写进日记本 + 回一条日记气泡
+  var busy = {};
+  async function charTurn(chat, char) {
+    if (busy[char.id]) return;
+    var pages = bookOf(char.id);
+    var last = pages[pages.length - 1];
+    if (!last || last.by === 'char') { refreshFeng(char.id); return; }
+    busy[char.id] = true;
+    typing(chat.id, true);
+    try {
+      var hist = pages.slice(-8).map(function (p) {
+        return (p.by === 'user' ? meName(chat) : (char.name || '\u4ed6')) + '\u5199\uff1a\n' + p.text;
+      }).join('\n\n');
+      var prompt = [
+        '\u4f60\u662f\u300c' + (char.name || '\u4ed6') + '\u300d\u3002',
+        personaOf(char) ? '\u4f60\u7684\u8bbe\u5b9a\uff1a\n' + personaOf(char) : '',
+        '',
+        '\u4f60\u548c\u300c' + meName(chat) + '\u300d\u5171\u7528\u4e00\u672c\u4ea4\u6362\u65e5\u8bb0\uff0c\u4e00\u4eba\u4e00\u9875\u8f6e\u7740\u5199\u3002',
+        '\u4e4b\u524d\u5199\u8fc7\u7684\uff1a',
+        '',
+        hist,
+        '',
+        '\u73b0\u5728\u8f6e\u5230\u4f60\u5199\u4e0b\u4e00\u9875\u3002',
+        '\u65e5\u8bb0\u662f\u5199\u7ed9\u81ea\u5df1\u7684\uff0c\u4f46\u4f60\u77e5\u9053\u4ed6\u4f1a\u770b\u5230\u2014\u2014\u8fd9\u4e24\u4ef6\u4e8b\u540c\u65f6\u6210\u7acb\uff0c\u6240\u4ee5\u6709\u4e9b\u8bdd\u5199\u5f97\u5f88\u76f4\uff0c\u6709\u4e9b\u8bdd\u7ed5\u4e00\u4e0b\u3002',
+        '\u53ef\u4ee5\u56de\u5e94\u4ed6\u4e0a\u4e00\u9875\u91cc\u7684\u4e1c\u897f\uff0c\u4e5f\u53ef\u4ee5\u53ea\u5199\u4f60\u81ea\u5df1\u7684\u3002',
+        '\u4e00\u5230\u4e09\u6bb5\uff0c\u4e0d\u8981\u5199\u6210\u65e5\u62a5\u3002\u4e0d\u8981\u62ec\u53f7\u52a8\u4f5c\u795e\u6001\uff0c\u4e0d\u8981 Markdown\uff0c\u4e0d\u8981\u5199\u65e5\u671f\u3002',
+        '\u76f4\u63a5\u8f93\u51fa\u65e5\u8bb0\u5185\u5bb9\u3002'
+      ].filter(function (x) { return x !== ''; }).join('\n');
+
+      var out = await askAI(prompt, 640);
+
+      var pg = bookOf(char.id);
+      var page = { by: 'char', text: out, ts: Date.now() };
+      pg.push(page);
+      saveBook(char.id, pg);
+
+      var chat2 = getChat(chat.id) || chat;
+      pushMsg(chat2, {
+        id: uid(), chatId: chat2.id, sender: 'ai', type: 'diary',
+        content: readableChar(out), diaryText: out, diaryBy: 'char',
+        diaryCharId: char.id, diaryTs: page.ts,
+        charId: char.id, userId: chat2.userId, timestamp: Date.now()
+      });
+    } catch (e) {
+      tip('\u4ed6\u4eca\u5929\u6ca1\u52a8\u7b14', esc((e && e.message) || e) + '<br><br>\u4f60\u5199\u7684\u90a3\u4e00\u9875\u5df2\u7ecf\u5b58\u8fdb\u672c\u5b50\u4e86\uff0c\u53ef\u4ee5\u7a0d\u540e\u518d\u70b9\u4e00\u6b21\u4ea4\u6362\u65e5\u8bb0\u8ba9\u4ed6\u5199\u3002');
+    } finally {
+      busy[char.id] = false;
+      typing(chat.id, false);
+    }
+  }
+
+  // ---------- 删除：本子里删掉，就等于这段记忆不存在了 ----------
+  // 同时清掉日记本页 + 聊天里对应的日记气泡，角色上下文里再也读不到。
+  function openDiaryManager(charIdOpt) {
+    var chat = null, char = null;
+    if (charIdOpt) {
+      char = getChar(charIdOpt);
+      chat = (S().chats || []).find(function (c) { return c.type !== 'group' && c.charId === charIdOpt; }) || null;
+    } else {
+      chat = getChat(S().currentChatId);
+      if (!chat || chat.type === 'group') { tip('\u63d0\u793a', '\u8bf7\u5148\u8fdb\u5165\u4e00\u4e2a\u5355\u804a'); return; }
+      char = getChar(chat.charId);
+    }
+    if (!char) return;
+    var pages = bookOf(char.id);
+    if (!pages.length) { tip('\u4ea4\u6362\u65e5\u8bb0', '\u8fd9\u672c\u8fd8\u662f\u7a7a\u7684\u3002'); return; }
+
+    var sel = {};
+    var name = char.name || '\u4ed6';
+    var rows = pages.slice().reverse().map(function (p) {
+      var k = String(p.ts);
+      return '<div class="dm-row" data-k="' + esc(k) + '">'
+        + '<div class="dm-box">\u2713</div>'
+        + '<div class="dm-main"><div class="dm-who">' + (p.by === 'user' ? '\u6211\u5199\u7684' : esc(name) + '\u5199\u7684')
+        + '<span>' + esc(fmtWhen(p.ts)) + '</span></div>'
+        + '<div class="dm-txt">' + esc(p.text || '') + '</div></div></div>';
+    }).join('');
+
+    var body = '<div class="diary-note">\u5220\u6389\u7684\u90a3\u51e0\u9875\u4f1a\u4ece\u672c\u5b50\u548c\u804a\u5929\u91cc\u4e00\u8d77\u6d88\u5931\uff0c'
+      + esc(name) + '\u4e5f\u518d\u4e5f\u60f3\u4e0d\u8d77\u6765\u3002</div>'
+      + '<div class="diary-mgr-bar"><button class="dm-all">\u5168\u9009</button><button class="dm-none">\u53d6\u6d88</button>'
+      + '<button class="dm-del" disabled>\u5220\u9664 0 \u9875</button></div>'
+      + '<div class="diary-mgr">' + rows + '</div>';
+    window.showModal('\u7ba1\u7406\u4ea4\u6362\u65e5\u8bb0', body, '\u5173\u4e0a', null, false);
+
+    setTimeout(function () {
+      var box = document.querySelector('.diary-mgr');
+      var delBtn = document.querySelector('.diary-mgr-bar .dm-del');
+      if (!box || !delBtn) return;
+      function sync() {
+        var n = Object.keys(sel).length;
+        delBtn.textContent = '\u5220\u9664 ' + n + ' \u9875';
+        delBtn.disabled = !n;
+      }
+      box.querySelectorAll('.dm-row').forEach(function (r) {
+        r.addEventListener('click', function () {
+          var k = r.getAttribute('data-k');
+          if (sel[k]) { delete sel[k]; r.classList.remove('on'); }
+          else { sel[k] = 1; r.classList.add('on'); }
+          sync();
+        });
+      });
+      var all = document.querySelector('.diary-mgr-bar .dm-all');
+      var none = document.querySelector('.diary-mgr-bar .dm-none');
+      if (all) all.addEventListener('click', function () {
+        box.querySelectorAll('.dm-row').forEach(function (r) { sel[r.getAttribute('data-k')] = 1; r.classList.add('on'); });
+        sync();
+      });
+      if (none) none.addEventListener('click', function () {
+        sel = {};
+        box.querySelectorAll('.dm-row').forEach(function (r) { r.classList.remove('on'); });
+        sync();
+      });
+      delBtn.addEventListener('click', function () {
+        var keys = Object.keys(sel);
+        if (!keys.length) return;
+        window.showModal('\u5220\u6389\u8fd9 ' + keys.length + ' \u9875\uff1f',
+          '<div style="font-size:13px;line-height:1.9;color:var(--text-secondary);">\u5220\u4e86\u5c31\u771f\u7684\u6ca1\u4e86\u3002'
+          + esc(name) + '\u4e0d\u4f1a\u518d\u8bb0\u5f97\u8fd9\u51e0\u9875\u5199\u8fc7\u4ec0\u4e48\uff0c\u804a\u5929\u91cc\u7684\u65e5\u8bb0\u4e5f\u4e00\u8d77\u6d88\u5931\u3002</div>',
+          '\u5220\u9664', function () { doDelete(chat, char, keys); }, true);
+      });
+      sync();
+    }, 30);
+  }
+
+  function doDelete(chat, char, keys) {
+    void chat;
+    var kill = {};
+    keys.forEach(function (k) { kill[String(k)] = 1; });
+    // 1) 日记本里删页
+    var pages = bookOf(char.id).filter(function (p) { return !kill[String(p.ts)]; });
+    saveBook(char.id, pages);
+    // 2) 聊天里删对应气泡（连带角色能读到的上下文一起消失）
+    var msgs = (S().messages || []).filter(function (m) {
+      return m.type === 'diary' && m.diaryCharId === char.id && kill[String(m.diaryTs)];
+    });
+    msgs.forEach(function (m) {
+      m.isDeleted = true;
+      try { DB().messages.put(m); } catch (e) {}
+      var el = document.querySelector('#msgArea [data-msg-id="' + m.id + '"]');
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+    S().messages = (S().messages || []).filter(function (m) { return !(m.type === 'diary' && m.diaryCharId === char.id && kill[String(m.diaryTs)]); });
+    try { window.renderChatList && window.renderChatList(); } catch (e) {}
+    tip('\u5df2\u5220\u9664', '\u90a3 ' + keys.length + ' \u9875\u4e0d\u5728\u4e86\u3002');
+  }
+
+  // ---------- 接进主程序 ----------
+  function boot() {
+    if (!window.__state || typeof window.createMsgElement !== 'function' || typeof window.showModal !== 'function') {
+      setTimeout(boot, 500); return;
+    }
+    if (window.__diaryChat) return;
+    window.__diaryChat = true;
+
+    // 日记气泡
+    var origCreate = window.createMsgElement;
+    window.createMsgElement = function (msg) {
+      if (msg && msg.type === 'diary') return buildDiaryMsg(msg);
+      return origCreate.apply(this, arguments);
+    };
+
+    // 功能栏入口：点一下写日记，长按管理/删除
+    function injectBtn() {
+      var grid = document.querySelector('#toolPopup .popup-grid');
+      if (!grid || grid.querySelector('[data-tool="diary"]')) return;
+      var b = document.createElement('button');
+      b.className = 'popup-item';
+      b.setAttribute('data-tool', 'diary');
+      b.innerHTML = '<span class="icon-sm">' + DIARY_SVG + '</span><span class="label">\u4ea4\u6362\u65e5\u8bb0</span>';
+      grid.appendChild(b);
+      var longPress = false, timer = null;
+      function closePopup() { var tp = document.getElementById('toolPopup'); if (tp) tp.classList.remove('visible'); }
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closePopup();
+        if (longPress) { longPress = false; return; }
+        openDiaryWrite();
+      });
+      b.addEventListener('contextmenu', function (e) { e.preventDefault(); closePopup(); openDiaryManager(); });
+      b.addEventListener('touchstart', function () {
+        longPress = false;
+        timer = setTimeout(function () { longPress = true; closePopup(); openDiaryManager(); }, 520);
+      });
+      b.addEventListener('touchend', function () { clearTimeout(timer); });
+      b.addEventListener('touchmove', function () { clearTimeout(timer); longPress = false; });
+    }
+    injectBtn();
+    setTimeout(injectBtn, 1500);
+    var n = 0, iv = setInterval(function () { injectBtn(); if (++n > 30) clearInterval(iv); }, 600);
+
+    window.__diaryOpenWrite = openDiaryWrite;
+    window.__diaryOpenManager = openDiaryManager;
+
+    // 给「缝」里的日记本用：在那边写完/角色写完，也往聊天里补一条同构气泡
+    function chatOfChar(cid) {
+      return (S().chats || []).find(function (c) { return c.type !== 'group' && c.charId === cid; }) || null;
+    }
+    function hasBubble(cid, ts) {
+      return (S().messages || []).some(function (m) {
+        return m.type === 'diary' && m.diaryCharId === cid && String(m.diaryTs) === String(ts);
+      });
+    }
+    window.__diaryPushUserPage = function (cid, text, ts) {
+      var chat = chatOfChar(cid); if (!chat || hasBubble(cid, ts)) return;
+      pushMsg(chat, {
+        id: uid(), chatId: chat.id, sender: 'user', type: 'diary',
+        content: readableUser(text), diaryText: text, diaryBy: 'user',
+        diaryCharId: cid, diaryTs: ts,
+        charId: null, userId: chat.userId, timestamp: ts
+      });
+    };
+    window.__diaryPushCharPage = function (cid, text, ts) {
+      var chat = chatOfChar(cid); if (!chat || hasBubble(cid, ts)) return;
+      pushMsg(chat, {
+        id: uid(), chatId: chat.id, sender: 'ai', type: 'diary',
+        content: readableChar(text), diaryText: text, diaryBy: 'char',
+        diaryCharId: cid, diaryTs: ts,
+        charId: cid, userId: chat.userId, timestamp: ts
+      });
+    };
+  }
+  boot();
+})();
+</script>
+<!-- ============ 交换日记 结束 ============ -->
+<!-- ============ 小手机 v6-31 外卖（角色点 / 玩家点） ============ -->
+<style id="takeoutCss">
+.msg-bubble .to-card{position:relative;min-width:196px;max-width:262px;border-radius:16px;padding:13px 14px 12px;cursor:pointer;background:rgba(255,255,255,0.42);backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);border:1px solid rgba(255,255,255,0.6);box-shadow:0 4px 18px rgba(120,110,90,0.14);overflow:hidden;}
+.msg-bubble .to-card::before{content:'';position:absolute;inset:0;background:linear-gradient(145deg,rgba(255,214,140,0.30),rgba(255,168,120,0.16) 55%,rgba(255,255,255,0) 100%);pointer-events:none;}
+.msg-bubble .to-card>*{position:relative;}
+.msg-bubble .to-card .to-top{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.msg-bubble .to-card .to-ic{width:20px;height:20px;flex:none;display:inline-block;}
+.msg-bubble .to-card .to-ic svg{width:100%;height:100%;fill:none;stroke:#d9822b;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.msg-bubble .to-card .to-shop{flex:1;min-width:0;font-size:14px;font-weight:700;color:#7a5a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.msg-bubble .to-card .to-paid{flex:none;font-size:10.5px;font-weight:700;color:#3f8a5c;background:rgba(63,138,92,0.14);padding:2px 7px;border-radius:7px;}
+.msg-bubble .to-card .to-line{font-size:12.5px;line-height:1.85;color:#7d6a4e;display:flex;gap:6px;}
+.msg-bubble .to-card .to-line .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.msg-bubble .to-card .to-line .q{flex:none;opacity:.7;}
+.msg-bubble .to-card .to-more{font-size:11.5px;color:#a89478;margin-top:2px;}
+.msg-bubble .to-card .to-foot{display:flex;align-items:baseline;gap:6px;margin-top:10px;padding-top:9px;border-top:1px dashed rgba(160,130,90,0.28);}
+.msg-bubble .to-card .to-sum{flex:1;font-size:11.5px;color:#a89478;}
+.msg-bubble .to-card .to-total{font-size:16px;font-weight:800;color:#d9822b;}
+.msg-bubble .to-card .to-total small{font-size:11px;font-weight:600;margin-right:1px;}
+html.phone-night .msg-bubble .to-card{background:rgba(44,38,28,0.5) !important;border-color:rgba(200,160,100,0.28) !important;}
+html.phone-night .msg-bubble .to-card .to-shop{color:#e6c98f !important;}
+html.phone-night .msg-bubble .to-card .to-line{color:#c8b596 !important;}
+html.phone-night .msg-bubble .to-card .to-more,html.phone-night .msg-bubble .to-card .to-sum{color:#9c8a6e !important;}
+#toView .tv-shop{font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:2px;}
+#toView .tv-meta{font-size:11.5px;color:#a8b2ba;margin-bottom:13px;}
+#toView .tv-rows{border-top:1px solid rgba(0,0,0,0.06);}
+#toView .tv-row{display:flex;align-items:baseline;gap:8px;padding:9px 2px;border-bottom:1px solid rgba(0,0,0,0.05);font-size:13.5px;color:var(--text-primary);}
+#toView .tv-row .n{flex:1;min-width:0;}
+#toView .tv-row .q{flex:none;font-size:12px;color:var(--text-secondary);min-width:28px;text-align:right;}
+#toView .tv-row .p{flex:none;font-size:13px;color:var(--text-secondary);min-width:62px;text-align:right;}
+#toView .tv-sum{display:flex;align-items:baseline;margin-top:13px;font-size:13px;color:var(--text-secondary);}
+#toView .tv-sum b{margin-left:auto;font-size:19px;color:#d9822b;font-weight:800;}
+#toView .tv-note{margin-top:13px;font-size:13px;line-height:1.8;color:var(--text-secondary);background:rgba(0,0,0,0.03);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;}
+#toView .tv-tip{margin-top:12px;font-size:11.5px;color:#a8b2ba;line-height:1.7;}
+html.phone-night #toView .tv-rows,html.phone-night #toView .tv-row{border-color:rgba(255,255,255,0.08) !important;}
+html.phone-night #toView .tv-note{background:rgba(255,255,255,0.05) !important;}
+.to-form .tf-row{display:flex;gap:7px;align-items:center;margin-bottom:7px;}
+.to-form .tf-row input{box-sizing:border-box;border:1px solid rgba(0,0,0,0.12);border-radius:10px;padding:9px 10px;font-size:13.5px;font-family:var(--font);outline:none;background:var(--bg-primary,#fff);color:var(--text-primary);}
+.to-form .tf-row .tf-name{flex:1;min-width:0;}
+.to-form .tf-row .tf-qty{width:52px;text-align:center;}
+.to-form .tf-row .tf-price{width:70px;text-align:center;}
+.to-form .tf-row .tf-del{flex:none;border:none;background:rgba(255,107,107,0.12);color:#e5484d;width:30px;height:34px;border-radius:9px;font-size:15px;cursor:pointer;line-height:1;}
+.to-form .tf-add{width:100%;border:1px dashed rgba(0,0,0,0.18);background:none;color:var(--text-secondary);border-radius:10px;padding:9px 0;font-size:13px;cursor:pointer;font-family:var(--font);margin-top:2px;}
+.to-form .tf-total{display:flex;align-items:baseline;margin-top:11px;font-size:13px;color:var(--text-secondary);}
+.to-form .tf-total b{margin-left:auto;font-size:18px;color:#d9822b;font-weight:800;}
+.to-form .tf-lb{font-size:11.5px;color:#a8b2ba;margin:12px 0 6px;}
+.to-form .tf-shop{width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.12);border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:var(--font);outline:none;background:var(--bg-primary,#fff);color:var(--text-primary);}
+.to-form .tf-menu{max-height:30vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+.to-form .tf-dish{display:flex;align-items:center;gap:9px;padding:8px 6px;border-radius:9px;}
+.to-form .tf-dish .d-n{flex:1;min-width:0;font-size:13.5px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.to-form .tf-dish .d-p{flex:none;font-size:13px;color:#d9822b;font-weight:600;}
+.to-form .tf-dish .d-add{flex:none;border:none;background:rgba(217,130,43,0.14);color:#d9822b;border-radius:8px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);}
+.to-form .tf-shops{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.to-form .tf-shops button{border:none;background:rgba(0,0,0,0.05);color:var(--text-secondary);font-size:12.5px;padding:6px 11px;border-radius:9px;cursor:pointer;font-family:var(--font);}
+.to-form .tf-shops button.on{background:rgba(217,130,43,0.16);color:#d9822b;font-weight:600;}
+</style>
+<script id="takeoutJs">
+(function () {
+  'use strict';
+  var TO_SVG = '<svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 11a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/><path d="M9 12.5h6"/></svg>';
+
+  function S() { return window.__state || {}; }
+  function DB() { return window.__db; }
+  function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+  function getChar(id) { return (S().characters || []).find(function (c) { return c.id === id; }); }
+  function getUser(id) { return (S().users || []).find(function (u) { return u.id === id; }); }
+  function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function money(n) { return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2); }
+  // ---------- 钱包：玩家点外卖要真的付钱，从微信零钱扣 ----------
+  function wallet() {
+    var s = S();
+    if (!s.settings) s.settings = {};
+    if (!s.settings.wallet) s.settings.wallet = { wechat: { balance: 0, records: [] }, alipay: { balance: 0, records: [] }, banks: [] };
+    var w = s.settings.wallet;
+    if (!w.wechat) w.wechat = { balance: 0, records: [] };
+    if (!w.alipay) w.alipay = { balance: 0, records: [] };
+    if (!w.banks) w.banks = [];
+    if (!w.wechat.records) w.wechat.records = [];
+    return w;
+  }
+  function wxBalance() { return Number(wallet().wechat.balance) || 0; }
+  function saveSettingsNow() {
+    try {
+      if (typeof window.saveSettings === 'function') { window.saveSettings(); return; }
+      if (DB() && DB().settings) DB().settings.put(Object.assign({ id: 'main' }, S().settings));
+    } catch (e) {}
+  }
+  // 扣款成功返回 true；余额不够返回 false（不扣任何钱）
+  function payWx(total, note) {
+    var amt = Math.round((Number(total) || 0) * 100) / 100;
+    if (amt <= 0) return true;
+    var acc = wallet().wechat;
+    var bal = Number(acc.balance) || 0;
+    if (bal < amt) return false;
+    acc.balance = Math.round((bal - amt) * 100) / 100;
+    acc.records.unshift({ id: uid(), type: 'out', amount: amt, note: note || '\u5916\u5356\u4ed8\u6b3e', ts: Date.now() });
+    saveSettingsNow();
+    // 钱包页正开着的话顺手刷一下
+    try { if (window.__walletRefresh) window.__walletRefresh(); } catch (e) {}
+    return true;
+  }
+  function avImg(v, fb) {
+    if (v && /^(data:|https?:|blob:)/.test(v)) return '<img src="' + v + '" style="width:100%;height:100%;object-fit:cover;">';
+    return v || fb;
+  }
+  function tip(t, b, ok) { if (window.showModal) window.showModal(t, b, ok || '\u597d\u7684'); }
+
+  function normItems(arr) {
+    return (arr || []).map(function (it) {
+      var name = String((it && it.name) || '').trim();
+      if (!name) return null;
+      return { name: name.slice(0, 40), qty: Math.max(1, Math.round(Number(it.qty) || 1)), price: Math.max(0, Number(it.price) || 0) };
+    }).filter(Boolean);
+  }
+  function sumOf(items) {
+    return (items || []).reduce(function (a, it) { return a + (Number(it.price) || 0) * (Number(it.qty) || 1); }, 0);
+  }
+  function readableTakeout(items, shop, total, note, fromChar) {
+    var lines = (items || []).map(function (it) { return '\u00b7 ' + it.name + ' \u00d7' + it.qty + '  \u00a5' + money(it.price * it.qty); }).join('\n');
+    var head = fromChar
+      ? '[\u7ed9\u5bf9\u65b9\u70b9\u4e86\u4e00\u4efd\u5916\u5356\uff0c\u5df2\u7ecf\u4ed8\u8fc7\u94b1\u4e86]'
+      : '[\u5bf9\u65b9\u7ed9\u4f60\u70b9\u4e86\u4e00\u4efd\u5916\u5356\uff0c\u5df2\u7ecf\u4ed8\u8fc7\u94b1\u4e86\u3002\u50cf\u771f\u4eba\u6536\u5230\u6295\u5582\u90a3\u6837\u81ea\u7136\u53cd\u5e94\uff1a\u610f\u5916\u3001\u9ad8\u5174\u3001\u8bf4\u4f60\u5403\u4e0d\u4e0b\u3001\u5ac9\u5f03\u3001\u8ba8\u4ef7\u8fd8\u4ef7\u90fd\u884c\uff0c\u4e0d\u8981\u53ea\u8bf4\u8c22\u8c22]';
+    return head + '\n\u5e97\u5bb6\uff1a' + (shop || '\u5916\u5356') + '\n' + lines + '\n\u5408\u8ba1\uff1a\u00a5' + money(total) + (note ? ('\n\u9644\u8a00\uff1a' + note) : '');
+  }
+
+  function buildTakeoutMsg(msg) {
+    var chat = getChat(msg.chatId);
+    var isUser = msg.sender === 'user';
+    var char = getChar(msg.charId || (chat && chat.charId));
+    var user = getUser(chat && chat.userId) || (S().users || [])[0];
+    var items = msg.toItems || [];
+    var total = msg.toTotal != null ? msg.toTotal : sumOf(items);
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrapper ' + (isUser ? 'user' : 'ai');
+    wrap.dataset.msgId = msg.id;
+    var av = document.createElement('div'); av.className = 'avatar-wrap';
+    av.innerHTML = isUser ? avImg(user && user.avatar, '\ud83d\udc64') : avImg(char && char.avatar, '\ud83e\uddf8');
+    wrap.appendChild(av);
+    var bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+    if (chat && chat.type === 'group') {
+      var nm = document.createElement('div'); nm.className = 'sender-name';
+      nm.textContent = isUser ? ((user && user.name) || '\u6211') : ((char && char.name) || 'AI');
+      if (isUser) nm.style.textAlign = 'right';
+      bubble.appendChild(nm);
+    }
+    var show = items.slice(0, 3).map(function (it) {
+      return '<div class="to-line"><span class="n">' + esc(it.name) + '</span><span class="q">\u00d7' + it.qty + '</span></div>';
+    }).join('');
+    var more = items.length > 3 ? '<div class="to-more">\u2026\u8fd8\u6709 ' + (items.length - 3) + ' \u9879</div>' : '';
+    bubble.innerHTML += '<div class="to-card">'
+      + '<div class="to-top"><span class="to-ic">' + TO_SVG + '</span>'
+      + '<span class="to-shop">' + esc(msg.toShop || '\u5916\u5356') + '</span>'
+      + '<span class="to-paid">\u5df2\u4ed8\u6b3e</span></div>'
+      + show + more
+      + '<div class="to-foot"><span class="to-sum">' + items.length + ' \u4efd \u00b7 \u70b9\u5f00\u770b\u8be6\u60c5</span>'
+      + '<span class="to-total"><small>\u00a5</small>' + money(total) + '</span></div></div>';
+    wrap.appendChild(bubble);
+    bubble.querySelector('.to-card').addEventListener('click', function (e) {
+      if (S().isMultiSelect) return;
+      e.stopPropagation();
+      openTakeoutView(msg);
+    });
+    wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); window.showMsgMenu && window.showMsgMenu(msg.id); });
+    var timer = null;
+    wrap.addEventListener('touchstart', function () { timer = setTimeout(function () { window.showMsgMenu && window.showMsgMenu(msg.id); }, 500); });
+    wrap.addEventListener('touchend', function () { clearTimeout(timer); });
+    wrap.addEventListener('touchmove', function () { clearTimeout(timer); });
+    if (S().isMultiSelect) {
+      wrap.addEventListener('click', function () { window.toggleMultiSelect && window.toggleMultiSelect(msg.id); });
+      if (S().selectedMsgIds && S().selectedMsgIds.has(msg.id)) wrap.classList.add('multi-select');
+    }
+    return wrap;
+  }
+
+  function openTakeoutView(msg) {
+    var chat = getChat(msg.chatId);
+    var char = getChar(msg.charId || (chat && chat.charId));
+    var user = getUser(chat && chat.userId) || (S().users || [])[0];
+    var items = msg.toItems || [];
+    var total = msg.toTotal != null ? msg.toTotal : sumOf(items);
+    var who = msg.sender === 'user' ? ((user && user.name) || '\u6211') : ((char && char.name) || '\u4ed6');
+    var when = '';
+    try {
+      var d = new Date(msg.timestamp);
+      when = (d.getMonth() + 1) + '\u6708' + d.getDate() + '\u65e5 ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    } catch (e) {}
+    var rows = items.map(function (it) {
+      return '<div class="tv-row"><span class="n">' + esc(it.name) + '</span><span class="q">\u00d7' + it.qty
+        + '</span><span class="p">\u00a5' + money(it.price * it.qty) + '</span></div>';
+    }).join('');
+    var body = '<div id="toView"><div class="tv-shop">' + esc(msg.toShop || '\u5916\u5356') + '</div>'
+      + '<div class="tv-meta">' + esc(who) + ' \u4e0b\u7684\u5355 \u00b7 \u5df2\u4ed8\u6b3e \u00b7 ' + esc(when) + '</div>'
+      + '<div class="tv-rows">' + rows + '</div>'
+      + '<div class="tv-sum">\u5408\u8ba1<b>\u00a5' + money(total) + '</b></div>'
+      + (msg.toNote ? '<div class="tv-note">' + esc(msg.toNote) + '</div>' : '')
+      + '<div class="tv-tip">\u8fd9\u5355\u5df2\u7ecf\u4ed8\u8fc7\u94b1\u4e86\uff0c\u4e0d\u4f1a\u52a8\u94b1\u5305\u4f59\u989d\u3002</div></div>';
+    window.showModal('\u5916\u5356\u8ba2\u5355', body, '\u5173\u4e0a', null, false);
+  }
+
+  var SHOPS = [
+    { name: '\u9ea6\u5f53\u52b3', dishes: [['\u9ea6\u8fa3\u9e21\u817f\u5821', 22.5], ['\u5de8\u65e0\u9738', 26], ['\u9ea6\u8fa3\u9e21\u7fc5 5\u5757', 21], ['\u85af\u6761(\u5927)', 12], ['\u53ef\u4e50(\u4e2d)', 8], ['\u9ea6\u65cb\u98ce', 8.5]] },
+    { name: '\u80af\u5fb7\u57fa', dishes: [['\u5410\u53f8\u9b41\u9e21\u817f\u5821', 24], ['\u9999\u8fa3\u9e21\u817f\u5821', 21.5], ['\u5965\u5c14\u826f\u9e21\u7fc5 5\u5757', 25], ['\u85af\u6761(\u5927)', 13], ['\u86cb\u631e', 9.5], ['\u53ef\u4e50(\u5927)', 10]] },
+    { name: '\u871c\u96ea\u51b0\u57ce', dishes: [['\u9c9c\u67e0\u6c34', 4], ['\u73cd\u73e0\u5976\u8336', 7], ['\u5723\u4ee3\u51b0\u6dc7\u6dcb', 3], ['\u6a58\u5b50\u6c34', 6], ['\u8354\u679d\u8336', 7]] },
+    { name: '\u9178\u8fa3\u7c89', dishes: [['\u7ecf\u5178\u9178\u8fa3\u7c89', 16], ['\u80a5\u725b\u7c89', 22], ['\u9e21\u4e1d\u7c89', 19], ['\u9e2d\u8840\u65fa', 9], ['\u917a\u571f\u8c46', 8], ['\u867e\u6ed1', 12]] },
+    { name: '\u5915\u591c\u70e7\u70e7', dishes: [['\u7f8a\u8089\u4e32 5\u4e32', 25], ['\u4e94\u82b1\u8089 5\u4e32', 22], ['\u70e4\u97ed\u83dc', 8], ['\u70e4\u9762\u7b4b', 6], ['\u70e4\u7fc5\u4e2d 4\u4e2a', 24], ['\u51b0\u5564', 8]] },
+    { name: '\u7ca5\u94fa', dishes: [['\u76ae\u86cb\u7460\u8089\u7ca5', 18], ['\u5c0f\u7c73\u5357\u74dc\u7ca5', 14], ['\u9c9c\u8099\u7ca5', 26], ['\u6c34\u6676\u867e\u997a', 16], ['\u917a\u9165\u6cb9\u6761', 7]] },
+    { name: '\u65e5\u5f0f\u62c9\u9762', dishes: [['\u8c5a\u9aa8\u62c9\u9762', 38], ['\u9171\u6c41\u62c9\u9762', 34], ['\u53c9\u70e7\u9762', 46], ['\u6eb6\u5cb8\u86cb', 6], ['\u70b8\u9e21\u5757', 18], ['\u9ea6\u8336', 6]] },
+    { name: '\u8f7b\u98df\u6c99\u62c9', dishes: [['\u9e21\u80f8\u8089\u6c99\u62c9', 32], ['\u4e09\u6587\u9c7c\u725b\u6cb9\u679c', 46], ['\u85dc\u9ea6\u725b\u8089\u788d', 38], ['\u73ed\u6234\u5361\u6c99\u62c9', 34], ['\u6c14\u6ce1\u6c34', 9]] }
+  ];
+
+  function openTakeoutForm() {
+    var chat = getChat(S().currentChatId);
+    if (!chat) { tip('\u63d0\u793a', '\u8bf7\u5148\u8fdb\u5165\u4e00\u4e2a\u804a\u5929'); return; }
+    var toName = chat.type === 'group' ? (chat.title || '\u7fa4\u91cc') : (((getChar(chat.charId) || {}).name) || '\u5bf9\u65b9');
+    var picked = 0;
+    var body = '<div class="to-form">'
+      + '<div class="tf-lb" style="margin-top:0;">\u9001\u7ed9 ' + esc(toName) + ' \u00b7 \u9009\u4e2a\u5e97\uff0c\u4e5f\u53ef\u4ee5\u81ea\u5df1\u5199</div>'
+      + '<div class="tf-shops">' + SHOPS.map(function (s, i) {
+          return '<button data-shop="' + i + '"' + (i === 0 ? ' class="on"' : '') + '>' + esc(s.name) + '</button>';
+        }).join('') + '</div>'
+      + '<input type="text" class="tf-shop" id="tfShop" value="' + esc(SHOPS[0].name) + '" placeholder="\u5e97\u5bb6\u540d">'
+      + '<div class="tf-lb">\u83dc\u5355\uff08\u70b9\u300c\u52a0\u300d\u76f4\u63a5\u8fdb\u8ba2\u5355\uff09</div>'
+      + '<div class="tf-menu" id="tfMenu"></div>'
+      + '<div class="tf-lb">\u8ba2\u5355\uff08\u53ef\u6539\u83dc\u540d / \u6570\u91cf / \u5355\u4ef7\uff09</div>'
+      + '<div id="tfList"></div>'
+      + '<button class="tf-add" id="tfAdd" type="button">\uff0b \u81ea\u5df1\u5199\u4e00\u9879</button>'
+      + '<div class="tf-total">\u5408\u8ba1<b id="tfTotal">\u00a50.00</b></div>'
+      + '<div class="tf-lb" id="tfBal" style="margin-top:6px;">\u5fae\u4fe1\u96f6\u94b1\u4f59\u989d \u00a5' + money(wxBalance()) + '\uff0c\u4ed8\u6b3e\u540e\u4f1a\u4ece\u91cc\u9762\u6263</div>'
+      + '<div class="tf-lb">\u9644\u8a00\uff08\u53ef\u4e0d\u5199\uff09</div>'
+      + '<input type="text" class="tf-shop" id="tfNote" placeholder="\u5982\uff1a\u8bb0\u5f97\u8d81\u70ed\u5403">'
+      + '</div>';
+    window.showModal('\u70b9\u5916\u5356', body, '\u4ed8\u6b3e\u5e76\u9001\u51fa', function () {
+      var items = collectForm();
+      if (!items.length) { tip('\u63d0\u793a', '\u8fd8\u6ca1\u70b9\u4e1c\u897f\u5462'); return; }
+      var shop = ((document.getElementById('tfShop') || {}).value || '').trim() || '\u5916\u5356';
+      var note = ((document.getElementById('tfNote') || {}).value || '').trim();
+      var total = sumOf(normItems(items));
+      // 玩家点外卖是真花钱：先从微信零钱扣，扣不动就不让下单
+      if (!payWx(total, '\u5916\u5356\u00b7' + shop)) {
+        tip('\u4f59\u989d\u4e0d\u8db3',
+          '\u8fd9\u5355\u8981 \u00a5' + money(total) + '\uff0c\u4f60\u7684\u5fae\u4fe1\u96f6\u94b1\u53ea\u5269 \u00a5' + money(wxBalance()) + '\u3002<br><br>\u5148\u53bb\u5fae\u4fe1\u94b1\u5305\u5145\u70b9\u94b1\uff0c\u6216\u8005\u5c11\u70b9\u51e0\u6837\u3002');
+        return;
+      }
+      sendTakeout(chat, items, shop, note, total);
+    }, true);
+
+    setTimeout(function () {
+      renderMenu(picked);
+      addRow('', 1, '');
+      document.querySelectorAll('.tf-shops [data-shop]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          picked = parseInt(b.dataset.shop, 10) || 0;
+          document.querySelectorAll('.tf-shops [data-shop]').forEach(function (x) { x.classList.remove('on'); });
+          b.classList.add('on');
+          var sh = document.getElementById('tfShop');
+          if (sh) sh.value = SHOPS[picked].name;
+          renderMenu(picked);
+        });
+      });
+      var add = document.getElementById('tfAdd');
+      if (add) add.addEventListener('click', function () { addRow('', 1, ''); });
+    }, 40);
+  }
+
+  function renderMenu(idx) {
+    var box = document.getElementById('tfMenu');
+    if (!box) return;
+    box.innerHTML = SHOPS[idx].dishes.map(function (d) {
+      return '<div class="tf-dish"><span class="d-n">' + esc(d[0]) + '</span>'
+        + '<span class="d-p">\u00a5' + money(d[1]) + '</span>'
+        + '<button class="d-add" type="button" data-n="' + esc(d[0]) + '" data-p="' + d[1] + '">\u52a0</button></div>';
+    }).join('');
+    box.querySelectorAll('.d-add').forEach(function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); addRow(b.dataset.n, 1, b.dataset.p); });
+    });
+  }
+
+  function addRow(name, qty, price) {
+    var list = document.getElementById('tfList');
+    if (!list) return;
+    var same = null;
+    list.querySelectorAll('.tf-row').forEach(function (r) {
+      var n = r.querySelector('.tf-name');
+      if (n && name && n.value.trim() === String(name).trim()) same = r;
+    });
+    if (same) {
+      var q = same.querySelector('.tf-qty');
+      q.value = (parseInt(q.value, 10) || 1) + 1;
+      syncTotal();
+      return;
+    }
+    var row = document.createElement('div');
+    row.className = 'tf-row';
+    row.innerHTML = '<input type="text" class="tf-name" placeholder="\u83dc\u540d" value="' + esc(name || '') + '">'
+      + '<input type="number" class="tf-qty" min="1" step="1" value="' + (qty || 1) + '">'
+      + '<input type="number" class="tf-price" min="0" step="0.5" placeholder="\u5355\u4ef7" value="' + (price === '' || price == null ? '' : price) + '">'
+      + '<button class="tf-del" type="button">\u00d7</button>';
+    list.appendChild(row);
+    row.querySelector('.tf-del').addEventListener('click', function () { row.remove(); syncTotal(); });
+    row.querySelectorAll('input').forEach(function (i) { i.addEventListener('input', syncTotal); });
+    syncTotal();
+  }
+
+  function collectForm() {
+    var out = [];
+    document.querySelectorAll('#tfList .tf-row').forEach(function (r) {
+      var n = (r.querySelector('.tf-name').value || '').trim();
+      if (!n) return;
+      out.push({
+        name: n,
+        qty: Math.max(1, parseInt(r.querySelector('.tf-qty').value, 10) || 1),
+        price: Math.max(0, parseFloat(r.querySelector('.tf-price').value) || 0)
+      });
+    });
+    return out;
+  }
+  function syncTotal() {
+    var el = document.getElementById('tfTotal');
+    if (el) el.textContent = '\u00a5' + money(sumOf(collectForm()));
+  }
+
+  function pushMsg(chat, msg) {
+    S().messages.push(msg);
+    chat.updatedAt = Date.now();
+    try { DB().messages.put(msg); } catch (e) {}
+    try { DB().chats.put(chat); } catch (e) {}
+    var area = document.getElementById('msgArea');
+    if (area && S().currentChatId === msg.chatId && window.createMsgElement) {
+      var t = document.getElementById('typingIndicator');
+      var el = window.createMsgElement(msg);
+      if (el && t && t.parentNode === area) area.insertBefore(el, t);
+      else if (el) { area.appendChild(el); if (t) area.appendChild(t); }
+      if (el && window.jellyScrollToBottom) window.jellyScrollToBottom(el);
+      else { var sc = document.querySelector('#chat-page .scroll-content'); if (sc) sc.scrollTop = sc.scrollHeight; }
+    }
+    setTimeout(function () { try { window.renderChatList && window.renderChatList(); } catch (e) {} }, 0);
+  }
+
+  function sendTakeout(chat, items, shop, note, prePaidTotal) {
+    items = normItems(items);
+    var total = prePaidTotal != null ? prePaidTotal : sumOf(items);
+    pushMsg(chat, {
+      id: uid(), chatId: chat.id, sender: 'user', type: 'takeout',
+      content: readableTakeout(items, shop, total, note, false),
+      toShop: shop, toItems: items, toTotal: total, toNote: note || '',
+      charId: chat.type === 'group' ? null : (chat.charId || null), userId: chat.userId,
+      timestamp: Date.now()
+    });
+  }
+
+  // [外卖: 店名 | 菜名 数量 单价, 菜名 数量 单价 | 附言]
+  function parseTakeoutTag(raw) {
+    var parts = String(raw || '').split(/\s*[|\uff5c]\s*/);
+    var shop = (parts[0] || '').trim() || '\u5916\u5356';
+    var note = (parts[2] || '').trim();
+    var items = (parts[1] || '').split(/\s*[,\uff0c\u3001]\s*/).map(function (seg) {
+      var t = seg.trim();
+      if (!t) return null;
+      var m = t.match(/^(.*?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/);
+      if (m) return { name: m[1].trim(), qty: parseFloat(m[2]), price: parseFloat(m[3]) };
+      var m2 = t.match(/^(.*?)\s+(\d+(?:\.\d+)?)$/);
+      if (m2) return { name: m2[1].trim(), qty: 1, price: parseFloat(m2[2]) };
+      return { name: t, qty: 1, price: 0 };
+    }).filter(Boolean);
+    items = normItems(items);
+    if (!items.length) return null;
+    return { shop: shop, items: items, note: note, total: sumOf(items) };
+  }
+
+  function boot() {
+    if (!window.__state || typeof window.createMsgElement !== 'function' || typeof window.showModal !== 'function') {
+      setTimeout(boot, 500); return;
+    }
+    if (window.__takeout) return;
+    window.__takeout = true;
+
+    var origCreate = window.createMsgElement;
+    window.createMsgElement = function (msg) {
+      if (msg && msg.type === 'takeout') return buildTakeoutMsg(msg);
+      return origCreate.apply(this, arguments);
+    };
+
+    function injectBtn() {
+      var grid = document.querySelector('#toolPopup .popup-grid');
+      if (!grid || grid.querySelector('[data-tool="takeout"]')) return;
+      var b = document.createElement('button');
+      b.className = 'popup-item';
+      b.setAttribute('data-tool', 'takeout');
+      b.innerHTML = '<span class="icon-sm">' + TO_SVG + '</span><span class="label">\u5916\u5356</span>';
+      grid.appendChild(b);
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var tp = document.getElementById('toolPopup'); if (tp) tp.classList.remove('visible');
+        openTakeoutForm();
+      });
+    }
+    injectBtn();
+    setTimeout(injectBtn, 1500);
+    var n = 0, iv = setInterval(function () { injectBtn(); if (++n > 30) clearInterval(iv); }, 600);
+
+    // 角色发 [外卖: ...] → 外卖卡
+    if (typeof window.commitCharLine === 'function') {
+      var origCommit = window.commitCharLine;
+      window.commitCharLine = async function (chatId, char, line, ts) {
+        var m = String(line || '').trim().match(/^\[\u5916\u5356[:\uff1a]\s*([\s\S]+)\]$/);
+        if (m) {
+          var od = parseTakeoutTag(m[1]);
+          if (!od) return null;
+          var chat = getChat(chatId);
+          return {
+            id: uid(), chatId: chatId, sender: 'ai', charId: char.id,
+            userId: chat && chat.userId, type: 'takeout',
+            content: readableTakeout(od.items, od.shop, od.total, od.note, true),
+            toShop: od.shop, toItems: od.items, toTotal: od.total, toNote: od.note,
+            timestamp: ts || Date.now()
+          };
+        }
+        return origCommit.apply(this, arguments);
+      };
+    }
+
+    window.__openTakeoutForm = openTakeoutForm;
+    window.__parseTakeoutTag = parseTakeoutTag;
+  }
+  boot();
+})();
+</script>
+<!-- ============ 小手机 v6-34 卡片类消息去掉气泡外框 ============ -->
+<style id="bareCardCss">
+/* 音乐 / 交换日记 / 外卖 / 一起听邀请：卡片本身就有完整的视觉，再套一层气泡反而脏 */
+.msg-bubble.bare-card{
+  background:none !important; background-color:transparent !important;
+  padding:0 !important; border:none !important; box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+  border-radius:0 !important;
+}
+.msg-bubble.bare-card::before,.msg-bubble.bare-card::after{display:none !important;}
+.msg-bubble.bare-card .sender-name{margin-bottom:5px;padding:0 2px;}
+/* 多选时仍要有可见的选中反馈，但落在卡片上而不是外框 */
+.msg-wrapper.multi-select .msg-bubble.bare-card{border:none !important;}
+.msg-wrapper.multi-select .msg-bubble.bare-card>*:not(.sender-name){
+  outline:2px solid var(--primary-dark,#3a86c9);outline-offset:2px;border-radius:16px;
+}
+</style>
+<script id="bareCardJs">
+(function () {
+  'use strict';
+  // 这些类型自带独立卡片，气泡外框要去掉
+  var BARE = { share_music: 1, diary: 1, takeout: 1, listen_invite: 1 };
+
+  function strip(el, msg) {
+    if (!el || !msg || !BARE[msg.type]) return el;
+    try {
+      var b = el.querySelector ? el.querySelector('.msg-bubble') : null;
+      if (b) b.classList.add('bare-card');
+    } catch (e) {}
+    return el;
+  }
+
+  function boot() {
+    if (typeof window.createMsgElement !== 'function') { setTimeout(boot, 400); return; }
+    if (window.__bareCard) return;
+    window.__bareCard = true;
+    var orig = window.createMsgElement;
+    window.createMsgElement = function (msg) {
+      return strip(orig.apply(this, arguments), msg);
+    };
+    // 已经渲染在屏上的历史消息补一遍
+    function sweep() {
+      try {
+        var msgs = (window.__state && window.__state.messages) || [];
+        var map = {};
+        msgs.forEach(function (m) { if (BARE[m.type]) map[m.id] = 1; });
+        document.querySelectorAll('#msgArea [data-msg-id]').forEach(function (w) {
+          if (!map[w.dataset.msgId]) return;
+          var b = w.querySelector('.msg-bubble');
+          if (b) b.classList.add('bare-card');
+        });
+      } catch (e) {}
+    }
+    sweep();
+    if (typeof window.renderMessages === 'function') {
+      var origRender = window.renderMessages;
+      window.renderMessages = function () {
+        var r = origRender.apply(this, arguments);
+        setTimeout(sweep, 0);
+        return r;
+      };
+    }
+  }
+  boot();
+})();
+</script>
+<!-- ============ 去框 结束 ============ -->
+<style id="bareCardThemeFix">
+/* 把所有主题的高优先级气泡背景一并压住，确保任何主题下音乐/日记/外卖/一起听卡都无外框 */
+html .msg-wrapper .msg-bubble.bare-card,
+html[data-morandi] .msg-wrapper.ai .msg-bubble.bare-card,
+html[data-morandi] .msg-wrapper.user .msg-bubble.bare-card,
+html[data-skin="pure"] .msg-wrapper.ai .msg-bubble.bare-card,
+html[data-skin="pure"] .msg-wrapper.user .msg-bubble.bare-card,
+html.phone-night .msg-wrapper.ai .msg-bubble.bare-card,
+html.phone-night .msg-wrapper.user .msg-bubble.bare-card,
+html.phone-dark .msg-wrapper.ai .msg-bubble.bare-card,
+html.phone-dark .msg-wrapper.user .msg-bubble.bare-card {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html .msg-bubble.bare-card::before,
+html .msg-bubble.bare-card::after { content: none !important; display: none !important; }
+html .msg-bubble.bare-card .sender-name { padding: 0 2px; margin-bottom: 4px; }
+</style>
+<!-- ============ 外卖 结束 ============ -->
+<!-- ============ 小手机 v6-32 一起听·角色主动切歌 ============ -->
+<style id="ltSwitchCss">
+.msg-wrapper .lt-switch-tip{max-width:82%;margin:6px auto;padding:7px 14px;border-radius:12px;background:rgba(140,212,240,0.12);color:#5a7c92;font-size:11.5px;line-height:1.7;text-align:center;}
+html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !important;color:#8fa9bd !important;}
+</style>
+<script id="ltSwitchJs">
+(function () {
+  'use strict';
+  function S() { return window.__state || {}; }
+  function DB() { return window.__db; }
+  function getChat(id) { return (S().chats || []).find(function (c) { return c.id === id; }); }
+  function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function togetherWith(charId) {
+    try {
+      var np = window.ltNowPlaying && window.ltNowPlaying();
+      if (np && np.together && np.together.charId === charId) return true;
+      var t = window.__ltTogetherWith;
+      if (t && t.charId === charId) return true;
+      var s = JSON.parse(localStorage.getItem('phone_lt_together_session') || 'null');
+      return !!(s && s.charId === charId);
+    } catch (e) { return false; }
+  }
+
+  // 角色换歌：真的把播放器切过去，聊天里只留一条很轻的痕迹，不解释原因
+  async function charSwitch(chatId, char, keyword, ts) {
+    var chat = getChat(chatId);
+    if (!togetherWith(char.id)) return null;
+    var song = null;
+    try { if (window.ltSearchSong) song = await window.ltSearchSong(keyword); } catch (e) {}
+    if (!song || !song.audio) return null;
+    try {
+      if (window.ltPlayInChat) window.ltPlayInChat({
+        audio: song.audio, source: song.source || 'netease', mid: song.id,
+        name: song.name, artist: song.artist, pic: song.pic
+      });
+    } catch (e) {}
+    try {
+      var log = JSON.parse(localStorage.getItem('phone_lt_switchlog') || '[]');
+      log.push({ charId: char.id, name: song.name, artist: song.artist, ts: Date.now() });
+      if (log.length > 30) log = log.slice(log.length - 30);
+      localStorage.setItem('phone_lt_switchlog', JSON.stringify(log));
+    } catch (e) {}
+    return {
+      id: uid(), chatId: chatId, sender: 'system', type: 'ltswitch',
+      charId: char.id, userId: chat && chat.userId,
+      content: '[' + (char.name || '\u4ed6') + '\u628a\u6b63\u5728\u542c\u7684\u6b4c\u6362\u6210\u4e86\u300a' + (song.name || '') + '\u300b'
+        + (song.artist ? (' - ' + song.artist) : '') + '\uff0c\u6ca1\u6709\u8bf4\u4e3a\u4ec0\u4e48]',
+      switchName: song.name || '', switchArtist: song.artist || '',
+      timestamp: ts || Date.now()
+    };
+  }
+
+  function buildSwitchTip(msg) {
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrapper system';
+    wrap.dataset.msgId = msg.id;
+    wrap.innerHTML = '<div class="lt-switch-tip">\ud83c\udfb5 \u6b4c\u88ab\u6362\u6210\u4e86\u300a' + esc(msg.switchName || '') + '\u300b'
+      + (msg.switchArtist ? (' \u00b7 ' + esc(msg.switchArtist)) : '') + '</div>';
+    return wrap;
+  }
+
+  function boot() {
+    if (!window.__state || typeof window.createMsgElement !== 'function') { setTimeout(boot, 500); return; }
+    if (window.__ltSwitch) return;
+    window.__ltSwitch = true;
+
+    var origCreate = window.createMsgElement;
+    window.createMsgElement = function (msg) {
+      if (msg && msg.type === 'ltswitch') return buildSwitchTip(msg);
+      return origCreate.apply(this, arguments);
+    };
+
+    if (typeof window.commitCharLine === 'function') {
+      var origCommit = window.commitCharLine;
+      window.commitCharLine = async function (chatId, char, line, ts) {
+        var m = String(line || '').trim().match(/^\[\u5207\u6b4c[:\uff1a]\s*(.+?)\]$/);
+        if (m) return await charSwitch(chatId, char, m[1].trim(), ts);
+        return origCommit.apply(this, arguments);
+      };
+    }
+
+    // 把「刚刚是我自己换的歌」塞进提示词，被追问时角色能自圆其说
+    if (typeof window.buildSystemPrompt === 'function') {
+      var origBSP = window.buildSystemPrompt;
+      window.buildSystemPrompt = function (chatId, char) {
+        var base = origBSP.apply(this, arguments);
+        try {
+          if (!char || !togetherWith(char.id)) return base;
+          var log = JSON.parse(localStorage.getItem('phone_lt_switchlog') || '[]')
+            .filter(function (x) { return x.charId === char.id && Date.now() - x.ts < 6 * 3600 * 1000; })
+            .slice(-3);
+          if (!log.length) return base;
+          var lines = log.map(function (x) {
+            var mins = Math.max(1, Math.round((Date.now() - x.ts) / 60000));
+            return '\u00b7 ' + mins + ' \u5206\u949f\u524d\u4f60\u628a\u6b4c\u6362\u6210\u4e86\u300a' + x.name + '\u300b'
+              + (x.artist ? ('\uff08' + x.artist + '\uff09') : '');
+          }).join('\n');
+          return base + '\n\n## \u4f60\u521a\u521a\u81ea\u5df1\u6362\u8fc7\u7684\u6b4c\n' + lines
+            + '\n\u8fd9\u51e0\u9996\u662f\u4f60\u4e3b\u52a8\u6362\u7684\uff0c\u5f53\u65f6\u5e76\u6ca1\u6709\u544a\u8bc9\u5bf9\u65b9\u539f\u56e0\u3002'
+            + '\u5982\u679c\u5bf9\u65b9\u95ee\u8d77\u4e3a\u4ec0\u4e48\u6362\u6b4c\uff0c\u4f60\u53ef\u4ee5\u968f\u53e3\u6572\u4e00\u53e5\u5e26\u8fc7\u53bb\u3001\u88c5\u50bb\u3001\u53cd\u95ee\u56de\u53bb\uff0c'
+            + '\u4e5f\u53ef\u4ee5\u5728\u60c5\u7eea\u4e0a\u6765\u6216\u5173\u7cfb\u591f\u8fd1\u65f6\u8bf4\u771f\u8bdd\u3002\u6839\u636e\u4eba\u8bbe\u548c\u6b64\u523b\u5fc3\u60c5\u81ea\u5df1\u5b9a\uff0c\u4e0d\u8981\u6bcf\u6b21\u90fd\u8001\u5b9e\u4ea4\u4ee3\u3002';
+        } catch (e) {}
+        return base;
+      };
+    }
+  }
+  boot();
+})();
+</script>
+<!-- ============ 一起听切歌 结束 ============ -->
+<!-- ============ 小手机 v6-33 文本编码智能识别（修番茄小说等无 BOM UTF-16 txt 乱码） ============ -->
+<script id="smartDecodeJs">
+(function () {
+  'use strict';
+  // 中文 txt 常见来源：UTF-8(带/不带 BOM)、GBK/GB18030、UTF-16LE/BE（很多小说站导出不带 BOM）、Big5。
+  // 老逻辑「严格 UTF-8 解不通就当 GBK」在无 BOM 的 UTF-16 上必错：
+  // UTF-16LE 里「的」是 84 76，0x84 不是合法 UTF-8 前导字节 → 严格解码抛错 → 被 GB18030 硬解成一堆乱码汉字。
+  // 这里改成：每种候选编码都解一段样本，按「像不像正常中文」打分，取最高分那个。
+  var CANDIDATES = ['utf-8', 'gb18030', 'utf-16le', 'utf-16be', 'big5'];
+
+  function score(s) {
+    if (!s) return -1e9;
+    var good = 0, bad = 0, nul = 0;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c === 0) { nul++; continue; }
+      if (c === 0xFFFD) { bad += 12; continue; }               // 替换符 = 解错了
+      if (c === 10 || c === 13 || c === 9) { good += 1; continue; }
+      if (c < 0x20) { bad += 6; continue; }                     // 正文不该有控制字符
+      if (c <= 0x7E) { good += 1; continue; }                   // ASCII
+      if (c >= 0x4E00 && c <= 0x9FFF) { good += 3; continue; }  // 常用汉字，权重高
+      if (c >= 0x3000 && c <= 0x303F) { good += 3; continue; }  // 中文标点
+      if (c >= 0xFF00 && c <= 0xFFEF) { good += 2; continue; }  // 全角
+      if (c >= 0x3400 && c <= 0x4DBF) { good += 1; continue; }  // 扩展 A：少量生僻字正常
+      if (c >= 0xE000 && c <= 0xF8FF) { bad += 4; continue; }   // 私用区，基本是解错
+      if (c >= 0x2000 && c <= 0x27BF) { good += 1; continue; }  // 破折号/引号等常见符号
+      if (c >= 0x00A0 && c <= 0x02FF) { bad += 1; continue; }   // 拉丁扩展：中文 txt 里成片出现就可疑
+      bad += 2;
+    }
+    // NUL 一大片 = 把 UTF-16 当单字节编码读了
+    return good - bad - nul * 8;
+  }
+
+  function tryDecode(bytes, enc) {
+    try { return new TextDecoder(enc).decode(bytes); } catch (e) { return null; }
+  }
+  function clean(s) {
+    // 去掉残留 BOM 和 NUL；NUL 带进正文会让分页和渲染出问题
+    return String(s || '').replace(/^\uFEFF/, '').replace(/\u0000/g, '');
+  }
+
+  function decodeTextBuf(buf) {
+    if (buf == null) return '';
+    var bytes = (buf instanceof Uint8Array) ? buf : new Uint8Array(buf);
+    if (!bytes.length) return '';
+
+    // 1) 有 BOM 就直接信 BOM
+    if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return clean(tryDecode(bytes.subarray(3), 'utf-8') || '');
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) return clean(tryDecode(bytes.subarray(2), 'utf-16le') || '');
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) return clean(tryDecode(bytes.subarray(2), 'utf-16be') || '');
+
+    // 2) 严格 UTF-8 能整份解通就是 UTF-8（最常见，快速路径）
+    try {
+      var strict = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      if (strict) return clean(strict);
+    } catch (e) {}
+
+    // 3) 打分选编码：只取前 64KB 当样本，长篇小说也不会卡
+    var sample = bytes.subarray(0, Math.min(bytes.length, 65536));
+    if (sample.length % 2) sample = sample.subarray(0, sample.length - 1); // 按偶数截，别把 UTF-16 码元切一半
+    var best = null, bestScore = -1e9;
+    for (var i = 0; i < CANDIDATES.length; i++) {
+      var txt = tryDecode(sample, CANDIDATES[i]);
+      if (txt == null) continue;
+      var sc = score(txt);
+      if (sc > bestScore) { bestScore = sc; best = CANDIDATES[i]; }
+    }
+    if (!best) best = 'gb18030';
+    return clean(tryDecode(bytes, best) || tryDecode(bytes, 'gb18030') || '');
+  }
+
+  window.__decodeTextBuf = decodeTextBuf;
+})();
+</script>
+<!-- ============ 编码识别 结束 ============ -->
+
+
