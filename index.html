@@ -35,7 +35,7 @@
     ╔══════════════════════════════════════════════════════════════════════╗
     ║  补丁目录索引（维护导航用 · 只读注释，不影响任何逻辑）
     ║  ──────────────────────────────────────────────────────────────────
-    ║  说明：本文件采用「本体 + 大量增量补丁」结构。每个补丁是一个
+    ║  说明（喵喵喵欢迎游玩一只机）：本文件采用「本体 + 大量增量补丁」结构。每个补丁是一个
     ║        <script id="phoneXxxJs"> 或 <style id="phoneXxxCss"> 块，
     ║        按出现顺序加载，后加载的补丁会覆盖/包装前面的同名函数。
     ║        改动前请先看清目标函数被哪些补丁包装，避免断链。
@@ -1858,8 +1858,8 @@ if (typeof Dexie === 'undefined') {
 
         /* ---------- 角色分享音乐·白色系精致大卡 ---------- */
         .music-share-card {
-            position: relative; display: flex; align-items: center; gap: 12px; width: 250px; max-width: 78vw;
-            padding: 11px 13px; border-radius: 18px; cursor: pointer;
+            position: relative; display: flex; align-items: center; gap: 9px; width: 200px; max-width: 62vw;
+            padding: 8px 10px; border-radius: 14px; cursor: pointer;
             background: linear-gradient(160deg, #ffffff 0%, #f6f8fe 100%);
             border: 1px solid rgba(120,140,190,0.14);
             box-shadow: 0 6px 20px rgba(80,100,150,0.10), inset 0 1px 0 rgba(255,255,255,0.9);
@@ -1868,7 +1868,7 @@ if (typeof Dexie === 'undefined') {
         }
         .music-share-card:active { transform: scale(0.975); box-shadow: 0 3px 12px rgba(80,100,150,0.12); }
         .music-share-card .msc-cover {
-            position: relative; width: 52px; height: 52px; border-radius: 13px; flex-shrink: 0; overflow: hidden;
+            position: relative; width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; overflow: hidden;
             background: linear-gradient(135deg,#eaeefaff,#dfe5f4); box-shadow: 0 4px 12px rgba(70,90,140,0.16);
             display: flex; align-items: center; justify-content: center; color: #9aa6c4;
         }
@@ -1887,10 +1887,10 @@ if (typeof Dexie === 'undefined') {
         .music-share-card .msc-play svg { position: absolute; width: 13px; height: 13px; fill: #4b5a80; }
         .music-share-card:active .msc-play, .music-share-card.playing .msc-play { opacity: 1; }
         .music-share-card .msc-info { flex: 1; min-width: 0; }
-        .music-share-card .msc-tag { font-size: 10.5px; color: #8b96b3; letter-spacing: .4px; display: flex; align-items: center; gap: 4px; }
+        .music-share-card .msc-tag { font-size: 9.5px; color: #8b96b3; letter-spacing: .3px; display: flex; align-items: center; gap: 3px; }
         .music-share-card .msc-tag::before { content: '♪'; color: #8fa6e0; font-size: 11px; }
-        .music-share-card .msc-title { font-size: 14.5px; font-weight: 700; color: #2b3245; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
-        .music-share-card .msc-artist { font-size: 12px; color: #99a2ba; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .music-share-card .msc-title { font-size: 12.5px; font-weight: 700; color: #2b3245; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .music-share-card .msc-artist { font-size: 10.5px; color: #99a2ba; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
         .music-share-card .msc-wave { display: flex; align-items: flex-end; gap: 2.5px; height: 18px; flex-shrink: 0; padding-right: 2px; }
         .music-share-card .msc-wave i { width: 2.5px; border-radius: 2px; background: linear-gradient(#a9c0f0,#8fa6e0); height: 6px; animation: mscWave 1s ease-in-out infinite; animation-play-state: paused; opacity: .55; }
         .music-share-card.playing .msc-wave i { animation-play-state: running; opacity: 1; }
@@ -5099,14 +5099,15 @@ ${groupTimeInfo}
 - 分享音乐: [分享音乐: 歌名 歌手]
 说人话，口语化，有语气、有情绪、可以短。这些动作标签要写在对应角色那一行的内容里（如 [小红] [群转账: 小明 5 请你喝奶茶]）。绝对禁止把以上任何规则、格式说明原样输出出来。${wantVoice ? `
 
-## 🫧 顺带写：这轮开口的人的心声（不额外发请求）
-在你输出完上面所有 [角色名] 消息之后，再为**这一轮真正开口说了话的每个角色**，各写一行 ta 此刻没说出口的真实心里话（心声/内心OS），格式：
-[心声: 角色名 | 这里写这个角色的心里话]
+## 🫧【本次输出的强制组成部分 · 必写】这轮开口的人的心声
+⚠️这不是可选任务：在你输出完上面所有 [角色名] 消息之后，你【必须】为**这一轮真正开口说了话的每个角色**，各补一行 ta 此刻没说出口的真实心里话（心声/内心OS）。缺了这些心声行，本次输出视为不完整、不合格。
+格式（必须一字不差用这个格式，每人各一行）→  [心声: 角色名 | 这里写这个角色的心里话]
 例如：
 [心声: ${chars[0]?.name || '小明'} | 嘴上这么说，其实还挺在意她刚那句话的]
-- 只给这轮开口的人写，潜水没说话的人不用写。
+- 只给这轮开口的人写，潜水没说话的人不用写；但凡开口的人，【每个都要有】对应的心声行，不能漏。
 - 用第一人称，口语、真实、10~40 个字，可以和 ta 嘴上说的不一样（口是心非/嘴硬心软/吐槽/害羞都行），紧贴刚刚群里的对话。
-- 心声行统一写在最后，不要和上面的聊天消息混在一起。这些 [心声:] 行不会作为群消息发出去，只存进「点头像看心声」给玩家看。` : ''}`;
+- 所有 [心声:] 行统一写在最后，不要和上面的聊天消息混在一起。这些行不会作为群消息发出去，只存进「点头像看心声」给玩家看，所以放心写真心话。
+- 再强调一次：这轮开口的每个人，最后【都必须】有一行 [心声: 名字 | ...]，这是硬性要求，不能省略。` : ''}`;
         }
 
         // 群聊一次编排：一次 API 请求，导演输出多条带 [角色名] 前缀的消息，
@@ -5122,14 +5123,8 @@ ${groupTimeInfo}
             chars.forEach(c => byName.set((c.name || '').trim(), c));
 
             const memoryCount = state.settings.globalMemory || 20;
-            // 心声节流：群里人少每轮都写；人多（>3）时每隔几轮才写一次，省 token 也更自然
+            // 心声每轮都写（不再节流）：反正是同一次请求里顺带写，不额外发 API
             let wantVoice = true;
-            try {
-                if (chars.length > 3) {
-                    const gc = (getMessages(chatId) || []).length;
-                    wantVoice = (Math.floor(gc / 3) !== Math.floor((gc - 1) / 3)); // 大约每 3 条消息才要一次
-                }
-            } catch (e) { wantVoice = true; }
             const systemPrompt = buildGroupDirectorPrompt(chat, chars, wantVoice);
             const history = buildGroupHistory(chatId, memoryCount);
             const messages = [{ role: 'system', content: systemPrompt }, ...history];
@@ -5483,8 +5478,15 @@ ${groupTimeInfo}
                 const statusText = isReceive ? '已接收' : '已退回';
                 const pending = state.messages.filter(m => m.chatId === chatId && m.sender === 'user' && m.type === 'transfer' && (!m.status || m.status === '待处理')).sort((a, b) => b.timestamp - a.timestamp);
                 if (pending.length) {
-                    pending[0].status = statusText;
-                    await db.messages.put(pending[0]);
+                    const target = pending[0];
+                    target.status = statusText;
+                    await db.messages.put(target);
+                    // 退回：把钱退回钱包
+                    if (!isReceive && !target._walletRefunded) {
+                        target._walletRefunded = true;
+                        try { if (typeof window.__v66income === 'function') window.__v66income(target.amount, '转账退回' + (target.note ? (' · ' + target.note) : '')); } catch (e) {}
+                        await db.messages.put(target);
+                    }
                     if (state.currentChatId === chatId) renderMessages(chatId);
                 }
                 return null;
@@ -5679,6 +5681,12 @@ ${groupTimeInfo}
                 state.messages.push(msg);
                 try { await db.messages.put(msg); } catch (e2) {}
                 if (state.currentChatId === chatId) renderMessages(chatId);
+
+                // 标记查手机操作已消费
+                if (char && char.phoneInspect && Array.isArray(char.phoneInspect.playerActions)) {
+                    char.phoneInspect.playerActions.forEach(function (a) { a.consumed = true; });
+                    try { await db.characters.put(char); } catch (e) { console.warn('[查手机] 标记消费失败', e); }
+                }
             } finally {
                 state.typingChars.delete(char.id);
                 updateTypingIndicator();
@@ -9418,6 +9426,34 @@ ${groupTimeInfo}
         var tip = status === '已收款' ? (uname + ' 收下了转账 ¥' + Number(msg.amount).toFixed(2)) : (uname + ' 退回了转账 ¥' + Number(msg.amount).toFixed(2));
         pushSysTip(msg.chatId, tip, Date.now());
         if (S().currentChatId === msg.chatId) window.renderMessages(msg.chatId);
+        
+        // 收款：给玩家钱包加钱
+        if (status === '已收款' && !msg._walletReceived) {
+            msg._walletReceived = true;
+            try {
+                if (typeof window.__v66income === 'function') {
+                    var char = getChar(msg.charId);
+                    var fromName = (char && char.name) || 'ta';
+                    window.__v66income(msg.amount, fromName + ' 转账' + (msg.note ? (' · ' + msg.note) : ''));
+                }
+                persistMsg(msg);
+            } catch (e) {}
+        }
+        
+        // 退回转账：如果是角色手机发出的转账被退回，把钱退回角色余额
+        if (status === '已退回' && msg.pmFromInspect && !msg._pmRefunded) {
+            msg._pmRefunded = true;
+            try {
+                var char = getChar(msg.charId);
+                if (char && char.phoneInspect && char.phoneInspect.wechat) {
+                    var p = char.phoneInspect;
+                    p.wechat.balance = pmRound(p.wechat.balance + msg.amount);
+                    p.wechat.records.push({ id: pmUid(), type: 'in', amount: msg.amount, note: '转账退回' + (msg.note ? ' · ' + msg.note : ''), time: Date.now() });
+                    await pmSaveChar(char);
+                }
+                persistMsg(msg);
+            } catch (e) {}
+        }
     }
 
     // ============ 群聊转账：选择指定成员 ============
@@ -10323,7 +10359,7 @@ ${groupTimeInfo}
             if (window.ltStartTogetherFromChat) {
                 window.ltStartTogetherFromChat(chat && chat.charId, {
                     name: inv.shareTitle, artist: inv.shareArtist,
-                    id: inv.musicId, mid: inv.musicId, source: inv.musicSource || 'netease', pic: inv.sharePic
+                    id: inv.musicId, mid: inv.musicId, source: inv.musicSource || 'netease', pic: inv.sharePic, audio: inv.shareAudio
                 });
             }
         } catch (e) {}
@@ -11334,7 +11370,7 @@ ${groupTimeInfo}
                 '<div class="wr-amt ' + (r.type === 'in' ? 'in' : 'out') + '">' + (r.type === 'in' ? '+' : '-') + fmt(r.amount) + '</div></div>';
         }).join('') : '<div class="wallet-empty">还没有收支记录</div>';
         page.innerHTML =
-            '<div class="app-header"><span class="back">‹</span><span class="title">' + name + '</span><span style="width:36px;"></span></div>' +
+            '<div class="app-header"><span class="back">‹</span><span class="title">' + name + '</span><button class="action-text" id="walletClearBtn" style="font-size:13px;color:#e06c62;">清空</button></div>' +
             '<div class="scroll-content">' +
             '<div class="wallet-balance-card ' + cls + '"><div class="wb-label"><span class="icon-sm">' + icon + '</span>零钱余额</div>' +
             '<div class="wb-amount"><small>¥</small>' + fmt(acc.balance) + '</div></div>' +
@@ -11344,6 +11380,16 @@ ${groupTimeInfo}
         page.querySelector('.back').addEventListener('click', goHome);
         page.querySelectorAll('[data-op]').forEach(function (b) {
             b.addEventListener('click', function () { opWallet(key, b.dataset.op); });
+        });
+        var clearBtn = page.querySelector('#walletClearBtn');
+        if (clearBtn) clearBtn.addEventListener('click', function () {
+            window.showModal && window.showModal('确认清空', '确认将' + name + '余额和记录全部清零？此操作无法撤销。', '清空', async function () {
+                var w = W();
+                w[key].balance = 0;
+                w[key].records = [];
+                await saveW();
+                renderWalletPage(page, key);
+            }, true);
         });
     }
 
@@ -13468,15 +13514,17 @@ ${groupTimeInfo}
     /* 3. 任意位置都能横滑翻页：把图标上的横向手势交给 pager */
     #homePager .home-grid .home-icon { touch-action: pan-x; }
 
-    /* 2. 应用图标玻璃透明质感 */
-    html[data-appglass] #homePager .home-grid .home-icon {
+    /* 2. 应用图标质感 —— 磨砂玻璃（frost，兼容老数据 1） */
+    html[data-appglass="frost"][data-appglass] .home-grid .home-icon,
+    html[data-appglass="1"][data-appglass] .home-grid .home-icon {
         background: rgba(255,255,255,0.16) !important;
         -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
         backdrop-filter: blur(14px) saturate(160%) !important;
         border: 1px solid rgba(255,255,255,0.28) !important;
         box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important;
     }
-    html[data-appglass] #homePager .home-grid .home-icon .icon-wrap {
+    html[data-appglass="frost"][data-appglass] .home-grid .home-icon .icon-wrap,
+    html[data-appglass="1"][data-appglass] .home-grid .home-icon .icon-wrap {
         background: rgba(255,255,255,0.22) !important;
         -webkit-backdrop-filter: blur(8px) !important; backdrop-filter: blur(8px) !important;
         box-shadow: inset 0 1px 2px rgba(255,255,255,0.4) !important;
@@ -13508,24 +13556,34 @@ ${groupTimeInfo}
         window.__applyHomeWallpaper = applyHomeWallpaper; // 覆盖 v5-16 版本，上传后即生效
         applyHomeWallpaper();
 
-        // ---------- 2. 图标玻璃质感开关 ----------
-        function glassOn() { try { return localStorage.getItem('phone_app_glass') === '1'; } catch (e) { return false; } }
-        function applyGlass(on) {
-            if (on) document.documentElement.setAttribute('data-appglass', '1');
-            else document.documentElement.removeAttribute('data-appglass');
-            try { localStorage.setItem('phone_app_glass', on ? '1' : '0'); } catch (e) {}
+        // ---------- 2. 图标质感开关：关闭 / 磨砂玻璃 ----------
+        function glassMode() {
+            try {
+                var v = localStorage.getItem('phone_app_glass') || '';
+                if (v === '1' || v === 'frost') return 'frost';   // 兼容老数据 '1'
+                return 'off';
+            } catch (e) { return 'off'; }
         }
-        applyGlass(glassOn());
+        function applyGlass(mode) {
+            if (mode === 'frost') document.documentElement.setAttribute('data-appglass', mode);
+            else document.documentElement.removeAttribute('data-appglass');
+            try { localStorage.setItem('phone_app_glass', mode === 'frost' ? 'frost' : '0'); } catch (e) {}
+        }
+        applyGlass(glassMode());
 
         function injectGlassToggle() {
             var group = document.getElementById('v23Group'); // 应用图标那栏
             if (!group || group.querySelector('#v25GlassRow')) return;
+            var m = glassMode();
             var row = document.createElement('div');
             row.className = 'setting-row';
             row.id = 'v25GlassRow';
-            row.innerHTML = '<label>图标玻璃透明质感</label><select id="v25Glass"><option value="0"' + (!glassOn() ? ' selected' : '') + '>关闭</option><option value="1"' + (glassOn() ? ' selected' : '') + '>开启</option></select>';
+            row.innerHTML = '<label>图标质感</label><select id="v25Glass">'
+                + '<option value="off"' + (m === 'off' ? ' selected' : '') + '>关闭</option>'
+                + '<option value="frost"' + (m === 'frost' ? ' selected' : '') + '>磨砂玻璃</option>'
+                + '</select>';
             group.appendChild(row);
-            document.getElementById('v25Glass').addEventListener('change', function () { applyGlass(this.value === '1'); });
+            document.getElementById('v25Glass').addEventListener('change', function () { applyGlass(this.value); });
         }
 
         // 回到桌面 / 进设置时重应用
@@ -16192,7 +16250,8 @@ html.phone-night .fcm .c-reply.evil{color:#e0776f !important;}
             });
             fresh.forEach(function (p) { dd.posts.push(p); });
             F.saveFD(dd);
-            if (token === F._refreshToken && onForumHome() && F.renderFeed) F.renderFeed();
+            // 帖子先落盘，再尝试重绘：在论坛首页就整页重建（从 localStorage 重读，杜绝停在旧空态），否则等下次进入自然读
+            if (token === F._refreshToken && onForumHome()) { if (F.render) F.render('home'); else if (F.renderFeed) F.renderFeed(); }
 
             // 帖子刷出来后，立刻并发为每个帖子生成「不少于10条」评论，让每条帖子一出现就自带满评论区
             if (typeof F.genComments === 'function') {
@@ -18104,6 +18163,8 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
       w.wechat.records.push({id:uid(),type:'in',amount:amount,note:note,ts:Date.now()});
       saveW();
     }
+    // 暴露给外部补丁（退回转账退款用）
+    window.__v66income = income;
 
     function settle(m){
       if(!m||typeof m!=='object')return;
@@ -19712,7 +19773,68 @@ html.phone-night .vc-hint-sys .vc-hint-view{color:#8fbfae;}
     }
     function openPicker(){
       var id=($('editCharId')||{}).value||'';
-      var imgs=((S().settings&&S().settings.genImages)||[]).filter(function(r){return r.charId===id&&r.url;});
+      var s=S();
+      var seen={};
+      var imgs=[];
+      // 1) 先取 genImages 里明确属于这个角色的
+      ((s.settings&&s.settings.genImages)||[]).forEach(function(r){
+        if(!r||!r.url)return;
+        if(r.charId!==id)return;
+        if(seen[r.url])return;
+        seen[r.url]=1;imgs.push(r);
+      });
+      // 2) 兜底：从聊天记录里捞这个角色发过的真实图片
+      //    有些画图链路没把 char 传进兜底记录，genImages 里的 charId 会是 null，
+      //    只按 charId 过滤会导致"明明发过图却说没有"。
+      var mkId=window.uid?window.uid:function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);};
+      function isRealImg(u){
+        if(!u||typeof u!=='string')return false;
+        if(u.indexOf('picsum.photos')>=0)return false;
+        return /^data:image\//.test(u)||/^https?:\/\//.test(u);
+      }
+      ((s.messages)||[]).forEach(function(m){
+        if(!m||m.isDeleted)return;
+        if(m.sender!=='ai')return;
+        if(m.charId!==id)return;
+        var u=m.imageUrl||'';
+        if(!isRealImg(u))return;
+        if(m.isSticker)return;
+        if(seen[u])return;
+        seen[u]=1;
+        imgs.push({id:'msg_'+m.id,charId:id,charName:'',ts:m.timestamp||0,desc:m.desc||m.content||'',prompt:'',url:u});
+      });
+      // 3) 再兜一层：genImages 里 charId 为空、但这个角色确实发过图时也列出来供勾选
+      if(!imgs.length){
+        ((s.settings&&s.settings.genImages)||[]).forEach(function(r){
+          if(!r||!r.url||seen[r.url])return;
+          if(r.charId)return;      // 已明确归属别人的不混进来
+          seen[r.url]=1;imgs.push(r);
+        });
+      }
+      imgs.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+      // 把从消息里补出来的图回写进 genImages，让后续 img2img 能按 id 找到
+      if(imgs.length){
+        if(!s.settings)s.settings={};
+        if(!Array.isArray(s.settings.genImages))s.settings.genImages=[];
+        var existing={};
+        s.settings.genImages.forEach(function(r){if(r&&r.url)existing[r.url]=r;});
+        var changed=false;
+        imgs.forEach(function(r){
+          if(existing[r.url]){
+            // 顺手把缺失的 charId 补上，修正历史数据
+            if(!existing[r.url].charId){existing[r.url].charId=id;changed=true;}
+          }else{
+            s.settings.genImages.unshift(r);changed=true;
+          }
+        });
+        if(changed){
+          if(s.settings.genImages.length>40)s.settings.genImages=s.settings.genImages.slice(0,40);
+          try{
+            if(typeof window.saveSettings==='function')window.saveSettings();
+            else if(window.__db&&window.__db.settings)window.__db.settings.put(Object.assign({id:'main'},s.settings));
+          }catch(e){}
+        }
+      }
       if(!imgs.length){window.showModal('还没有图片','这个角色还没有生成过图片。先让ta发一张图，之后这里就能勾选做参考。','好的');return;}
       if(!cur.sel)cur.sel=[];
       var grid='<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">勾选作为该角色的面部/发型/配饰参考。</div>'+
@@ -30077,6 +30199,12 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
     function closeApp() { var app = document.getElementById('lt-app'); if (app) app.classList.remove('show'); }
     window.openListenTogether = openApp;
+    // 暴露给查手机等外部模块调用
+    window.__ltPlaySong = function (title, artist) {
+        var song = { id: 'pm_' + Date.now(), source: 'netease', name: title || '未知歌曲', artist: artist || '' };
+        if (!document.getElementById('lt-app')) { openApp(); }
+        playSong(song);
+    };
 
     // ---------- 供聊天里的「一起听邀请」调用：角色同意后，在一起听应用里开始一起听 + 记录时长 ----------
     var LS_TG = 'phone_lt_together_session';
@@ -34182,7 +34310,7 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       if (!box) return;
       var rules = listFor(chat);
       if (!rules.length) {
-        box.innerHTML = '<div class="rgx-empty">还没有正则规则。<br>点下面「新建正则」加一条，效果和酒馆的正则一样：命中就替换，绝对执行。</div>';
+        box.innerHTML = '<div class="rgx-empty">还没有正则规则。<br>点下面「新建正则」加一条，命中就绝对执行。</div>';
         return;
       }
       var TRASH = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
@@ -34917,35 +35045,20 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
         }
 
         // —— 附加任务 D：顺带写下此刻的心声（不额外发请求，玩家点头像才看得到）——
-        // 「两次回应内至少一条」兜底：算这个角色距上次产出心声，之后又发了几条消息。
-        // 如果 ≥2 条还没写新心声（或从没写过），这轮就强制补写，并把心声任务提到最前、语气加重。
+        // 心声改为「每轮硬性强制」：措辞升级为铁律、加示例、并永远置顶，
+        // 最大限度避免被模型忽略或被其它顺带任务挤掉。（仍是同一次请求，不额外发 API）
         tasks.voice = true;
-        var forceVoice = false;
-        try {
-          var lastVoiceTs = (typeof window.__hvVoiceGap === 'function') ? window.__hvVoiceGap(char.id) : 0;
-          var msgs = window.getMessages ? window.getMessages(chat.id) : [];
-          var aiSince = 0;
-          for (var vi = 0; vi < msgs.length; vi++) {
-            var mm = msgs[vi];
-            if (mm && mm.sender !== 'user' && (!mm.charId || mm.charId === char.id) && (mm.timestamp || 0) > lastVoiceTs) aiSince++;
-          }
-          // 从没写过，或距上次心声已隔 ≥2 条该角色消息 → 强制补
-          if (!lastVoiceTs || aiSince >= 2) forceVoice = true;
-        } catch (e) {}
-        var voiceBlock = '\n\n## 🫧 顺带写一句：你此刻没说出口的心声\n' +
-          '在这次回复的最后，另起一行写下「' + char.name + '」此刻心里真实的、没说出口的那句话（心声/内心OS）：可以是吐槽、口是心非、害羞、破防、在意、小情绪等，紧贴刚刚这轮对话。\n' +
-          '格式 →  [心声: 这里写心里话]\n' +
-          '- 用第一人称，口语、真实、有活人感，10~40 个字，一两句就好，不要旁白动作、不要引号。\n' +
-          '- 这一行不会作为聊天消息发出去，只存进「点头像看心声」那里给玩家看。' +
-          (forceVoice
-            ? '\n- ⚠️这一轮【必须】写心声，不能省略、不能跳过，无论如何都要在回复最后补上这一行 [心声: ...]。'
-            : '\n- 尽量每轮都写。');
-        if (forceVoice) {
-          // 提到最前，降低被其它顺带任务挤掉的概率
-          extra = voiceBlock + extra;
-        } else {
-          extra += voiceBlock;
-        }
+        var voiceBlock = '\n\n## 🫧【本次回复的强制组成部分 · 必写】你此刻没说出口的心声\n' +
+          '⚠️这不是可选任务：你这次回复的【最后一行】必须写一句「' + char.name + '」此刻心里真实的、没说出口的话（心声/内心OS）。无论前面聊了什么、有没有别的顺带任务，都不能省略、不能跳过——缺了这一行，本次回复视为不完整、不合格。\n' +
+          '格式（必须一字不差用这个格式，单独成行）→  [心声: 这里写心里话]\n' +
+          '内容要求：可以是吐槽、口是心非、害羞、破防、在意、小情绪等，紧贴刚刚这轮对话。用第一人称，口语、真实、有活人感，10~40 个字，一两句就好，不要旁白动作、不要引号。\n' +
+          '示例（正常回复完之后，最后补上心声行）：\n' +
+          '  好啦好啦知道了\n' +
+          '  [心声: 嘴上答应得爽快，其实心里还在为刚才那句话不是滋味]\n' +
+          '- 这一行不会作为聊天消息发出去，只存进「点头像看心声」给玩家看，所以放心写真心话。\n' +
+          '- 再强调一次：本次回复的最后【一定】要有 [心声: ...] 这一行，这是硬性要求。';
+        // 永远置顶，作为最优先的强制输出项
+        extra = voiceBlock + extra;
 
         if (extra) {
           window.__mergedCtx[char.id] = tasks;
@@ -35495,10 +35608,21 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
       }catch(e){}
     }
 
+    // char 没传进来时，从当前聊天推断是哪个角色在发图，避免 charId 记成 null
+    function guessChar(char){
+      if(char&&char.id)return char;
+      try{
+        var s=S();
+        var chat=(s.chats||[]).find(function(c){return c.id===s.currentChatId;});
+        if(!chat||chat.type==='group')return char;
+        return (s.characters||[]).find(function(c){return c.id===chat.charId;})||char;
+      }catch(e){return char;}
+    }
+
     var prevGen=window.generateRealImage;
     window.generateRealImage=async function(description,char){
       var url=await prevGen(description,char);
-      ensureRecord(char,description,url);
+      ensureRecord(guessChar(char),description,url);
       return url;
     };
   }
@@ -39155,8 +39279,8 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
   // ==========================================================
   function renderTide() {
     var v = $('fgViewTide');
+    if (!v) return;          // DOM 未建时静默跳过，不要报 null 错
     var list = posts().slice().sort(function (a, b) { return b.ts - a.ts; });
-    var c = cfg();
 
     var head =
       '<div class="fg-mepost" id="fgMePost">' +
@@ -39444,7 +39568,7 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
 
   function renderLetter() {
     var v = $('fgViewLetter');
-    var cs = chars();
+    if (!v) return;
     var arr = letters().slice().sort(function (a, b) { return b.writeAt - a.writeAt; });
 
     if (!ltDraft.to && cs.length) ltDraft.to = cs[0].id;
@@ -39622,9 +39746,10 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
 
   function renderBook() {
     var v = $('fgViewBook');
+    if (!v) return;
     var cs = chars();
     if (!cs.length) {
-      v.innerHTML = '<div class="fg-empty"><span class="big">\u2751</span>\u8fd8\u6ca1\u6709\u4eba\u8bbe\u3002</div>';
+      v.innerHTML = '<div class="fg-empty"><span class="big">✧</span>还没有人设。</div>';
       return;
     }
     if (!bkWho || !getChar(bkWho)) bkWho = cs[0].id;
@@ -44449,29 +44574,88 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
   function uid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+  // 是否正在和这个角色一起听（多路兜底：应用状态 / 内存 / localStorage / 聊天里已接受的邀请）
   function togetherWith(charId) {
     try {
       var np = window.ltNowPlaying && window.ltNowPlaying();
       if (np && np.together && np.together.charId === charId) return true;
       var t = window.__ltTogetherWith;
       if (t && t.charId === charId) return true;
-      var s = JSON.parse(localStorage.getItem('phone_lt_together_session') || 'null');
-      return !!(s && s.charId === charId);
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem('phone_lt_together_session') || 'null'); } catch (e1) {}
+      if (s && s.charId === charId) return true;
+      try { s = JSON.parse(localStorage.getItem('phone_lt_together') || 'null'); } catch (e2) {}
+      if (s && s.charId === charId) return true;
+      // 兜底：聊天里那张「一起听」邀请卡已经是 accepted，也算正在一起听
+      var msgs = S().messages || [];
+      for (var i = msgs.length - 1; i >= 0; i--) {
+        var m = msgs[i];
+        if (!m || m.type !== 'listen_invite' || m.isDeleted) continue;
+        if (m.inviteStatus !== 'accepted') continue;
+        var c = getChat(m.chatId);
+        if (c && c.charId === charId) return true;
+      }
+      return false;
     } catch (e) { return false; }
   }
 
-  // 角色换歌：真的把播放器切过去，聊天里只留一条很轻的痕迹，不解释原因
-  async function charSwitch(chatId, char, keyword, ts) {
+  // 搜歌：原词搜不到就层层退让（去括号 → 去「歌名 - 歌手」的歌手段 → 只用歌名），别一次失败就当没换
+  async function findSong(keyword) {
+    if (!window.ltSearchSong) return null;
+    var kw = String(keyword || '').replace(/[《》"'“”]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!kw) return null;
+    var tries = [kw];
+    function push(x) { x = (x || '').trim(); if (x && tries.indexOf(x) < 0) tries.push(x); }
+    push(kw.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' '));
+    var seg = kw.split(/\s*[-–—|、,，·]\s*/).filter(Boolean);
+    if (seg.length > 1) push(seg[0]);
+    push(kw.split(' ')[0]);
+    for (var i = 0; i < tries.length; i++) {
+      try {
+        var s = await window.ltSearchSong(tries[i]);
+        if (s && s.audio) return s;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  // 角色换歌：真的把播放器切过去；切不了就说人话，绝不能"嘴上说换了其实没换"
+  async function charSwitch(chatId, char, keyword, ts, hasRestText) {
     var chat = getChat(chatId);
-    if (!togetherWith(char.id)) return null;
-    var song = null;
-    try { if (window.ltSearchSong) song = await window.ltSearchSong(keyword); } catch (e) {}
-    if (!song || !song.audio) return null;
+    var song = await findSong(keyword);
+    if (!song || !song.audio) {
+      if (hasRestText) return null;   // 同一行还有正文，让那句话照常发，别再加一条
+      return {
+        id: uid(), chatId: chatId, sender: 'ai', type: 'text',
+        charId: char.id, userId: chat && chat.userId,
+        content: '（想把歌换成《' + keyword + '》，结果没搜到这首）',
+        timestamp: ts || Date.now()
+      };
+    }
+    var already = togetherWith(char.id);
+    var payload = {
+      audio: song.audio, source: song.source || 'netease', mid: song.id, id: song.id,
+      name: song.name, artist: song.artist, pic: song.pic
+    };
+    var switched = false;
     try {
-      if (window.ltPlayInChat) window.ltPlayInChat({
-        audio: song.audio, source: song.source || 'netease', mid: song.id,
-        name: song.name, artist: song.artist, pic: song.pic
-      });
+      if (!already && window.ltStartTogetherFromChat) {
+        // 还没建立一起听会话（角色自己起头换歌）：顺手建上，它内部会直接播这首
+        window.ltStartTogetherFromChat(char.id, payload);
+        switched = true;
+      } else if (window.ltPlayInChat) {
+        window.ltPlayInChat(payload);
+        switched = true;
+      }
+    } catch (e) {}
+    if (!switched) return null;
+    // 把「当前在听这首」同步给一起听会话，避免提示词里还挂着上一首
+    try {
+      if (window.__ltTogetherWith && window.__ltTogetherWith.charId === char.id) {
+        window.__ltTogetherWith.name = song.name || '';
+        window.__ltTogetherWith.artist = song.artist || '';
+        localStorage.setItem('phone_lt_together', JSON.stringify(window.__ltTogetherWith));
+      }
     } catch (e) {}
     try {
       var log = JSON.parse(localStorage.getItem('phone_lt_switchlog') || '[]');
@@ -44479,11 +44663,12 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
       if (log.length > 30) log = log.slice(log.length - 30);
       localStorage.setItem('phone_lt_switchlog', JSON.stringify(log));
     } catch (e) {}
+    if (hasRestText) return null;     // 正文那句由外层照常发，这里不再插提示
     return {
       id: uid(), chatId: chatId, sender: 'system', type: 'ltswitch',
       charId: char.id, userId: chat && chat.userId,
-      content: '[' + (char.name || '\u4ed6') + '\u628a\u6b63\u5728\u542c\u7684\u6b4c\u6362\u6210\u4e86\u300a' + (song.name || '') + '\u300b'
-        + (song.artist ? (' - ' + song.artist) : '') + '\uff0c\u6ca1\u6709\u8bf4\u4e3a\u4ec0\u4e48]',
+      content: '[' + (char.name || '他') + '把正在听的歌换成了《' + (song.name || '')
+        + '》' + (song.artist ? (' - ' + song.artist) : '') + ']',
       switchName: song.name || '', switchArtist: song.artist || '',
       timestamp: ts || Date.now()
     };
@@ -44493,8 +44678,8 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
     var wrap = document.createElement('div');
     wrap.className = 'msg-wrapper system';
     wrap.dataset.msgId = msg.id;
-    wrap.innerHTML = '<div class="lt-switch-tip">\ud83c\udfb5 \u6b4c\u88ab\u6362\u6210\u4e86\u300a' + esc(msg.switchName || '') + '\u300b'
-      + (msg.switchArtist ? (' \u00b7 ' + esc(msg.switchArtist)) : '') + '</div>';
+    wrap.innerHTML = '<div class="lt-switch-tip">🎵 歌被换成了《' + esc(msg.switchName || '') + '》'
+      + (msg.switchArtist ? (' · ' + esc(msg.switchArtist)) : '') + '</div>';
     return wrap;
   }
 
@@ -44509,35 +44694,59 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
       return origCreate.apply(this, arguments);
     };
 
+    // 切歌标签可能被写在一行正文里，所以不要求整行只有标签；[换歌:] 也当同义词收下
+    var SWITCH_RE = /\[\s*(?:切歌|换歌)\s*[:：]\s*([^\]]+?)\s*\]/;
     if (typeof window.commitCharLine === 'function') {
       var origCommit = window.commitCharLine;
       window.commitCharLine = async function (chatId, char, line, ts) {
-        var m = String(line || '').trim().match(/^\[\u5207\u6b4c[:\uff1a]\s*(.+?)\]$/);
-        if (m) return await charSwitch(chatId, char, m[1].trim(), ts);
+        var s = String(line || '').trim();
+        var m = s.match(SWITCH_RE);
+        if (m && char) {
+          var rest = s.replace(m[0], ' ').replace(/\s+/g, ' ').trim();
+          var out = await charSwitch(chatId, char, (m[1] || '').trim(), ts, !!rest);
+          if (rest) return await origCommit.call(this, chatId, char, rest, ts);
+          return out;
+        }
         return origCommit.apply(this, arguments);
       };
     }
 
-    // 把「刚刚是我自己换的歌」塞进提示词，被追问时角色能自圆其说
+    // 提示词：正在一起听时，明确告诉角色现在听的是哪首、可以怎么换歌、以及刚刚自己换过什么
     if (typeof window.buildSystemPrompt === 'function') {
       var origBSP = window.buildSystemPrompt;
       window.buildSystemPrompt = function (chatId, char) {
         var base = origBSP.apply(this, arguments);
         try {
           if (!char || !togetherWith(char.id)) return base;
-          var log = JSON.parse(localStorage.getItem('phone_lt_switchlog') || '[]')
-            .filter(function (x) { return x.charId === char.id && Date.now() - x.ts < 6 * 3600 * 1000; })
-            .slice(-3);
-          if (!log.length) return base;
-          var lines = log.map(function (x) {
-            var mins = Math.max(1, Math.round((Date.now() - x.ts) / 60000));
-            return '\u00b7 ' + mins + ' \u5206\u949f\u524d\u4f60\u628a\u6b4c\u6362\u6210\u4e86\u300a' + x.name + '\u300b'
-              + (x.artist ? ('\uff08' + x.artist + '\uff09') : '');
-          }).join('\n');
-          return base + '\n\n## \u4f60\u521a\u521a\u81ea\u5df1\u6362\u8fc7\u7684\u6b4c\n' + lines
-            + '\n\u8fd9\u51e0\u9996\u662f\u4f60\u4e3b\u52a8\u6362\u7684\uff0c\u5f53\u65f6\u5e76\u6ca1\u6709\u544a\u8bc9\u5bf9\u65b9\u539f\u56e0\u3002'
-            + '\u5982\u679c\u5bf9\u65b9\u95ee\u8d77\u4e3a\u4ec0\u4e48\u6362\u6b4c\uff0c\u4f60\u53ef\u4ee5\u968f\u53e3\u6572\u4e00\u53e5\u5e26\u8fc7\u53bb\u3001\u88c5\u50bb\u3001\u53cd\u95ee\u56de\u53bb\uff0c'
-            + '\u4e5f\u53ef\u4ee5\u5728\u60c5\u7eea\u4e0a\u6765\u6216\u5173\u7cfb\u591f\u8fd1\u65f6\u8bf4\u771f\u8bdd\u3002\u6839\u636e\u4eba\u8bbe\u548c\u6b64\u523b\u5fc3\u60c5\u81ea\u5df1\u5b9a\uff0c\u4e0d\u8981\u6bcf\u6b21\u90fd\u8001\u5b9e\u4ea4\u4ee3\u3002';
+          var cur = '';
+          try {
+            var np = window.ltNowPlaying && window.ltNowPlaying();
+            if (np && np.name) cur = '《' + np.name + '》' + (np.artist ? ('（' + np.artist + '）') : '');
+            else {
+              var t = window.__ltTogetherWith;
+              if (t && t.name) cur = '《' + t.name + '》' + (t.artist ? ('（' + t.artist + '）') : '');
+            }
+          } catch (e1) {}
+          var add = '\n\n## 🎧 你正在和对方一起听歌'
+            + (cur ? ('\n现在放的是 ' + cur + '。') : '')
+            + '\n你可以随时自己动手换歌，方式是【在回复里单独发一行】：[切歌: 歌名 歌手]，例如 [切歌: 夜空中最亮的星 逃跑计划]。'
+            + '\n- 只要你说了要换歌（哪怕是"我换一首"、"给你放我喜欢的"），就必须真的带上这一行标签，否则歌根本不会变，对方会看出来你在敷衍。'
+            + '\n- 歌名写准确、尽量带歌手，必须是真实存在的歌，不要编。'
+            + '\n- 换完可以什么都不说，也可以随口一句。对方追问时可以敷衍、装傻、也可以说实话，看你的人设和心情。';
+          var log = [];
+          try {
+            log = JSON.parse(localStorage.getItem('phone_lt_switchlog') || '[]')
+              .filter(function (x) { return x.charId === char.id && Date.now() - x.ts < 6 * 3600 * 1000; })
+              .slice(-3);
+          } catch (e2) {}
+          if (log.length) {
+            add += '\n\n### 你刚刚自己换过的歌\n' + log.map(function (x) {
+              var mins = Math.max(1, Math.round((Date.now() - x.ts) / 60000));
+              return '· ' + mins + ' 分钟前你把歌换成了《' + x.name + '》' + (x.artist ? ('（' + x.artist + '）') : '');
+            }).join('\n')
+              + '\n这几首是你主动换的，当时并没有告诉对方原因。被问起来时不用每次都老实交代。';
+          }
+          return base + add;
         } catch (e) {}
         return base;
       };
@@ -44623,4 +44832,2326 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
 </script>
 <!-- ============ 编码识别 结束 ============ -->
 
+<!-- ============ 查手机 v1：偷看角色的手机（独立命名空间 pmInsp） ============ -->
+<style id="pmInspectCss">
+    /* 默认浅色（白）；夜间模式只改这组变量，结构和阴影全部复用 */
+    #pmInspectModal {
+        --pmi-shell: #ffffff;
+        --pmi-shell-2: #f7f7f9;
+        --pmi-ink: #1c1c1e;
+        --pmi-ink-2: rgba(28,28,30,0.62);
+        --pmi-ink-3: rgba(28,28,30,0.42);
+        --pmi-ink-4: rgba(28,28,30,0.28);
+        --pmi-line: rgba(28,28,30,0.09);
+        --pmi-fill: rgba(28,28,30,0.045);
+        --pmi-fill-2: rgba(28,28,30,0.075);
+        --pmi-notch: #1c1c1e;
+        --pmi-bezel: rgba(28,28,30,0.14);
+        --pmi-inset: rgba(28,28,30,0.08);
+        --pmi-me-bg: #1c1c1e;
+        --pmi-me-ink: #ffffff;
+        --pmi-lock-bg: #f2f2f5;
+        --pmi-mask: rgba(28,28,32,0.34);
+        --pmi-in: #1f9254;
+        --pmi-shadow: 0 26px 60px rgba(28,28,40,0.26);
+        --pmi-ph-ink: rgba(28,28,30,0.72);
+    }
+    html.phone-night #pmInspectModal,
+    html.phone-dark #pmInspectModal {
+        --pmi-shell: #101012;
+        --pmi-shell-2: #17171a;
+        --pmi-ink: #f5f5f7;
+        --pmi-ink-2: rgba(255,255,255,0.72);
+        --pmi-ink-3: rgba(255,255,255,0.44);
+        --pmi-ink-4: rgba(255,255,255,0.3);
+        --pmi-line: rgba(255,255,255,0.08);
+        --pmi-fill: rgba(255,255,255,0.06);
+        --pmi-fill-2: rgba(255,255,255,0.1);
+        --pmi-notch: #000000;
+        --pmi-bezel: rgba(255,255,255,0.14);
+        --pmi-inset: rgba(0,0,0,0.9);
+        --pmi-me-bg: #f5f5f7;
+        --pmi-me-ink: #101012;
+        --pmi-lock-bg: #08080a;
+        --pmi-mask: rgba(0,0,0,0.55);
+        --pmi-in: #6ee7a8;
+        --pmi-shadow: 0 30px 70px rgba(0,0,0,0.55);
+        --pmi-ph-ink: rgba(255,255,255,0.85);
+    }
 
+    #pmInspectModal {
+        position: fixed; inset: 0; z-index: 99000;
+        display: none; align-items: center; justify-content: center;
+        background: var(--pmi-mask); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    #pmInspectModal.pm-insp-open { display: flex; }
+    .pm-insp-phone {
+        position: relative; width: 300px; height: 600px; max-width: 88vw; max-height: 86vh;
+        border-radius: 42px; overflow: hidden; background: var(--pmi-shell); color: var(--pmi-ink);
+        border: 1px solid var(--pmi-bezel);
+        box-shadow: var(--pmi-shadow), inset 0 0 0 4px var(--pmi-inset);
+        display: flex; flex-direction: column; font-size: 13px; letter-spacing: 0.2px;
+        animation: pmInspIn 0.28s ease;
+    }
+    @keyframes pmInspIn { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+    .pm-insp-notch { position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+        width: 76px; height: 20px; border-radius: 12px; background: var(--pmi-notch); z-index: 6; }
+    .pm-insp-status { flex: 0 0 auto; height: 38px; display: flex; align-items: center; justify-content: space-between;
+        padding: 0 20px; font-size: 11px; color: var(--pmi-ink-2); z-index: 5; }
+    .pm-insp-body { flex: 1 1 auto; overflow: hidden; position: relative; }
+    .pm-insp-pane { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding: 4px 0 18px; }
+    .pm-insp-pane.pm-on { display: block; }
+    .pm-insp-pane::-webkit-scrollbar { width: 0; }
+    .pm-insp-bar { flex: 0 0 auto; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+        border-bottom: 1px solid var(--pmi-line); background: var(--pmi-shell); font-size: 14px; font-weight: 600;
+        position: sticky; top: 0; z-index: 3; }
+    .pm-insp-bar .pm-back { width: 26px; height: 26px; flex: 0 0 auto; border: none; background: transparent;
+        color: var(--pmi-ink); font-size: 20px; line-height: 1; cursor: pointer; padding: 0; }
+    .pm-insp-bar .pm-t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pm-insp-bar .pm-act { border: none; background: var(--pmi-fill-2); color: var(--pmi-ink);
+        font-size: 11px; padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+    .pm-insp-home-foot { flex: 0 0 auto; height: 22px; display: flex; align-items: center; justify-content: center; }
+    .pm-insp-home-foot i { display: block; width: 96px; height: 4px; border-radius: 3px; background: var(--pmi-ink-4); }
+    .pm-insp-lock { position: absolute; inset: 0; z-index: 20; background: var(--pmi-lock-bg); color: var(--pmi-ink);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.45s ease; }
+    .pm-insp-lock.pm-fade { opacity: 0; pointer-events: none; }
+    .pm-insp-lock .pm-lk-time { font-size: 46px; font-weight: 200; letter-spacing: 1px; }
+    .pm-insp-lock .pm-lk-date { font-size: 12px; color: var(--pmi-ink-3); }
+    .pm-insp-lock .pm-lk-who { margin-top: 20px; font-size: 12px; color: var(--pmi-ink-3); }
+    .pm-insp-deskhead { padding: 16px 20px 8px; }
+    .pm-insp-deskhead .pm-dh-name { font-size: 17px; font-weight: 600; }
+    .pm-insp-deskhead .pm-dh-sub { font-size: 11px; color: var(--pmi-ink-3); margin-top: 3px; }
+    .pm-insp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 6px; padding: 12px 14px; }
+    .pm-insp-app { text-align: center; cursor: pointer; user-select: none; }
+    .pm-insp-app:active { transform: scale(0.92); }
+    .pm-insp-app .pm-ic { width: 46px; height: 46px; margin: 0 auto 6px; border-radius: 13px;
+        background: var(--pmi-fill); border: 1px solid var(--pmi-line);
+        display: flex; align-items: center; justify-content: center; font-size: 19px; position: relative; }
+    .pm-insp-app .pm-lb { font-size: 10px; color: var(--pmi-ink-2); }
+    .pm-insp-app .pm-dot { position: absolute; top: -3px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px;
+        background: #ff453a; color: #fff; font-size: 9px; line-height: 15px; padding: 0 4px; font-weight: 600; }
+    .pm-insp-card { margin: 10px 14px; padding: 12px 13px; border-radius: 14px;
+        background: var(--pmi-fill); border: 1px solid var(--pmi-line); }
+    .pm-insp-card .pm-c-t { font-size: 13px; font-weight: 600; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+    .pm-insp-card .pm-c-b { font-size: 12px; line-height: 1.65; color: var(--pmi-ink-2); white-space: pre-wrap; }
+    .pm-insp-card .pm-c-m { font-size: 10px; color: var(--pmi-ink-4); margin-top: 7px; }
+    .pm-insp-empty { padding: 40px 24px; text-align: center; font-size: 12px; color: var(--pmi-ink-3); line-height: 1.8; }
+    .pm-insp-empty b { display: block; font-size: 22px; margin-bottom: 8px; font-weight: 400; }
+    .pm-insp-empty .pm-insp-svg { width: 30px; height: 30px; }
+    .pm-insp-tabs { display: flex; gap: 6px; padding: 10px 14px 2px; }
+    .pm-insp-tabs button { flex: 1 1 0; border: none; cursor: pointer; padding: 7px 0; border-radius: 9px;
+        background: var(--pmi-fill); color: var(--pmi-ink-3); font-size: 11px; }
+    .pm-insp-tabs button.pm-on { background: var(--pmi-me-bg); color: var(--pmi-me-ink); font-weight: 600; }
+    .pm-insp-sess { display: flex; gap: 10px; padding: 12px 14px; cursor: pointer; align-items: center; }
+    .pm-insp-sess:active { background: var(--pmi-fill); }
+    .pm-insp-sess .pm-av { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 auto; overflow: hidden;
+        background: var(--pmi-fill-2); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .pm-insp-sess .pm-av img { width: 100%; height: 100%; object-fit: cover; }
+    .pm-insp-sess .pm-mid { flex: 1 1 auto; min-width: 0; }
+    .pm-insp-sess .pm-nm { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .pm-insp-sess .pm-nm .pm-rel {
+        font-size: 9px; font-weight: 500; padding: 1px 5px; border-radius: 5px;
+        background: var(--pmi-fill-2); color: var(--pmi-ink-3); flex: 0 0 auto;
+    }
+    .pm-insp-sess .pm-ls { font-size: 11px; color: var(--pmi-ink-3); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pm-insp-sess .pm-tm { font-size: 10px; color: var(--pmi-ink-4); flex: 0 0 auto; }
+    .pm-insp-chat { padding: 12px 12px 6px; }
+    .pm-insp-row { display: flex; margin-bottom: 10px; }
+    .pm-insp-row.pm-me { justify-content: flex-end; }
+    .pm-insp-bub { max-width: 76%; padding: 8px 11px; border-radius: 13px; font-size: 12px; line-height: 1.6;
+        background: var(--pmi-fill-2); word-break: break-word; white-space: pre-wrap; }
+    .pm-insp-row.pm-me .pm-insp-bub { background: var(--pmi-me-bg); color: var(--pmi-me-ink); }
+    .pm-insp-sys { text-align: center; font-size: 10px; color: var(--pmi-ink-4); margin: 8px 0; }
+    .pm-insp-daysep { text-align: center; font-size: 10px; color: var(--pmi-ink-4); margin: 12px 0 8px; }
+    .pm-insp-inputbar { flex: 0 0 auto; display: flex; gap: 7px; padding: 8px 10px;
+        border-top: 1px solid var(--pmi-line); background: var(--pmi-fill); }
+    .pm-insp-inputbar input { flex: 1 1 auto; min-width: 0; border: none; outline: none; border-radius: 9px;
+        background: var(--pmi-fill-2); color: var(--pmi-ink); font-size: 12px; padding: 8px 10px; }
+    .pm-insp-inputbar button { flex: 0 0 auto; border: none; cursor: pointer; border-radius: 9px; padding: 0 12px;
+        background: var(--pmi-me-bg); color: var(--pmi-me-ink); font-size: 12px; font-weight: 600; }
+    .pm-insp-bal { margin: 14px; padding: 18px 16px; border-radius: 16px;
+        background: var(--pmi-fill); border: 1px solid var(--pmi-line); }
+    .pm-insp-bal .pm-bl { font-size: 11px; color: var(--pmi-ink-3); }
+    .pm-insp-bal .pm-bv { font-size: 30px; font-weight: 600; margin-top: 8px; }
+    .pm-insp-bal .pm-bv small { font-size: 15px; font-weight: 500; margin-right: 3px; opacity: 0.6; }
+    .pm-insp-rec { display: flex; justify-content: space-between; gap: 10px; padding: 11px 15px; border-bottom: 1px solid var(--pmi-line); }
+    .pm-insp-rec .pm-rn { font-size: 12px; }
+    .pm-insp-rec .pm-rt { font-size: 10px; color: var(--pmi-ink-4); margin-top: 3px; }
+    .pm-insp-rec .pm-ra { font-size: 13px; font-weight: 600; flex: 0 0 auto; }
+    .pm-insp-rec .pm-ra.pm-in { color: var(--pmi-in); }
+    .pm-insp-album { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 12px; }
+    .pm-insp-ph { position: relative; aspect-ratio: 1 / 1; border-radius: 9px; overflow: hidden; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; padding: 6px;
+        font-size: 9px; line-height: 1.4; text-align: center; color: var(--pmi-ph-ink);
+        border: 1px solid var(--pmi-line); }
+    .pm-insp-ph .pm-lock { position: absolute; top: 4px; right: 5px; font-size: 9px; opacity: 0.85; }
+    .pm-insp-ph.pm-blur span { filter: blur(3px); opacity: 0.55; }
+    .pm-insp-usage { padding: 6px 14px 14px; }
+    .pm-insp-ub { margin-bottom: 13px; }
+    .pm-insp-ub .pm-uh { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+    .pm-insp-ub .pm-uh span:last-child { color: var(--pmi-ink-3); font-size: 11px; }
+    .pm-insp-ub .pm-track { height: 6px; border-radius: 4px; background: var(--pmi-fill-2); overflow: hidden; }
+    .pm-insp-ub .pm-fill { height: 100%; border-radius: 4px; background: var(--pmi-ink-2); }
+    .pm-insp-note { padding: 4px 16px 14px; font-size: 10px; color: var(--pmi-ink-4); line-height: 1.7; }
+    .pm-insp-loading { padding: 44px 20px; text-align: center; font-size: 12px; color: var(--pmi-ink-3); }
+    .pm-insp-loading i { display: block; width: 22px; height: 22px; margin: 0 auto 14px; border-radius: 50%;
+        border: 2px solid var(--pmi-line); border-top-color: var(--pmi-ink-2); animation: pmInspSpin 0.8s linear infinite; }
+    @keyframes pmInspSpin { to { transform: rotate(360deg); } }
+    .pm-insp-x { position: absolute; top: -14px; right: -14px; width: 30px; height: 30px; border-radius: 50%;
+        border: none; cursor: pointer; background: var(--pmi-shell); color: var(--pmi-ink); font-size: 16px; line-height: 30px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.24); padding: 0; }
+    .pm-insp-form { padding: 12px 14px; }
+    .pm-insp-form label { display: block; font-size: 11px; color: var(--pmi-ink-3); margin: 10px 0 5px; }
+    .pm-insp-form input, .pm-insp-form textarea { width: 100%; box-sizing: border-box;
+        border: 1px solid var(--pmi-line); outline: none; background: var(--pmi-fill); color: var(--pmi-ink);
+        font-size: 12px; padding: 9px 10px; border-radius: 10px; font-family: inherit; resize: vertical; }
+    .pm-insp-form .pm-submit { width: 100%; margin-top: 16px; border: none; cursor: pointer; border-radius: 11px;
+        padding: 11px 0; background: var(--pmi-me-bg); color: var(--pmi-me-ink); font-size: 13px; font-weight: 600; }
+    .pm-insp-form .pm-hint { font-size: 10px; color: var(--pmi-ink-4); margin-top: 10px; line-height: 1.7; }
+
+    /* 线性图标统一对齐 */
+    .pm-insp-svg { display: block; }
+    .pm-insp-app .pm-ic .pm-insp-svg { opacity: 0.82; }
+    .pm-insp-card .pm-c-t .pm-insp-svg,
+    .pm-insp-rec .pm-rn .pm-insp-svg { display: inline-block; vertical-align: -2px; margin-right: 5px; opacity: 0.55; }
+    .pm-insp-ph .pm-lock .pm-insp-svg { opacity: 0.9; }
+    .pm-insp-bar .pm-back .pm-insp-svg { margin: 0 auto; opacity: 0.85; }
+    .pm-insp-empty .pm-insp-svg { margin: 0 auto 12px; opacity: 0.3; }
+    /* 输入栏「+」按钮里的查手机入口图标 */
+    .tool-popup .popup-item .pm-insp-entry-ic { display: flex; align-items: center; justify-content: center; }
+    .tool-popup .popup-item .pm-insp-entry-ic .pm-insp-svg { width: 24px; height: 24px; }
+</style>
+
+<script id="phoneInspectPatch">
+(function () {
+    if (window.__phoneInspectPatched) return;
+    window.__phoneInspectPatched = true;
+
+    // ---------- 基础工具（全部自带，不复用现有 wallet/moments/notes 的任何函数） ----------
+    var S = function () { return window.__state; };
+    var DB = function () { return window.__db; };
+    function pmUid() { return (window.uid ? window.uid() : (Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7))); }
+    function pmEsc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+    function pmRound(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+    function pmMoney(n) { return (Number(n) || 0).toFixed(2); }
+    function pmGetChar(id) { var s = S(); return s && (s.characters || []).find(function (c) { return c.id === id; }); }
+    function pmGetChat(id) { var s = S(); return s && (s.chats || []).find(function (c) { return c.id === id; }); }
+    function pmGetUser(id) { var s = S(); return s && (s.users || []).find(function (u) { return u.id === id; }); }
+    function pmClock(ts) {
+        var d = new Date(ts || Date.now());
+        return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    }
+    function pmDay(ts) {
+        var d = new Date(ts || Date.now());
+        return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    }
+    function pmAgo(ts) {
+        var diff = Date.now() - (ts || 0);
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+        if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前';
+        return pmDay(ts);
+    }
+    function pmToast(text) {
+        var t = document.createElement('div');
+        t.textContent = text;
+        t.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:99900;' +
+            'background:rgba(20,20,22,0.94);color:#f5f5f7;font-size:13px;padding:10px 16px;border-radius:12px;' +
+            'box-shadow:0 8px 26px rgba(0,0,0,0.4);pointer-events:none;max-width:74vw;text-align:center;line-height:1.6;';
+        document.body.appendChild(t);
+        setTimeout(function () { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; }, 1500);
+        setTimeout(function () { try { document.body.removeChild(t); } catch (e) {} }, 1900);
+    }
+    async function pmSaveChar(char) {
+        if (!char) return;
+        try { if (DB() && DB().characters) await DB().characters.put(char); } catch (e) { console.warn('[查手机] 保存角色失败', e); }
+    }
+    async function pmSaveMsg(m) {
+        try { if (DB() && DB().messages) await DB().messages.put(m); } catch (e) { console.warn('[查手机] 保存消息失败', e); }
+    }
+    function pmChatApi() {
+        var s = S(); if (!s) return null;
+        var apis = s.apiConfigs || [];
+        var a = apis.find(function (x) { return x.type === 'chat' && x.id === s.currentChatApiId; }) ||
+                apis.find(function (x) { return x.type === 'chat'; });
+        return (a && a.url && a.key) ? a : null;
+    }
+
+
+    // ---------- 线性图标：统一 24×24 描边风格，无颜色、无 emoji ----------
+    var PM_ICONS = {
+        // 入口：一只手机 + 放大镜
+        entry: '<path d="M7 3.6h7.2a2 2 0 0 1 2 2v4.2"/><path d="M16.2 15.4v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2"/><circle cx="17.6" cy="12.6" r="3.1"/><path d="M19.9 14.9 22 17"/>',
+        // 微信：对话气泡
+        chat: '<path d="M20.5 11.4c0 3.9-3.8 7-8.5 7-.9 0-1.8-.1-2.6-.3L4.6 20l1.2-3.3A6.7 6.7 0 0 1 3.5 11.4c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"/><path d="M9 10.6h.01M12 10.6h.01M15 10.6h.01"/>',
+        // 备忘录：纸张 + 折角
+        note: '<path d="M6 3.5h7.4L19 9.1V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V5a1.5 1.5 0 0 1 1-1.5Z"/><path d="M13.2 3.6v5.6H19"/><path d="M8.4 13.4h7"/><path d="M8.4 16.8h4.6"/>',
+        // 相册：山与太阳
+        album: '<rect x="3.5" y="4.8" width="17" height="14.4" rx="2.2"/><circle cx="9.1" cy="10.1" r="1.6"/><path d="M3.8 17.2l4.6-4.5 3.6 3.5 2.7-2.6 5.6 5.4"/>',
+        // 浏览器：地球
+        globe: '<circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8"/><path d="M12 3.6c2.2 2.3 3.4 5.3 3.4 8.4S14.2 18.1 12 20.4c-2.2-2.3-3.4-5.3-3.4-8.4S9.8 5.9 12 3.6Z"/>',
+        // 使用时长：时钟
+        clock: '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.3 2"/>',
+        // 你的痕迹：足迹/指向
+        trace: '<path d="M12 20.4s6.6-4.3 6.6-9.2a6.6 6.6 0 0 0-13.2 0c0 4.9 6.6 9.2 6.6 9.2Z"/><circle cx="12" cy="11" r="2.4"/>',
+        // 钱包
+        wallet: '<rect x="3.4" y="6.2" width="17.2" height="12.6" rx="2.2"/><path d="M3.4 10.4h17.2"/><path d="M16.4 14.6h1.8"/>',
+        // 锁（私密标记）
+        lock: '<rect x="5.4" y="10.6" width="13.2" height="9.4" rx="2"/><path d="M8.6 10.6V8.2a3.4 3.4 0 0 1 6.8 0v2.4"/>',
+        // 搜索（浏览记录条目）
+        search: '<circle cx="11" cy="11" r="6.4"/><path d="M15.6 15.6 20.4 20.4"/>',
+        // 返回箭头
+        back: '<path d="M14.6 5.4 8 12l6.6 6.6"/>'
+    };
+    function pmIcon(name, size) {
+        var d = PM_ICONS[name];
+        if (!d) return '';
+        var s = size || 22;
+        return '<svg class="pm-insp-svg" viewBox="0 0 24 24" width="' + s + '" height="' + s + '" ' +
+            'fill="none" stroke="currentColor" stroke-width="1.5" ' +
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+    }
+    // ---------- 数据结构：character.phoneInspect ----------
+    var PM_VERSION = 1;
+    function pmData(char) {
+        if (!char) return null;
+        if (!char.phoneInspect || typeof char.phoneInspect !== 'object') {
+            char.phoneInspect = { version: PM_VERSION };
+        }
+        var p = char.phoneInspect;
+        if (typeof p.version !== 'number') p.version = PM_VERSION;
+        if (typeof p.generated !== 'boolean') p.generated = false;
+        if (!('lastSyncedMsgId' in p)) p.lastSyncedMsgId = null;
+        if (!p.wechat || typeof p.wechat !== 'object') p.wechat = { balance: 0, records: [] };
+        if (typeof p.wechat.balance !== 'number') p.wechat.balance = 0;
+        if (!Array.isArray(p.wechat.records)) p.wechat.records = [];
+        // 角色和别人的会话：[{id, name, relation, avatarText, messages:[{from:'them'|'char', text, time}]}]
+        if (!Array.isArray(p.contacts)) p.contacts = [];
+        if (!Array.isArray(p.notes)) p.notes = [];
+        if (!Array.isArray(p.album)) p.album = [];
+        if (!Array.isArray(p.albumDeleted)) p.albumDeleted = [];   // 最近删除
+        if (!Array.isArray(p.mapHistory)) p.mapHistory = [];        // 打车/地图历史
+        if (!Array.isArray(p.musicRecent)) p.musicRecent = [];      // 音乐最近播放
+        if (!Array.isArray(p.healthLog)) p.healthLog = [];          // 健康异常数据
+        if (!Array.isArray(p.inspectHistory)) p.inspectHistory = []; // 查手机记录（玩家每次查看的会话）
+        if (!Array.isArray(p.browserHistory)) p.browserHistory = [];
+        if (!Array.isArray(p.appUsage)) p.appUsage = [];
+        if (!Array.isArray(p.playerActions)) p.playerActions = [];
+        if (!p.failed || typeof p.failed !== 'object') p.failed = {};
+        return p;
+    }
+
+    // ---------- 弹窗状态 ----------
+    var pmState = {
+        charId: null,
+        chatId: null,
+        contactId: null,
+        page: 'desk',
+        noteTab: 'random',
+        unlocked: false,
+        loading: false,
+        lastError: null,
+        lastRaw: '',
+        viewNoteId: null,
+        viewPhotoId: null,
+        viewDelPhotoId: null,
+        replying: null,
+        currentSessionId: null
+    };
+    var pmRoot = null;
+
+    // ---------- 入口按钮：塞进聊天工具面板 ----------
+    function pmMountEntry() {
+        var grid = document.querySelector('#toolPopup .popup-grid');
+        if (!grid) return false;
+        if (grid.querySelector('[data-pm-insp-entry]')) return true;
+        var btn = document.createElement('button');
+        btn.className = 'popup-item';
+        btn.setAttribute('data-pm-insp-entry', '1');
+        btn.innerHTML = '<span class="icon-sm pm-insp-entry-ic">' + pmIcon('entry', 24) + '</span><span class="label">查手机</span>';
+        btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var pop = document.getElementById('toolPopup');
+            if (pop) pop.classList.remove('visible');
+            pmOpen();
+        });
+        grid.appendChild(btn);
+        return true;
+    }
+
+    function pmBoot(tries) {
+        tries = tries || 0;
+        if (!window.__state || !window.__db) {
+            if (tries < 60) setTimeout(function () { pmBoot(tries + 1); }, 400);
+            return;
+        }
+        if (!pmMountEntry() && tries < 60) { setTimeout(function () { pmBoot(tries + 1); }, 400); return; }
+        pmWrapPrompt();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { pmBoot(0); }, 700); });
+    } else {
+        setTimeout(function () { pmBoot(0); }, 700);
+    }
+
+    // ---------- 弹窗骨架 ----------
+    function pmEnsureRoot() {
+        if (pmRoot && document.body.contains(pmRoot)) return pmRoot;
+        var d = document.createElement('div');
+        d.id = 'pmInspectModal';
+        d.innerHTML =
+            '<div class="pm-insp-phone">' +
+            '  <button class="pm-insp-x" data-pm-close="1">×</button>' +
+            '  <div class="pm-insp-notch"></div>' +
+            '  <div class="pm-insp-status"><span data-pm-clock>00:00</span><span>◍ ⋯ ▮</span></div>' +
+            '  <div class="pm-insp-body" data-pm-body></div>' +
+            '  <div class="pm-insp-home-foot"><i></i></div>' +
+            '  <div class="pm-insp-lock" data-pm-lock style="display:none;"></div>' +
+            '</div>';
+        document.body.appendChild(d);
+        pmRoot = d;
+        pmBindTranslate(d);
+
+        d.addEventListener('click', function (ev) {
+            if (ev.target === d) { pmClose(); return; }
+            var closeBtn = ev.target.closest && ev.target.closest('[data-pm-close]');
+            if (closeBtn) { pmClose(); return; }
+            var go = ev.target.closest && ev.target.closest('[data-pm-go]');
+            if (go) { pmGoto(go.getAttribute('data-pm-go')); return; }
+            var ct = ev.target.closest && ev.target.closest('[data-pm-contact]');
+            if (ct) { pmState.contactId = ct.getAttribute('data-pm-contact'); pmGoto('contactChat'); return; }
+            var tab = ev.target.closest && ev.target.closest('[data-pm-notetab]');
+            if (tab) { pmState.noteTab = tab.getAttribute('data-pm-notetab'); pmRender(); return; }
+            // 删除类按钮必须先判断，否则会被外层卡片的「进详情」抢先命中
+            var dAct = ev.target.closest && ev.target.closest('[data-pm-delete-action]');
+            if (dAct) { ev.stopPropagation(); pmDeleteAction(dAct.getAttribute('data-pm-delete-action')); return; }
+            var dNote = ev.target.closest && ev.target.closest('[data-pm-delete-note]');
+            if (dNote) { ev.stopPropagation(); pmDeleteNote(dNote.getAttribute('data-pm-delete-note')); return; }
+            var dPhoto = ev.target.closest && ev.target.closest('[data-pm-delete-photo]');
+            if (dPhoto) { ev.stopPropagation(); pmDeletePhoto(dPhoto.getAttribute('data-pm-delete-photo')); return; }
+            var dSession = ev.target.closest && ev.target.closest('[data-pm-del-session]');
+            if (dSession) { ev.stopPropagation(); pmDeleteInspectSession(dSession.getAttribute('data-pm-del-session')); return; }
+            var noteCard = ev.target.closest && ev.target.closest('[data-pm-note]');
+            if (noteCard) { pmShowNote(noteCard.getAttribute('data-pm-note')); return; }
+            var ph = ev.target.closest && ev.target.closest('[data-pm-photo]');
+            if (ph) { pmShowPhoto(ph.getAttribute('data-pm-photo')); return; }
+            var delPh = ev.target.closest && ev.target.closest('[data-pm-del-photo]');
+            if (delPh) { pmShowDelPhoto(delPh.getAttribute('data-pm-del-photo')); return; }
+            var playSongEl = ev.target.closest && ev.target.closest('[data-pm-play-song]');
+            if (playSongEl) {
+                var title = playSongEl.getAttribute('data-pm-play-song');
+                var artist = playSongEl.getAttribute('data-pm-play-artist') || '';
+                if (typeof window.__ltPlaySong === 'function') {
+                    pmClose();
+                    setTimeout(function () { window.__ltPlaySong(title, artist); }, 120);
+                } else {
+                    pmToast('先在设置里开通一起听功能再使用');
+                }
+                return;
+            }
+            var act2 = ev.target.closest && ev.target.closest('[data-pm-action]');
+            if (act2) {
+                var actName = act2.getAttribute('data-pm-action');
+                var charA = pmGetChar(pmState.charId);
+                var pA = charA ? pmData(charA) : null;
+                if (actName === 'refresh') { if (charA) pmGenerate(charA, true); }
+                else if (actName === 'submitSend') { if (charA && pA) pmDoSend(charA, pA); }
+                else if (actName === 'submitPay') { if (charA && pA) pmDoPay(charA, pA); }
+                else if (actName === 'submitPhoto') { if (charA && pA) pmDoPhoto(charA, pA); }
+                else if (actName === 'submitNote') { if (charA && pA) pmDoNote(charA, pA); }
+                else if (actName === 'submitContactMsg') { if (charA && pA) pmSendToContact(charA, pA); }
+                else if (actName === 'contactReply') { if (charA && pA) pmContactReply(charA, pA); }
+                return;
+            }
+        });
+        document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && pmRoot && pmRoot.classList.contains('pm-insp-open')) pmClose();
+        });
+        return d;
+    }
+
+    function pmOpen() {
+        var s = S();
+        if (!s) { pmToast('还没准备好，稍等一下'); return; }
+        var chat = pmGetChat(s.currentChatId);
+        if (!chat) { pmToast('先进一个聊天再查手机'); return; }
+        if (chat.type === 'group') { pmToast('群聊里查不了，进单聊试试'); return; }
+        var char = pmGetChar(chat.charId);
+        if (!char) { pmToast('找不到这个角色'); return; }
+
+        pmState.charId = char.id;
+        pmState.chatId = chat.id;
+        pmState.page = 'desk';
+        pmState.noteTab = 'random';
+        pmState.unlocked = false;
+        pmState.lastError = null;
+
+        var root = pmEnsureRoot();
+        root.classList.add('pm-insp-open');
+        var clock = root.querySelector('[data-pm-clock]');
+        if (clock) clock.textContent = pmClock();
+
+        pmShowLock(char);
+        pmRender();
+
+        // 记录本次查手机 session（持久化，不随刷新清空）
+        var pInspect = pmData(char);
+        var sessionId = pmUid();
+        // session 先占位，关闭时或操作时会更新
+        pmState.currentSessionId = sessionId;
+        var sessionEntry = { id: sessionId, time: Date.now(), actions: [] };
+        pInspect.inspectHistory = pInspect.inspectHistory || [];
+        pInspect.inspectHistory.unshift(sessionEntry);
+        if (pInspect.inspectHistory.length > 100) pInspect.inspectHistory = pInspect.inspectHistory.slice(0, 100);
+        pmSaveChar(char);
+
+        // 首次打开且没生成过 → 后台拉一次 AI 数据
+        var p = pmData(char);
+        if (!p.generated && !pmState.loading) pmGenerate(char, false);
+    }
+
+    function pmClose() {
+        if (!pmRoot) return;
+        pmRoot.classList.remove('pm-insp-open');
+    }
+
+    function pmShowLock(char) {
+        var lock = pmRoot && pmRoot.querySelector('[data-pm-lock]');
+        if (!lock) return;
+        var d = new Date();
+        var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+        lock.innerHTML =
+            '<div class="pm-lk-time">' + pmClock() + '</div>' +
+            '<div class="pm-lk-date">' + pmDay() + ' ' + week + '</div>' +
+            '<div class="pm-lk-who">' + pmEsc(char.name || '对方') + ' 的手机</div>';
+        lock.style.display = 'flex';
+        lock.classList.remove('pm-fade');
+        setTimeout(function () { lock.classList.add('pm-fade'); }, 850);
+        setTimeout(function () { lock.style.display = 'none'; pmState.unlocked = true; }, 1320);
+    }
+
+    function pmGoto(page) {
+        pmState.page = page;
+        pmRender();
+        var pane = pmRoot && pmRoot.querySelector('.pm-insp-pane.pm-on');
+        if (pane) pane.scrollTop = 0;
+    }
+
+    // ---------- 便利贴 / 相册点击放大（在手机壳内部渲染，不用宿主 modal） ----------
+    function pmShowNote(nid) {
+        pmState.viewNoteId = nid;
+        pmGoto('noteDetail');
+    }
+
+    function pmShowPhoto(pid) {
+        pmState.viewPhotoId = pid;
+        pmGoto('photoDetail');
+    }
+
+    // 备忘录详情页
+    function pmViewNoteDetail(char, p) {
+        var n = (p.notes || []).find(function (x) { return x.id === pmState.viewNoteId; });
+        if (!n) return pmBar('备忘录', 'notes') + '<div class="pm-insp-empty">' + pmIcon('note', 30) + '这条不见了</div>';
+        var priv = (n.type === 'diary' || n.isPrivate);
+        return pmBar(priv ? '私密日记' : '备忘录', 'notes') +
+            '<div class="pm-insp-card" style="margin:14px;padding:16px 15px;">' +
+                '<div class="pm-c-t" style="font-size:15px;margin-bottom:10px;">' +
+                    (priv ? pmIcon('lock', 14) : '') + pmEsc(n.title || (priv ? '日记' : '无题')) +
+                '</div>' +
+                '<div class="pm-c-b" style="font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word;">' +
+                    pmEsc(n.content || '') +
+                '</div>' +
+                '<div class="pm-c-m" style="margin-top:12px;">' +
+                    pmAgo(n.time) + (n.source === 'player' ? ' · 你写的' : '') +
+                '</div>' +
+            '</div>' +
+            (priv ? '<div class="pm-insp-note">这条 ta 本来不打算给任何人看。</div>' : '');
+    }
+
+    // 照片详情页
+    function pmViewPhotoDetail(char, p) {
+        var list = (p.album || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        var idx = list.findIndex(function (x) { return x.id === pmState.viewPhotoId; });
+        var a = idx >= 0 ? list[idx] : null;
+        if (!a) return pmBar('照片', 'album') + '<div class="pm-insp-empty">' + pmIcon('album', 30) + '这张不见了</div>';
+        var priv = !!a.isPrivate;
+        return pmBar(priv ? '隐藏的照片' : '照片', 'album') +
+            '<div style="margin:14px;border-radius:14px;overflow:hidden;background:' + pmGrad(idx) + ';' +
+                'min-height:190px;display:flex;align-items:center;justify-content:center;padding:22px 18px;' +
+                'border:1px solid var(--pmi-line);">' +
+                '<div style="font-size:13px;line-height:1.8;color:var(--pmi-ph-ink);text-align:center;' +
+                    'white-space:pre-wrap;word-break:break-word;">' + pmEsc(a.desc || '') + '</div>' +
+            '</div>' +
+            '<div class="pm-insp-note" style="padding-top:0;">' +
+                pmAgo(a.time) + (a.source === 'player' ? ' · 你用 ta 手机拍的' : '') +
+            '</div>' +
+            (priv ? '<div class="pm-insp-note">这张 ta 设了隐藏，本来不会给任何人看。</div>' : '');
+    }
+
+    // ---------- 主渲染分发 ----------
+    function pmRender() {
+        if (!pmRoot) return;
+        var body = pmRoot.querySelector('[data-pm-body]');
+        if (!body) return;
+        var char = pmGetChar(pmState.charId);
+        if (!char) { body.innerHTML = '<div class="pm-insp-empty"><b>·</b>角色不见了</div>'; return; }
+        var p = pmData(char);
+        var html = '';
+        switch (pmState.page) {
+            case 'desk':     html = pmViewDesk(char, p); break;
+            case 'wechat':   html = pmViewWechat(char, p); break;
+            case 'chat':     html = pmViewChat(char, p); break;
+            case 'contactChat': html = pmViewContactChat(char, p); break;
+            case 'wallet':   html = pmViewWallet(char, p); break;
+            case 'notes':    html = pmViewNotes(char, p); break;
+            case 'noteDetail':  html = pmViewNoteDetail(char, p); break;
+            case 'album':    html = pmViewAlbum(char, p); break;
+            case 'albumDeleted': html = pmViewAlbumDeleted(char, p); break;
+            case 'delPhotoDetail': html = pmViewDelPhotoDetail(char, p); break;
+            case 'photoDetail': html = pmViewPhotoDetail(char, p); break;
+            case 'browser':  html = pmViewBrowser(char, p); break;
+            case 'usage':    html = pmViewUsage(char, p); break;
+            case 'mapHistory':  html = pmViewMapHistory(char, p); break;
+            case 'musicRecent': html = pmViewMusicRecent(char, p); break;
+            case 'healthLog':   html = pmViewHealthLog(char, p); break;
+            case 'inspectHistory': html = pmViewInspectHistory(char, p); break;
+            case 'trace':    html = pmViewTrace(char, p); break;
+            case 'doSend':   html = pmViewDoSend(char, p); break;
+            case 'doPay':    html = pmViewDoPay(char, p); break;
+            case 'doPhoto':  html = pmViewDoPhoto(char, p); break;
+            case 'doNote':   html = pmViewDoNote(char, p); break;
+            default:         html = pmViewDesk(char, p);
+        }
+        body.innerHTML = '<div class="pm-insp-pane pm-on">' + html + '</div>';
+        if (pmState.page === 'chat' || pmState.page === 'contactChat') {
+            var pane = body.querySelector('.pm-insp-pane');
+            if (pane) pane.scrollTop = pane.scrollHeight;
+        }
+    }
+
+    function pmBar(title, backTo, extra) {
+        return '<div class="pm-insp-bar">' +
+            (backTo ? '<button class="pm-back" data-pm-go="' + backTo + '">' + pmIcon('back', 20) + '</button>' : '<span style="width:6px;"></span>') +
+            '<span class="pm-t">' + pmEsc(title) + '</span>' +
+            (extra || '') + '</div>';
+    }
+
+    // ---------- 桌面 ----------
+    function pmViewDesk(char, p) {
+        var msgs = pmMirrorMsgs();
+        var pending = (p.playerActions || []).filter(function (a) { return !a.consumed; }).length;
+        var apps = [
+            { go: 'wechat', icon: 'chat', label: '微信', dot: 0 },
+            { go: 'notes',  icon: 'note', label: '备忘录', dot: 0 },
+            { go: 'album',  icon: 'album', label: '相册', dot: 0 },
+            { go: 'browser', icon: 'globe', label: '浏览器', dot: 0 },
+            { go: 'usage',  icon: 'clock', label: '使用时长', dot: 0 },
+            { go: 'mapHistory', icon: 'trace', label: '打车记录', dot: 0 },
+            { go: 'musicRecent', icon: 'search', label: '音乐', dot: 0 },
+            { go: 'healthLog', icon: 'clock', label: '健康', dot: 0 },
+            { go: 'inspectHistory', icon: 'lock', label: '查手机记录', dot: 0 },
+            { go: 'trace',  icon: 'note', label: '你的痕迹', dot: pending }
+        ];
+        var loadingTip = pmState.loading
+            ? '<div class="pm-insp-loading"><i></i>正在读取这台手机里的内容…</div>'
+            : '';
+        var refresh = '<button class="pm-act" data-pm-action="refresh">' + (p.generated ? '刷新内容' : '重新读取') + '</button>';
+        var errTip = (!pmState.loading && pmState.lastError)
+            ? '<div class="pm-insp-note" style="color:#e06c62;">读取失败：' + pmEsc(String(pmState.lastError).slice(0, 120)) + '</div>'
+            : '';
+        return '<div class="pm-insp-deskhead">' +
+                '<div class="pm-dh-name">' + pmEsc(char.name || '对方') + ' 的手机</div>' +
+                '<div class="pm-dh-sub">' + (p.generated ? '已解锁 · 随便看看' : '内容还没读出来') + '</div>' +
+            '</div>' +
+            loadingTip +
+            '<div class="pm-insp-grid">' +
+            apps.map(function (a) {
+                return '<div class="pm-insp-app" data-pm-go="' + a.go + '">' +
+                    '<div class="pm-ic">' + pmIcon(a.icon, 22) + (a.dot ? '<span class="pm-dot">' + a.dot + '</span>' : '') + '</div>' +
+                    '<div class="pm-lb">' + a.label + '</div></div>';
+            }).join('') +
+            '</div>' +
+            '<div style="padding:8px 14px;">' + refresh + '</div>' +
+            errTip +
+            '<div class="pm-insp-note">你在这台手机上做的事，ta 下一次开口时会知道。</div>';
+    }
+
+    // ---------- 镜像聊天记录：直接读主聊天数据源，不生成副本 ----------
+    function pmMirrorMsgs() {
+        var s = S();
+        if (!s || !pmState.chatId) return [];
+        return (s.messages || [])
+            .filter(function (m) { return m.chatId === pmState.chatId && !m.isDeleted && !m.isRecalled; })
+            .sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+    }
+
+    // 把各种消息类型压成一句「手机上看到的文字」
+    function pmMsgText(m) {
+        if (!m) return '';
+        var t = m.type || 'text';
+        if (t === 'text') return String(m.content || '');
+        if (t === 'sticker') return '[表情' + (m.stickerName ? ' ' + m.stickerName : '') + ']';
+        if (t === 'voice') return '[语音] ' + String(m.content || '');
+        if (t === 'image') return '[图片' + (m.desc ? ' ' + m.desc : '') + ']';
+        if (t === 'transfer') return '[转账 ¥' + pmMoney(m.amount) + (m.note ? ' · ' + m.note : '') + ']';
+        if (t === 'redpacket') return '[红包 ¥' + pmMoney(m.rpTotal || m.amount) + (m.rpNote ? ' · ' + m.rpNote : '') + ']';
+        if (t === 'daifu') return '[代付 ¥' + pmMoney(m.amount) + (m.note ? ' · ' + m.note : '') + ']';
+        if (t === 'collect') return '[群收款' + (m.note ? ' · ' + m.note : '') + ']';
+        if (t === 'narration') return '（' + String(m.content || '') + '）';
+        if (t === 'music') return '[音乐分享] ' + String(m.content || '');
+        if (t === 'systip') return String(m.content || '');
+        return String(m.content || '[消息]');
+    }
+
+    // 联系人会话的最后一条 / 时间
+    function pmContactLast(c) {
+        var ms = (c && c.messages) || [];
+        return ms.length ? ms[ms.length - 1] : null;
+    }
+    function pmContactTs(c) {
+        var l = pmContactLast(c);
+        return l ? (l.time || 0) : 0;
+    }
+
+    function pmViewWechat(char, p) {
+        var msgs = pmMirrorMsgs();
+        var chat = pmGetChat(pmState.chatId);
+        var user = pmGetUser(chat && chat.userId);
+        var uname = (user && user.name) || '我';
+        var last = msgs[msgs.length - 1];
+        var lastText = last ? pmMsgText(last) : '还没有聊过';
+        var av = (user && user.avatar) || '';
+        var avHtml = (av && (av.indexOf('http') === 0 || av.indexOf('data:') === 0))
+            ? '<img src="' + pmEsc(av) + '" alt="">'
+            : pmEsc(av || (uname.charAt(0) || '我'));
+
+        // 玩家会话（置顶）
+        var rows = '<div class="pm-insp-sess" data-pm-go="chat">' +
+                '<div class="pm-av">' + avHtml + '</div>' +
+                '<div class="pm-mid">' +
+                    '<div class="pm-nm">' + pmEsc(uname) + '</div>' +
+                    '<div class="pm-ls">' + pmEsc(lastText.slice(0, 40)) + '</div>' +
+                '</div>' +
+                '<div class="pm-tm">' + (last ? pmClock(last.timestamp) : '') + '</div>' +
+            '</div>';
+
+        // 角色和别人的会话
+        var contacts = (p.contacts || []).slice().sort(function (a, b) { return pmContactTs(b) - pmContactTs(a); });
+        if (contacts.length) {
+            rows += contacts.map(function (c) {
+                var cl = pmContactLast(c);
+                var prefix = (cl && cl.from === 'char') ? '我：' : '';
+                var preview = cl ? (prefix + String(cl.text || '')) : '还没有消息';
+                return '<div class="pm-insp-sess" data-pm-contact="' + pmEsc(c.id) + '">' +
+                    '<div class="pm-av">' + pmEsc(c.avatarText || (c.name || '·').charAt(0)) + '</div>' +
+                    '<div class="pm-mid">' +
+                        '<div class="pm-nm">' + pmEsc(c.name || '未知') +
+                            (c.relation ? '<span class="pm-rel">' + pmEsc(c.relation) + '</span>' : '') +
+                        '</div>' +
+                        '<div class="pm-ls">' + pmEsc(preview.slice(0, 40)) + '</div>' +
+                    '</div>' +
+                    '<div class="pm-tm">' + (cl ? pmClock(cl.time) : '') + '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        var tip;
+        if (contacts.length) {
+            tip = '<div class="pm-insp-note">和你的那条是真实记录，和你那边同一份。下面几条是 ta 和别人的往来。</div>';
+        } else if (p.failed.contacts) {
+            tip = '<div class="pm-insp-note">ta 和别人的会话没读出来。' +
+                '<button class="pm-act" data-pm-action="refresh" style="margin-left:6px;padding:4px 8px;">重试</button></div>';
+        } else if (p.generated) {
+            tip = '<div class="pm-insp-note">还没读到 ta 和别人的会话，可以回桌面点「刷新内容」再试。</div>';
+        } else {
+            tip = '<div class="pm-insp-note">正在读取 ta 和别人的会话…</div>';
+        }
+
+        return pmBar('微信', 'desk', '<button class="pm-act" data-pm-go="wallet">钱包</button>') + rows + tip;
+    }
+
+    // 角色和某个联系人的会话详情
+    function pmViewContactChat(char, p) {
+        var c = (p.contacts || []).find(function (x) { return x.id === pmState.contactId; });
+        if (!c) return pmBar('会话', 'wechat') + '<div class="pm-insp-empty">' + pmIcon('chat', 30) + '这条会话不见了</div>';
+        var ms = (c.messages || []).slice().sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+        var body;
+        if (!ms.length) {
+            body = '<div class="pm-insp-empty">' + pmIcon('chat', 30) + '还没有消息</div>';
+        } else {
+            var lastDay = '';
+            body = '<div class="pm-insp-chat">' + ms.map(function (m) {
+                var out = '';
+                var day = pmDay(m.time);
+                if (day !== lastDay) { lastDay = day; out += '<div class="pm-insp-daysep">' + day + ' ' + pmClock(m.time) + '</div>'; }
+                var mine = (m.from === 'char');
+                var mark = m.byPlayer ? '<span style="font-size:9px;opacity:0.5;margin-left:4px;">你代发</span>' : '';
+                var needTrans = pmNeedsTranslate(char);
+                return out + '<div class="pm-insp-row ' + (mine ? 'pm-me' : '') + '">' +
+                    '<div class="pm-insp-bub">' + pmEsc(m.text || '') + mark +
+                    (needTrans && !mine && m.textZh ? pmTransBtn(m.textZh) : '') +
+                    '</div></div>';
+            }).join('') + '</div>';
+        }
+
+        var isReal = !!c.realCharId && !!pmGetChar(c.realCharId);
+        var title = (c.name || '会话') + (c.relation ? '（' + c.relation + '）' : '');
+        var busy = pmState.replying === c.id;
+
+        // 输入栏：以角色身份给这个联系人发消息
+        var inputBar = '<div class="pm-insp-inputbar">' +
+            '<input id="pmInspContactText" type="text" placeholder="以 ' + pmEsc(char.name || 'ta') + ' 的身份说…"' +
+                (busy ? ' disabled' : '') + '>' +
+            '<button data-pm-action="submitContactMsg"' + (busy ? ' disabled' : '') + '>发送</button>' +
+            '</div>';
+
+        // 回应按钮：让对方基于收到的消息真的回一句
+        var replyBtn = '<div style="padding:8px 12px 2px;">' +
+            '<button class="pm-act" data-pm-action="contactReply" style="width:100%;padding:9px 0;"' +
+                (busy ? ' disabled' : '') + '>' +
+                (busy ? '对方正在回…' : '让 ' + pmEsc(c.name || 'ta') + ' 回应') +
+            '</button></div>';
+
+        var tip = isReal
+            ? '<div class="pm-insp-note">' + pmEsc(c.name) + ' 是真实存在的人。你以 ' + pmEsc(char.name || 'ta') +
+              ' 的身份发的消息，ta 会真的收到；点「让 ta 回应」ta 就会按自己的人设回一句，也可能因此去找你或在群里说点什么。</div>'
+            : '<div class="pm-insp-note">这个联系人只存在于 ' + pmEsc(char.name || 'ta') +
+              ' 的手机里（人设里没有这个人）。你可以代发消息，ta 也会回，但不会牵动别的聊天。</div>';
+
+        return pmBar(title, 'wechat') + body + inputBar + replyBtn + tip;
+    }
+
+    // ================= 联系人联动：代发消息 + 对方真实回应 =================
+
+    // 以角色身份给某个联系人发一条消息（写进 contacts，同时留痕迹）
+    async function pmSendToContact(char, p) {
+        var text = pmVal('pmInspContactText');
+        if (!text) { pmToast('先写点什么'); return; }
+        var c = (p.contacts || []).find(function (x) { return x.id === pmState.contactId; });
+        if (!c) { pmToast('这条会话不见了'); return; }
+        c.messages = c.messages || [];
+        c.messages.push({ from: 'char', text: text, time: Date.now(), byPlayer: true });
+        pmPushAction(p, 'contact_msg', { name: c.name, relation: c.relation || '', text: text });
+        await pmSaveChar(char);
+        pmRender();
+        pmToast('已用 ' + (char.name || 'ta') + ' 的微信发给 ' + (c.name || 'ta'));
+    }
+
+    // 找到两个角色的共同群聊
+    function pmSharedGroup(aId, bId) {
+        var s = S();
+        return (s.chats || []).find(function (ch) {
+            if (!ch || ch.type !== 'group') return false;
+            var ids = ch.charIds || [];
+            return ids.indexOf(aId) >= 0 && ids.indexOf(bId) >= 0;
+        }) || null;
+    }
+
+    // 找到某个角色和玩家的单聊
+    function pmPrivateChatOf(charId) {
+        var s = S();
+        return (s.chats || []).find(function (ch) {
+            return ch && ch.type !== 'group' && ch.charId === charId;
+        }) || null;
+    }
+
+    // 往任意聊天里插一条角色消息
+    async function pmPushMsgTo(chatId, charId, text) {
+        if (!chatId || !text) return;
+        var msg = {
+            id: pmUid(), chatId: chatId, sender: 'ai', charId: charId,
+            type: 'text', content: text, timestamp: Date.now(), pmFromInspect: true
+        };
+        S().messages.push(msg);
+        await pmSaveMsg(msg);
+        var ch = pmGetChat(chatId);
+        if (ch) { ch.updatedAt = Date.now(); try { if (DB() && DB().chats) await DB().chats.put(ch); } catch (e) {} }
+        if (S().currentChatId === chatId && window.renderMessages) {
+            try {
+                window.renderMessages(chatId);
+                setTimeout(function () { var a = document.getElementById('msgArea'); if (a) a.scrollTop = a.scrollHeight; }, 60);
+            } catch (e) {}
+        }
+        if (window.renderChatList) { try { window.renderChatList(); } catch (e) {} }
+    }
+
+    // 让联系人对收到的消息做出反应
+    async function pmContactReply(char, p) {
+        var c = (p.contacts || []).find(function (x) { return x.id === pmState.contactId; });
+        if (!c) { pmToast('这条会话不见了'); return; }
+        var api = pmChatApi();
+        if (!api) { pmToast('先在设置里配好聊天 API'); return; }
+        if (pmState.replying) return;
+
+        var ms = (c.messages || []).slice().sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+        if (!ms.length) { pmToast('还没有消息可回应'); return; }
+        var last = ms[ms.length - 1];
+        if (last.from !== 'char') { pmToast('最后一条是对方说的，等你先说点什么'); return; }
+
+        pmState.replying = c.id;
+        pmRender();
+
+        // 对方是真实角色时，用 ta 自己的人设；否则只用关系描述
+        var realChar = c.realCharId ? pmGetChar(c.realCharId) : null;
+        var chatObj = pmGetChat(pmState.chatId);
+        var playerUser = pmGetUser(chatObj && chatObj.userId);
+        var playerName = (playerUser && playerUser.name) || '对方';
+
+        var sharedGroup = realChar ? pmSharedGroup(char.id, realChar.id) : null;
+        var playerChat = realChar ? pmPrivateChatOf(realChar.id) : null;
+
+        var history = ms.slice(-12).map(function (m) {
+            return (m.from === 'char' ? (char.name || '对方') : (c.name || '我')) + '：' + m.text;
+        }).join('\n');
+
+        var prompt =
+            '你是【' + (c.name || '某人') + '】。\n' +
+            (realChar ? ('你的人设：\n' + pmPersonaBrief(realChar) + '\n') : '') +
+            '你和【' + (char.name || '对方') + '】的关系：' + (c.relation || '认识') + '。\n\n' +
+            '你们微信上的对话（最后一条是 ' + (char.name || 'ta') + ' 刚发给你的）：\n' + history + '\n\n' +
+            '现在请你以【' + (c.name || '某人') + '】的身份，像真人一样反应。\n' +
+            '判断要点：这条消息符合你印象中的 ' + (char.name || 'ta') + ' 吗？\n' +
+            '- 如果只是普通寒暄、日常内容 → 就正常回一句，别小题大做。\n' +
+            '- 如果内容明显不像 ' + (char.name || 'ta') + ' 平时的样子（语气突变、说了不该说的、透露了奇怪的事、跟你们关系不符）→ 你会起疑，可能追问、质问、试探，甚至去找别人求证。\n\n' +
+            '只返回严格 JSON，不要多余文字：\n' +
+            '{\n' +
+            '  "reply": "你在微信上回给 ' + (char.name || 'ta') + ' 的话（必填，一句自然的人话）",\n' +
+            '  "suspicious": true 或 false（这条消息是否让你觉得不对劲）,\n' +
+            (sharedGroup ? ('  "groupSay": "如果你想在群里说点什么就填，不想就填空字符串",\n') : '') +
+            (playerChat ? ('  "askPlayer": "如果你想私下去问「' + playerName + '」就填要说的话，不想就填空字符串",\n') : '') +
+            '  "reason": "一句话说明你为什么这么反应"\n' +
+            '}\n\n' +
+            '要求：\n' +
+            '- reply 必须有，口语化，符合你的人设和你们的关系。\n' +
+            (sharedGroup ? ('- groupSay：只有真的到了"想在群里提一嘴"的程度才填（比如觉得奇怪想旁敲侧击、或单纯分享）。普通消息就留空。\n') : '') +
+            (playerChat ? ('- askPlayer：只有你真的想找「' + playerName + '」核实/吐槽/打听时才填。普通消息就留空。\n') : '') +
+            '- 像真人一样克制：不是每件事都要闹大，也不是每件事都无所谓。按你的性格和这条消息的实际分量来定。';
+
+        try {
+            var res = await fetch(api.url.replace(/\/+$/, '') + '/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.key },
+                body: JSON.stringify({
+                    model: api.model || 'gpt-3.5-turbo',
+                    messages: [
+                        { role: 'system', content: prompt },
+                        { role: 'user', content: '按上面要求，只输出那个 JSON。' }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 1200
+                })
+            });
+            if (!res.ok) {
+                var et = '';
+                try { et = (await res.text() || '').slice(0, 120); } catch (e2) {}
+                throw new Error('HTTP ' + res.status + (et ? '：' + et : ''));
+            }
+            var data = await res.json();
+            var choice = data && data.choices && data.choices[0];
+            var out = (choice && choice.message && choice.message.content) || '';
+            if (!out) throw new Error('模型没有返回内容');
+            var obj = pmExtractJson(out);
+
+            var reply = String((obj && obj.reply) || '').trim();
+            if (!reply) throw new Error('没有解析出回复内容');
+
+            // 1) 对方在微信上回一句
+            c.messages.push({ from: 'them', text: reply, time: Date.now() });
+            await pmSaveChar(char);
+
+            // 2) 连锁反应：群里说一句
+            var extras = [];
+            var groupSay = String((obj && obj.groupSay) || '').trim();
+            if (groupSay && sharedGroup && realChar) {
+                await pmPushMsgTo(sharedGroup.id, realChar.id, groupSay);
+                extras.push('在群「' + (sharedGroup.name || '群聊') + '」里说了句话');
+            }
+
+            // 3) 连锁反应：私下来问玩家
+            var askPlayer = String((obj && obj.askPlayer) || '').trim();
+            if (askPlayer && playerChat && realChar) {
+                await pmPushMsgTo(playerChat.id, realChar.id, askPlayer);
+                extras.push('私聊来问你了');
+            }
+
+            pmState.replying = null;
+            pmRender();
+
+            var tip = (c.name || 'ta') + ' 回复了';
+            if (obj && obj.suspicious) tip += '（似乎起疑了）';
+            if (extras.length) tip += '，还' + extras.join('、');
+            pmToast(tip);
+        } catch (e) {
+            pmState.replying = null;
+            pmRender();
+            var msg = String((e && e.message) || e || '未知错误');
+            console.warn('[查手机] 联系人回应失败：', msg, e);
+            if (/failed to fetch|networkerror|load failed/i.test(msg)) pmToast('连不上接口，检查 API 和网络');
+            else pmToast(msg.slice(0, 90));
+        }
+    }
+
+    function pmViewChat(char, p) {
+        var msgs = pmMirrorMsgs();
+        var chat = pmGetChat(pmState.chatId);
+        var user = pmGetUser(chat && chat.userId);
+        var uname = (user && user.name) || '我';
+        var needTrans = pmNeedsTranslate(char);
+        var body = '';
+        if (!msgs.length) {
+            body = '<div class="pm-insp-empty">' + pmIcon('chat', 30) + '还没有聊天记录</div>';
+        } else {
+            var lastDay = '';
+            body = '<div class="pm-insp-chat">' + msgs.map(function (m) {
+                var out = '';
+                var day = pmDay(m.timestamp);
+                if (day !== lastDay) { lastDay = day; out += '<div class="pm-insp-daysep">' + day + ' ' + pmClock(m.timestamp) + '</div>'; }
+                var txt = pmMsgText(m);
+                if (!txt) return out;
+                if (m.type === 'systip' || m.sender === 'system') {
+                    return out + '<div class="pm-insp-sys">' + pmEsc(txt) + '</div>';
+                }
+                // 站在角色手机的视角：角色自己发的在右边
+                var mine = (m.sender === 'ai');
+                // 外语角色：角色自己说的话（右侧）加「译」按钮，取 bilingual 已翻译缓存
+                var transBtn = '';
+                if (needTrans && mine) {
+                    // bilingual 翻译存在 msg.translation，取到就直接展示，无需再调 API
+                    var cached = m.translation || '';
+                    transBtn = cached ? pmTransBtn(cached) : '';
+                }
+                return out + '<div class="pm-insp-row ' + (mine ? 'pm-me' : '') + '">' +
+                    '<div class="pm-insp-bub">' + pmEsc(txt) + transBtn + '</div></div>';
+            }).join('') + '</div>';
+        }
+        return pmBar(uname, 'wechat', '<button class="pm-act" data-pm-go="doSend">代ta发</button>') + body;
+    }
+
+    // ---------- 钱包 ----------
+    function pmViewWallet(char, p) {
+        var recs = (p.wechat.records || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        var list = recs.length
+            ? recs.map(function (r) {
+                var isIn = r.type === 'in';
+                return '<div class="pm-insp-rec">' +
+                    '<div><div class="pm-rn">' + pmEsc(r.note || (isIn ? '收入' : '支出')) + '</div>' +
+                    '<div class="pm-rt">' + pmDay(r.time) + ' ' + pmClock(r.time) + '</div></div>' +
+                    '<div class="pm-ra ' + (isIn ? 'pm-in' : '') + '">' + (isIn ? '+' : '-') + pmMoney(r.amount) + '</div></div>';
+            }).join('')
+            : '<div class="pm-insp-empty">' + pmIcon('wallet', 30) + '还没有零钱明细</div>';
+        return pmBar('钱包', 'wechat', '<button class="pm-act" data-pm-go="doPay">代ta转账</button>') +
+            '<div class="pm-insp-bal">' +
+                '<div class="pm-bl">零钱余额</div>' +
+                '<div class="pm-bv"><small>¥</small>' + pmMoney(p.wechat.balance) + '</div>' +
+            '</div>' +
+            '<div style="padding:0 15px 6px;font-size:11px;color:rgba(255,255,255,0.4);">零钱明细</div>' +
+            list;
+    }
+
+    // ---------- 备忘录 ----------
+    function pmViewNotes(char, p) {
+        if (p.failed.notes) {
+            return pmBar('备忘录', 'desk') + pmFailBlock('notes', '备忘录');
+        }
+        var tab = pmState.noteTab === 'diary' ? 'diary' : 'random';
+        var all = (p.notes || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        var list = all.filter(function (n) {
+            return tab === 'diary' ? (n.type === 'diary' || n.isPrivate) : !(n.type === 'diary' || n.isPrivate);
+        });
+        var tabs = '<div class="pm-insp-tabs">' +
+            '<button class="' + (tab === 'random' ? 'pm-on' : '') + '" data-pm-notetab="random">随手记</button>' +
+            '<button class="' + (tab === 'diary' ? 'pm-on' : '') + '" data-pm-notetab="diary">私密日记</button>' +
+            '</div>';
+        var body;
+        if (!list.length) {
+            body = '<div class="pm-insp-empty">' + pmIcon('note', 30) + (tab === 'diary' ? '这里还没有日记' : '这里还没有随手记') + '</div>';
+        } else {
+            body = list.map(function (n) {
+                var priv = (n.type === 'diary' || n.isPrivate);
+                var canDel = n.source === 'player';
+                var needTrans = pmNeedsTranslate(char);
+                return '<div class="pm-insp-card" data-pm-note="' + pmEsc(n.id) + '" style="cursor:pointer;position:relative;">' +
+                    (canDel ? '<button data-pm-delete-note="' + pmEsc(n.id) + '" style="position:absolute;top:8px;right:8px;border:none;' +
+                        'background:var(--pmi-fill-2);color:var(--pmi-ink-3);font-size:10px;padding:2px 7px;border-radius:6px;cursor:pointer;" ' +
+                        'title="删掉这条，角色不知道你留过">删除</button>' : '') +
+                    '<div class="pm-c-t">' + (priv ? pmIcon('lock', 13) : '') + pmEsc(n.title || (priv ? '日记' : '无题')) +
+                        (needTrans && (n.titleZh || n.contentZh) ? pmTransBtn(n.titleZh || n.contentZh || '') : '') + '</div>' +
+                    '<div class="pm-c-b">' + pmEsc((n.content || '').slice(0, 60)) + (n.content && n.content.length > 60 ? '…' : '') + '</div>' +
+                    '<div class="pm-c-m">' + pmAgo(n.time) + (canDel ? ' · 你写的' : '') + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+        var hint = tab === 'diary'
+            ? '<div class="pm-insp-note">已用指纹解锁。这些是 ta 本来不打算给人看的。</div>'
+            : '';
+        return pmBar('备忘录', 'desk', '<button class="pm-act" data-pm-go="doNote">留一条</button>') + tabs + body + hint;
+    }
+
+    // ---------- 相册（无真实图，用有设计感的文字卡替代，不留空占位） ----------
+    // 深色态用的暗调渐变
+    var PM_GRADS_DARK = [
+        'linear-gradient(140deg,#3a3a3f,#1c1c20)',
+        'linear-gradient(140deg,#4a4046,#221e22)',
+        'linear-gradient(140deg,#37423f,#1b201f)',
+        'linear-gradient(140deg,#423c34,#201d19)',
+        'linear-gradient(140deg,#383f4a,#1b1e24)',
+        'linear-gradient(140deg,#463a3a,#221b1b)',
+        'linear-gradient(140deg,#3d4436,#1e211b)',
+        'linear-gradient(140deg,#3a3648,#1c1a24)',
+        'linear-gradient(140deg,#44403a,#211f1c)'
+    ];
+    // 浅色态用的柔和浅灰调渐变（文字改成深色，见 CSS 的 --pmi-ph-ink）
+    var PM_GRADS_LIGHT = [
+        'linear-gradient(140deg,#eceef1,#dcdfe4)',
+        'linear-gradient(140deg,#f0eced,#e2dcdf)',
+        'linear-gradient(140deg,#e9eeec,#d9e0dd)',
+        'linear-gradient(140deg,#f1eee8,#e2ded4)',
+        'linear-gradient(140deg,#e9ecf1,#d8dde5)',
+        'linear-gradient(140deg,#f1eaea,#e3d9d9)',
+        'linear-gradient(140deg,#ecefe7,#dde2d7)',
+        'linear-gradient(140deg,#ebe9f1,#dbd8e4)',
+        'linear-gradient(140deg,#f0efe9,#e1dfd6)'
+    ];
+    function pmIsNight() {
+        var h = document.documentElement;
+        return !!(h && (h.classList.contains('phone-night') || h.classList.contains('phone-dark')));
+    }
+    function pmGrad(i) {
+        var arr = pmIsNight() ? PM_GRADS_DARK : PM_GRADS_LIGHT;
+        return arr[i % arr.length];
+    }
+    function pmViewAlbum(char, p) {
+        if (p.failed.album) return pmBar('相册', 'desk') + pmFailBlock('album', '相册');
+        var list = (p.album || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        if (!list.length) {
+            return pmBar('相册', 'desk', '<button class="pm-act" data-pm-go="doPhoto">用ta的手机拍</button>') +
+                '<div class="pm-insp-empty">' + pmIcon('album', 30) + '相册还是空的</div>';
+        }
+        var grid = '<div class="pm-insp-album">' + list.map(function (a, i) {
+            var priv = !!a.isPrivate;
+            var canDel = a.source === 'player';
+            return '<div style="position:relative;">' +
+                '<div class="pm-insp-ph' + (priv ? ' pm-blur' : '') + '" data-pm-photo="' + pmEsc(a.id) + '" ' +
+                'style="background:' + pmGrad(i) + ';">' +
+                (priv ? '<span class="pm-lock">' + pmIcon('lock', 11) + '</span>' : '') +
+                '<span>' + pmEsc(String(a.desc || '').slice(0, 22)) + '</span></div>' +
+                (canDel ? '<button data-pm-delete-photo="' + pmEsc(a.id) + '" style="position:absolute;top:3px;left:3px;border:none;' +
+                    'background:rgba(0,0,0,0.55);color:#fff;font-size:9px;padding:1px 5px;border-radius:5px;cursor:pointer;" ' +
+                    'title="删除这张，抹掉痕迹">删</button>' : '') +
+                '</div>';
+        }).join('') + '</div>';
+        return pmBar('相册', 'desk', '<button class="pm-act" data-pm-go="doPhoto">拍一张</button>') + grid +
+            (p.albumDeleted && p.albumDeleted.length
+                ? '<div style="padding:4px 14px 10px;"><button class="pm-act" data-pm-go="albumDeleted" style="width:100%;padding:8px 0;font-size:12px;">最近删除 (' + p.albumDeleted.length + ')</button></div>'
+                : '') +
+            '<div class="pm-insp-note">点开任意一张看清楚内容。带锁的是 ta 设了隐藏的。</div>';
+    }
+
+    // ---------- 浏览器 ----------
+    function pmViewBrowser(char, p) {
+        if (p.failed.browserHistory) return pmBar('浏览记录', 'desk') + pmFailBlock('browserHistory', '浏览记录');
+        var list = (p.browserHistory || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        if (!list.length) return pmBar('浏览记录', 'desk') + '<div class="pm-insp-empty">' + pmIcon('globe', 30) + '没有搜索记录</div>';
+        return pmBar('浏览记录', 'desk') +
+            list.map(function (h) {
+                return '<div class="pm-insp-rec"><div>' +
+                    '<div class="pm-rn">' + pmIcon('search', 13) + pmEsc(h.keyword || '') + '</div>' +
+                    '<div class="pm-rt">' + pmAgo(h.time) + '</div></div></div>';
+            }).join('') +
+            '<div class="pm-insp-note">ta 搜过的东西，比说出口的更诚实一点。</div>';
+    }
+
+    // ---------- 使用时长 ----------
+    function pmViewUsage(char, p) {
+        if (p.failed.appUsage) return pmBar('屏幕使用时间', 'desk') + pmFailBlock('appUsage', '使用时长');
+        var list = (p.appUsage || []).slice().sort(function (a, b) { return (b.durationMinutes || 0) - (a.durationMinutes || 0); });
+        if (!list.length) return pmBar('屏幕使用时间', 'desk') + '<div class="pm-insp-empty">' + pmIcon('clock', 30) + '没有使用记录</div>';
+        var max = list[0].durationMinutes || 1;
+        var total = list.reduce(function (s, a) { return s + (a.durationMinutes || 0); }, 0);
+        return pmBar('屏幕使用时间', 'desk') +
+            '<div class="pm-insp-bal"><div class="pm-bl">今日总计</div>' +
+            '<div class="pm-bv">' + Math.floor(total / 60) + '<small style="margin:0 2px 0 1px;">小时</small>' + (total % 60) + '<small style="margin-left:1px;">分</small></div></div>' +
+            '<div class="pm-insp-usage">' + list.map(function (a) {
+                var mins = a.durationMinutes || 0;
+                var pct = Math.max(4, Math.round(mins / max * 100));
+                var label = mins >= 60 ? (Math.floor(mins / 60) + '小时' + (mins % 60 ? (mins % 60) + '分' : '')) : (mins + '分钟');
+                return '<div class="pm-insp-ub">' +
+                    '<div class="pm-uh"><span>' + pmEsc(a.appName || '应用') + '</span><span>' + label + '</span></div>' +
+                    '<div class="pm-track"><div class="pm-fill" style="width:' + pct + '%;"></div></div></div>';
+            }).join('') + '</div>';
+    }
+
+    // ---------- 你的痕迹（玩家操作历史） ----------
+    function pmActionText(a) {
+        var pl = a.payload || {};
+        // 把操作时间转成自然语言，让角色知道是多久前的事，不会把11天前说成"刚"
+        var whenStr = '';
+        if (a.time) {
+            var diffMs = Date.now() - a.time;
+            var diffDays = Math.floor(diffMs / 86400000);
+            var diffHrs = Math.floor(diffMs / 3600000);
+            var diffMin = Math.floor(diffMs / 60000);
+            if (diffMin < 2) whenStr = '（刚刚）';
+            else if (diffMin < 60) whenStr = '（' + diffMin + '分钟前）';
+            else if (diffHrs < 24) whenStr = '（' + diffHrs + '小时前）';
+            else if (diffDays === 1) whenStr = '（昨天）';
+            else if (diffDays < 30) whenStr = '（' + diffDays + '天前）';
+            else whenStr = '（很久前）';
+        }
+        if (a.type === 'send_msg') return '用 ta 的微信给你自己发了一句' + whenStr + '：「' + (pl.text || '') + '」';
+        if (a.type === 'transfer') return '从 ta 自己的手机微信零钱里，转了 ¥' + pmMoney(pl.amount) + ' 到你那边' + whenStr +
+            (pl.note ? '，备注「' + pl.note + '」' : '');
+        if (a.type === 'photo') return '用 ta 的手机拍了一张照片存进相册' + whenStr + '：' + (pl.desc || '');
+        if (a.type === 'note') return '在 ta 的备忘录里留了一条' + whenStr + '：「' + (pl.content || '') + '」';
+        if (a.type === 'contact_msg') return '用 ta 的微信，冒充 ta 给' +
+            (pl.relation ? (pl.relation + '「' + (pl.name || '某人') + '」') : ('「' + (pl.name || '某人') + '」')) +
+            '发了一句' + whenStr + '：「' + (pl.text || '') + '」';
+        return '动了 ta 的手机' + whenStr;
+    }
+
+    // ---------- 打车/地图历史 ----------
+    function pmViewMapHistory(char, p) {
+        if (p.failed.mapHistory) return pmBar('打车记录', 'desk') + pmFailBlock('mapHistory', '打车记录');
+        var list = (p.mapHistory || []).slice().sort(function (a, b) { return (b.daysAgo || 0) - (a.daysAgo || 0); });
+        if (!list.length) return pmBar('打车记录', 'desk') +
+            '<div class="pm-insp-empty">' + pmIcon('trace', 30) + '没有出行记录</div>';
+        return pmBar('打车记录', 'desk') +
+            list.map(function (r) {
+                var from = r.from || '出发地';
+                var to   = r.to   || '目的地';
+                var meta = [r.type || '打车', r.cost ? '¥' + r.cost : '', r.daysAgo != null ? pmAgo(Date.now() - r.daysAgo * 86400000) : ''].filter(Boolean).join(' · ');
+                return '<div class="pm-insp-rec" style="flex-direction:column;align-items:flex-start;gap:5px;padding:12px 15px;">' +
+                    '<div class="pm-rn" style="font-size:13px;">' + pmIcon('trace', 13) + pmEsc(from) +
+                        ' <span style="opacity:.5;font-size:11px;margin:0 4px;">→</span>' + pmEsc(to) + '</div>' +
+                    '<div class="pm-rt">' + pmEsc(meta) + '</div>' +
+                    '</div>';
+            }).join('') +
+            '<div class="pm-insp-note">ta 去过的地方，多看几次就能摸清规律。</div>';
+    }
+
+    // ---------- 音乐最近播放 ----------
+    function pmViewMusicRecent(char, p) {
+        if (p.failed.musicRecent) return pmBar('音乐', 'desk') + pmFailBlock('musicRecent', '音乐');
+        var list = (p.musicRecent || []).slice();
+        if (!list.length) return pmBar('音乐', 'desk') +
+            '<div class="pm-insp-empty">' + pmIcon('search', 30) + '没有播放记录</div>';
+        return pmBar('音乐', 'desk') +
+            list.map(function (m, i) {
+                var cover = i % 2 === 0 ? 'linear-gradient(140deg,#3a3f4a,#1c1e24)' : 'linear-gradient(140deg,#3d3042,#1e1822)';
+                var playing = i === 0;
+                return '<div class="pm-insp-sess" style="gap:12px;cursor:pointer;" ' +
+                    'data-pm-play-song="' + pmEsc(m.title || '') + '" data-pm-play-artist="' + pmEsc(m.artist || '') + '">' +
+                    '<div style="width:44px;height:44px;flex:0 0 auto;border-radius:10px;background:' + cover + ';' +
+                        'display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.8);">' +
+                        (playing ? '▶' : '♫') + '</div>' +
+                    '<div class="pm-mid">' +
+                        '<div class="pm-nm" style="font-size:13px;">' + pmEsc(m.title || '未知歌曲') + '</div>' +
+                        '<div class="pm-ls">' + pmEsc(m.artist || '') + (m.album ? ' · ' + pmEsc(m.album) : '') + '</div>' +
+                    '</div>' +
+                    '<div class="pm-tm">' + (m.daysAgo != null ? pmAgo(Date.now() - m.daysAgo * 86400000) : '') + '</div>' +
+                    '</div>';
+            }).join('') +
+            '<div class="pm-insp-note">点任意一首，会在一起听里开始播放。</div>';
+    }
+
+    // ---------- 健康异常数据 ----------
+    function pmViewHealthLog(char, p) {
+        if (p.failed.healthLog) return pmBar('健康', 'desk') + pmFailBlock('healthLog', '健康数据');
+        var list = (p.healthLog || []).slice().sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); });
+        if (!list.length) return pmBar('健康', 'desk') +
+            '<div class="pm-insp-empty">' + pmIcon('clock', 30) + '没有健康记录</div>';
+
+        // 按天分组
+        var groups = {};
+        var groupOrder = [];
+        list.forEach(function (entry) {
+            var day = entry.date || '某天';
+            if (!groups[day]) { groups[day] = []; groupOrder.push(day); }
+            groups[day].push(entry);
+        });
+
+        // 纯文字标记，不用彩色 emoji
+        var EVENT_DOT  = { sleep: '·', wake: '·', open_phone: '·', close_phone: '·', active: '·' };
+        var EVENT_NAME = { sleep: '入睡', wake: '醒来', open_phone: '打开手机', close_phone: '放下手机', active: '活动' };
+
+        return pmBar('健康', 'desk') +
+            groupOrder.map(function (day) {
+                var entries = groups[day];
+                return '<div class="pm-insp-card" style="margin:10px 14px;">' +
+                    '<div class="pm-c-t" style="margin-bottom:8px;">' + pmEsc(day) + '</div>' +
+                    entries.map(function (e) {
+                        var label = EVENT_NAME[e.type] || pmEsc(e.type || '事件');
+                        var sub = '';
+                        if (e.type === 'open_phone' && e.app) sub = '打开 ' + pmEsc(e.app);
+                        if (e.type === 'open_phone' && e.duration) sub += (sub ? '，' : '') + '用了 ' + pmEsc(e.duration);
+                        if (e.note) sub = (sub ? sub + ' · ' : '') + pmEsc(e.note);
+                        return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--pmi-line);">' +
+                            '<span style="font-size:11px;color:var(--pmi-ink-3);flex:0 0 50px;">' + pmEsc(e.time || '') + '</span>' +
+                            '<div style="flex:1;min-width:0;">' +
+                                '<span style="font-size:12px;">' + label + '</span>' +
+                                (sub ? '<div style="font-size:10px;color:var(--pmi-ink-3);margin-top:2px;">' + sub + '</div>' : '') +
+                            '</div></div>';
+                    }).join('') +
+                    '</div>';
+            }).join('') +
+            '<div class="pm-insp-note">这些是睡眠监测里捕捉到的异常——普通夜晚不会这样。</div>';
+    }
+
+    // ---------- 相册「最近删除」入口（挂在相册页底部） ----------
+    function pmViewAlbumDeleted(char, p) {
+        var list = (p.albumDeleted || []).slice();
+        if (!list.length) return pmBar('最近删除', 'album') +
+            '<div class="pm-insp-empty">' + pmIcon('album', 30) + '没有最近删除的照片</div>';
+        return pmBar('最近删除', 'album') +
+            '<div class="pm-insp-album">' + list.map(function (a, i) {
+                var priv = !!a.isPrivate;
+                return '<div style="position:relative;">' +
+                    '<div class="pm-insp-ph pm-blur" data-pm-del-photo="' + pmEsc(a.id) + '" style="background:' + pmGrad(i) + ';opacity:.8;cursor:pointer;">' +
+                    (priv ? '<span class="pm-lock">' + pmIcon('lock', 11) + '</span>' : '') +
+                    '<span>' + pmEsc(String(a.desc || '').slice(0, 22)) + '</span></div>' +
+                    '<div style="position:absolute;bottom:3px;left:0;right:0;text-align:center;' +
+                        'font-size:8px;color:rgba(255,255,255,0.65);">' +
+                        (a.daysAgo != null ? pmAgo(Date.now() - a.daysAgo * 86400000) + '删除' : '') +
+                    '</div></div>';
+            }).join('') + '</div>' +
+            '<div class="pm-insp-note">删了不代表忘了。这几张照片还在「最近删除」里，还没彻底消失。</div>';
+    }
+
+    // 最近删除照片详情（在手机壳内渲染，不用宿主 modal）
+    function pmShowDelPhoto(id) {
+        pmState.viewDelPhotoId = id;
+        pmGoto('delPhotoDetail');
+    }
+
+    function pmViewDelPhotoDetail(char, p) {
+        var a = (p.albumDeleted || []).find(function (x) { return x.id === pmState.viewDelPhotoId; });
+        if (!a) return pmBar('最近删除', 'albumDeleted') +
+            '<div class="pm-insp-empty">' + pmIcon('album', 30) + '这张不见了</div>';
+        var priv = !!a.isPrivate;
+        return pmBar(priv ? '私密 · 已删除' : '已删除的照片', 'albumDeleted') +
+            '<div style="margin:14px;border-radius:14px;overflow:hidden;background:' + pmGrad(0) + ';' +
+                'min-height:190px;display:flex;align-items:center;justify-content:center;padding:22px 18px;' +
+                'border:1px solid var(--pmi-line);opacity:.92;">' +
+                '<div style="font-size:13px;line-height:1.8;color:var(--pmi-ph-ink);text-align:center;' +
+                    'white-space:pre-wrap;word-break:break-word;">' + pmEsc(a.desc || '') + '</div>' +
+            '</div>' +
+            '<div class="pm-insp-note" style="padding-top:0;">' +
+                (a.daysAgo != null ? pmAgo(Date.now() - a.daysAgo * 86400000) + '删除' : '删除时间未知') +
+                (priv ? ' · 曾设为私密' : '') +
+            '</div>' +
+            '<div class="pm-insp-note">删了但没彻底清理，才留在这里。</div>';
+    }
+
+    // ---------- 查手机记录 ----------
+    function pmViewInspectHistory(char, p) {
+        var list = (p.inspectHistory || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        if (!list.length) {
+            return pmBar('查手机记录', 'desk') +
+                '<div class="pm-insp-empty">' + pmIcon('trace', 30) + '还没有查手机记录<br>每次打开这台手机都会留下记录</div>';
+        }
+        return pmBar('查手机记录', 'desk') +
+            list.map(function (session) {
+                var actions = (session.actions || []);
+                var summary = actions.length
+                    ? actions.map(function (a) { return pmActionText(a); }).join('；')
+                    : '只看了看，没有操作';
+                return '<div class="pm-insp-card" style="position:relative;padding-right:70px;">' +
+                    '<div class="pm-c-t" style="font-size:12px;margin-bottom:6px;">' +
+                        pmAgo(session.time) +
+                    '</div>' +
+                    '<div class="pm-c-b" style="font-size:11px;line-height:1.65;">' +
+                        pmEsc(summary) +
+                    '</div>' +
+                    '<button data-pm-del-session="' + pmEsc(session.id) + '" style="position:absolute;top:10px;right:10px;' +
+                        'border:none;background:var(--pmi-fill-2);color:var(--pmi-ink-3);' +
+                        'font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;">' +
+                        '抹除记忆</button>' +
+                    '</div>';
+            }).join('') +
+            '<div class="pm-insp-note">删掉某次记录后，ta 对那次查手机的事情将毫无印象——从记忆里彻底消失。</div>';
+    }
+
+    async function pmDeleteInspectSession(sessionId) {
+        var char = pmGetChar(pmState.charId);
+        if (!char) return;
+        var p = pmData(char);
+        // 找到这次 session 里的所有 actions
+        var session = (p.inspectHistory || []).find(function (s) { return s.id === sessionId; });
+        if (!session) return;
+        // 把该 session 的操作从 playerActions 里也标记为消费（抹掉记忆意味着角色也不知道了）
+        // 同时把 playerActions 里来自这次 session 的未消费项清掉
+        if (Array.isArray(session.actions)) {
+            var actionIds = new Set(session.actions.map(function (a) { return a.id; }));
+            p.playerActions = (p.playerActions || []).filter(function (a) { return !actionIds.has(a.id); });
+        }
+        // 从历史记录中移除
+        p.inspectHistory = (p.inspectHistory || []).filter(function (s) { return s.id !== sessionId; });
+        await pmSaveChar(char);
+        pmRender();
+        pmToast('这次查手机的记忆已从 ta 的脑海中抹去');
+    }
+
+    function pmViewTrace(char, p) {
+        var list = (p.playerActions || []).slice().sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
+        if (!list.length) {
+            return pmBar('你的痕迹', 'desk') +
+                '<div class="pm-insp-empty">' + pmIcon('trace', 30) + '你还什么都没动过<br>在微信、钱包、相册、备忘录里<br>都可以留下点东西</div>';
+        }
+        return pmBar('你的痕迹', 'desk') + list.map(function (a) {
+            return '<div class="pm-insp-card" style="display:flex;align-items:flex-start;gap:8px;">' +
+                '<div style="flex:1 1 auto;min-width:0;">' +
+                    '<div class="pm-c-b">' + pmEsc(pmActionText(a)) + '</div>' +
+                    '<div class="pm-c-m">' + pmAgo(a.time) + ' · ' + (a.consumed ? 'ta 已经发现了' : '还没被 ta 发现') + '</div>' +
+                '</div>' +
+                '<button data-pm-delete-action="' + pmEsc(a.id) + '" style="flex:0 0 auto;border:none;' +
+                    'color:var(--pmi-ink-3);font-size:11px;padding:3px 7px;border-radius:6px;cursor:pointer;' +
+                    'background:var(--pmi-fill);line-height:1.5;white-space:nowrap;" title="删掉这条痕迹，角色就不知道了">删除</button>' +
+                '</div>';
+        }).join('') + '<div class="pm-insp-note">删除痕迹后角色不会发现这件事；已发现的删掉只是抹记录。</div>';
+    }
+    // ---------- 删除痕迹 / 玩家留下的内容 ----------
+    async function pmDeleteAction(actionId) {
+        var char = pmGetChar(pmState.charId);
+        if (!char) return;
+        var p = pmData(char);
+        var before = (p.playerActions || []).length;
+        p.playerActions = (p.playerActions || []).filter(function (a) { return a.id !== actionId; });
+        if (p.playerActions.length < before) {
+            await pmSaveChar(char);
+            pmRender();
+            pmToast('痕迹已抹除，角色不会发现这件事了');
+        }
+    }
+
+    async function pmDeleteNote(noteId) {
+        var char = pmGetChar(pmState.charId);
+        if (!char) return;
+        var p = pmData(char);
+        var n = (p.notes || []).find(function (x) { return x.id === noteId; });
+        if (!n || n.source !== 'player') { pmToast('只能删掉你自己留下的内容'); return; }
+        p.notes = p.notes.filter(function (x) { return x.id !== noteId; });
+        // 同时抹掉对应的操作痕迹（让角色不知道）
+        p.playerActions = (p.playerActions || []).filter(function (a) {
+            return !(a.type === 'note' && a.payload && a.payload.content === n.content && !a.consumed);
+        });
+        await pmSaveChar(char);
+        pmRender();
+        pmToast('备忘录和痕迹都抹掉了');
+    }
+
+    async function pmDeletePhoto(photoId) {
+        var char = pmGetChar(pmState.charId);
+        if (!char) return;
+        var p = pmData(char);
+        var a = (p.album || []).find(function (x) { return x.id === photoId; });
+        if (!a || a.source !== 'player') { pmToast('只能删掉你自己拍的照片'); return; }
+        p.album = p.album.filter(function (x) { return x.id !== photoId; });
+        // 同时抹掉对应的操作痕迹
+        p.playerActions = (p.playerActions || []).filter(function (act) {
+            return !(act.type === 'photo' && act.payload && act.payload.desc === a.desc && !act.consumed);
+        });
+        await pmSaveChar(char);
+        pmRender();
+        pmToast('照片和痕迹都删掉了');
+    }
+
+    function pmFailBlock(field, label) {
+        return '<div class="pm-insp-empty">' + pmIcon('search', 30) + pmEsc(label) + '的内容飘走了<br>' +
+            '<button class="pm-act" data-pm-action="refresh" style="margin-top:14px;padding:8px 14px;">点击重试</button></div>';
+    }
+
+    // ---------- 玩家反向操作：四个表单 ----------
+    function pmViewDoSend(char, p) {
+        var chat = pmGetChat(pmState.chatId);
+        var user = pmGetUser(chat && chat.userId);
+        var uname = (user && user.name) || '我';
+        return pmBar('代 ' + (char.name || 'ta') + ' 发消息', 'chat') +
+            '<div class="pm-insp-form">' +
+                '<label>以 ' + pmEsc(char.name || 'ta') + ' 的身份，发给 ' + pmEsc(uname) + '</label>' +
+                '<textarea id="pmInspSendText" rows="4" placeholder="替 ta 说一句话…"></textarea>' +
+                '<button class="pm-submit" data-pm-action="submitSend">发出去</button>' +
+                '<div class="pm-hint">这条会真的出现在你们的聊天里，ta 下次开口时会知道这句不是自己发的。</div>' +
+            '</div>';
+    }
+
+    function pmViewDoPay(char, p) {
+        return pmBar('代 ' + (char.name || 'ta') + ' 转账', 'wallet') +
+            '<div class="pm-insp-form">' +
+                '<label>ta 的零钱余额：¥' + pmMoney(p.wechat.balance) + '</label>' +
+                '<label>转账金额</label>' +
+                '<input id="pmInspPayAmt" type="number" step="0.01" min="0.01" placeholder="0.00">' +
+                '<label>备注（可留空）</label>' +
+                '<input id="pmInspPayNote" type="text" placeholder="比如：拿去买点好吃的">' +
+                '<button class="pm-submit" data-pm-action="submitPay">以 ta 的名义发起转账</button>' +
+                '<div class="pm-hint">这会以角色的手机发出一条转账消息，你需要点击「接收」才会真正到账。</div>' +
+            '</div>';
+    }
+
+    function pmViewDoPhoto(char, p) {
+        return pmBar('用 ta 的手机拍一张', 'album') +
+            '<div class="pm-insp-form">' +
+                '<label>照片内容（写清楚拍到了什么）</label>' +
+                '<textarea id="pmInspPhotoDesc" rows="4" placeholder="比如：偷偷对着ta的侧脸拍的一张，背景是傍晚的窗"></textarea>' +
+                '<button class="pm-submit" data-pm-action="submitPhoto">存进 ta 的相册</button>' +
+                '<div class="pm-hint">会以「用 ta 手机拍的」存进相册，ta 之后翻相册时会看到。</div>' +
+            '</div>';
+    }
+
+    function pmViewDoNote(char, p) {
+        return pmBar('在 ta 备忘录里留一条', 'notes') +
+            '<div class="pm-insp-form">' +
+                '<label>标题（可留空）</label>' +
+                '<input id="pmInspNoteTitle" type="text" placeholder="给 ta 的">' +
+                '<label>内容</label>' +
+                '<textarea id="pmInspNoteText" rows="5" placeholder="想让 ta 看到的话…"></textarea>' +
+                '<button class="pm-submit" data-pm-action="submitNote">写进备忘录</button>' +
+                '<div class="pm-hint">会留在「随手记」里，标记为你写的。</div>' +
+            '</div>';
+    }
+
+    // ---------- 操作分发 ----------
+    function pmVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+
+    function pmHandleAction(kind) {
+        var char = pmGetChar(pmState.charId);
+        if (!char) return;
+        var p = pmData(char);
+        if (kind === 'refresh') { pmGenerate(char, true); return; }
+        if (kind === 'submitSend') { pmDoSend(char, p); return; }
+        if (kind === 'submitPay') { pmDoPay(char, p); return; }
+        if (kind === 'submitPhoto') { pmDoPhoto(char, p); return; }
+        if (kind === 'submitNote') { pmDoNote(char, p); return; }
+        if (kind === 'submitContactMsg') { pmSendToContact(char, p); return; }
+        if (kind === 'contactReply') { pmContactReply(char, p); return; }
+    }
+
+    function pmPushAction(p, type, payload) {
+        var action = { id: pmUid(), type: type, payload: payload || {}, time: Date.now(), consumed: false };
+        p.playerActions.push(action);
+        if (p.playerActions.length > 60) p.playerActions = p.playerActions.slice(-60);
+        // 同步到当前查手机 session
+        if (pmState.currentSessionId) {
+            var session = (p.inspectHistory || []).find(function (s) { return s.id === pmState.currentSessionId; });
+            if (session) { session.actions = session.actions || []; session.actions.push(action); }
+        }
+    }
+
+    // 代角色发消息：真的往主聊天记录里插一条角色消息
+    async function pmDoSend(char, p) {
+        var text = pmVal('pmInspSendText');
+        if (!text) { pmToast('先写点什么'); return; }
+        var chat = pmGetChat(pmState.chatId);
+        if (!chat) { pmToast('聊天不见了'); return; }
+        var msg = {
+            id: pmUid(), chatId: chat.id, sender: 'ai', charId: char.id,
+            type: 'text', content: text, timestamp: Date.now(),
+            pmFromInspect: true
+        };
+        try {
+            S().messages.push(msg);
+            await pmSaveMsg(msg);
+            chat.updatedAt = Date.now();
+            try { if (DB() && DB().chats) await DB().chats.put(chat); } catch (e) {}
+            pmPushAction(p, 'send_msg', { text: text });
+            await pmSaveChar(char);
+            if (S().currentChatId === chat.id && window.renderMessages) {
+                try {
+                    window.renderMessages(chat.id);
+                    setTimeout(function () { var a = document.getElementById('msgArea'); if (a) a.scrollTop = a.scrollHeight; }, 60);
+                } catch (e) {}
+            }
+            if (window.renderChatList) { try { window.renderChatList(); } catch (e) {} }
+            pmToast('已用 ' + (char.name || 'ta') + ' 的微信发出去了');
+            pmGoto('chat');
+        } catch (e) {
+            console.warn('[查手机] 代发失败', e);
+            // 回滚
+            try { S().messages = S().messages.filter(function (m) { return m.id !== msg.id; }); } catch (e2) {}
+            pmToast('发送失败了');
+        }
+    }
+
+    // 代角色转账：先发一条转账消息到聊天记录，玩家点击接收后才到账
+    async function pmDoPay(char, p) {
+        var amt = pmRound(parseFloat(pmVal('pmInspPayAmt')));
+        var note = pmVal('pmInspPayNote');
+        if (!amt || amt <= 0) { pmToast('金额填一下'); return; }
+        if (amt > p.wechat.balance) { pmToast('ta 零钱只有 ¥' + pmMoney(p.wechat.balance)); return; }
+        var chat = pmGetChat(pmState.chatId);
+        if (!chat) { pmToast('聊天不见了'); return; }
+        
+        // 先扣除角色余额
+        var before = p.wechat.balance;
+        p.wechat.balance = pmRound(before - amt);
+        p.wechat.records.push({ id: pmUid(), type: 'out', amount: amt, note: note || '转账', time: Date.now() });
+        
+        // 发一条转账消息到聊天里
+        var msg = {
+            id: pmUid(), chatId: chat.id, sender: 'ai', charId: char.id,
+            type: 'transfer', amount: amt, note: note || '', timestamp: Date.now(),
+            pmFromInspect: true, transferStatus: 'pending'
+        };
+        
+        try {
+            S().messages.push(msg);
+            await pmSaveMsg(msg);
+            chat.updatedAt = Date.now();
+            try { if (DB() && DB().chats) await DB().chats.put(chat); } catch (e) {}
+            pmPushAction(p, 'transfer', { amount: amt, note: note });
+            await pmSaveChar(char);
+            if (S().currentChatId === chat.id && window.renderMessages) {
+                try {
+                    window.renderMessages(chat.id);
+                    setTimeout(function () { var a = document.getElementById('msgArea'); if (a) a.scrollTop = a.scrollHeight; }, 60);
+                } catch (e) {}
+            }
+            if (window.renderChatList) { try { window.renderChatList(); } catch (e) {} }
+            pmToast('已用 ' + (char.name || 'ta') + ' 的微信发出转账');
+            pmGoto('chat');
+        } catch (e) {
+            console.warn('[查手机] 转账失败', e);
+            // 回滚
+            p.wechat.balance = before;
+            p.wechat.records.pop();
+            try { S().messages = S().messages.filter(function (m) { return m.id !== msg.id; }); } catch (e2) {}
+            pmToast('转账没成功');
+        }
+    }
+
+    async function pmDoPhoto(char, p) {
+        var desc = pmVal('pmInspPhotoDesc');
+        if (!desc) { pmToast('写一下拍到了什么'); return; }
+        p.album.push({ id: pmUid(), desc: desc, time: Date.now(), isPrivate: false, source: 'player' });
+        pmPushAction(p, 'photo', { desc: desc });
+        await pmSaveChar(char);
+        pmToast('已存进 ta 的相册');
+        pmGoto('album');
+    }
+
+    async function pmDoNote(char, p) {
+        var title = pmVal('pmInspNoteTitle');
+        var content = pmVal('pmInspNoteText');
+        if (!content) { pmToast('内容还空着'); return; }
+        p.notes.push({
+            id: pmUid(), type: 'random', title: title || '（有人给你留了一条）',
+            content: content, time: Date.now(), isPrivate: false, source: 'player'
+        });
+        pmPushAction(p, 'note', { title: title, content: content });
+        await pmSaveChar(char);
+        pmToast('已写进 ta 的备忘录');
+        pmState.noteTab = 'random';
+        pmGoto('notes');
+    }
+
+
+    // ---------- 外语角色：查手机内容翻译 ----------
+    var LANG_NAME_PM = { en: '英语', de: '德语', ru: '俄语', fr: '法语', ja: '日语', ko: '韩语', yue: '粤语' };
+
+    function pmNeedsTranslate(char) {
+        var lang = (char && char.chatLang) || 'zh';
+        return lang !== 'zh' && lang !== 'yue';
+    }
+
+    // 给文本内容拼一个「译」按钮（点后直接显示预生成的翻译，不调 API）
+    function pmTransBtn(zhText) {
+        if (!zhText) return '';
+        // 把翻译文本 base64 存在属性里，点击时展开
+        return '<button data-pm-trans-text="' + pmEsc(zhText) + '" ' +
+            'style="flex:0 0 auto;border:none;background:var(--pmi-fill-2);color:var(--pmi-ink-3);' +
+            'font-size:10px;padding:2px 6px;border-radius:5px;cursor:pointer;margin-left:6px;' +
+            'white-space:nowrap;vertical-align:middle;">译</button>';
+    }
+
+    // 在 pmRoot 里代理翻译按钮点击（直接显示预生成翻译，无需 API）
+    function pmBindTranslate(root) {
+        root.addEventListener('click', function (ev) {
+            var btn = ev.target.closest && ev.target.closest('[data-pm-trans-text]');
+            if (!btn) return;
+            ev.stopPropagation();
+            var panel = btn.nextElementSibling;
+            if (panel && panel.classList && panel.classList.contains('pm-trans-panel')) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                return;
+            }
+            var zhText = btn.getAttribute('data-pm-trans-text') || '';
+            var p = document.createElement('div');
+            p.className = 'pm-trans-panel';
+            p.style.cssText = 'font-size:11px;line-height:1.65;color:var(--pmi-ink-2);' +
+                'background:var(--pmi-fill);border-radius:8px;padding:8px 10px;margin-top:6px;';
+            p.textContent = zhText || '（无翻译）';
+            btn.insertAdjacentElement('afterend', p);
+        });
+    }
+
+    // ---------- AI 生成：一次调用，只要那五个字段，字段级容错 ----------
+    function pmPersonaBrief(char) {
+        var bits = [];
+        if (char.persona) bits.push(String(char.persona).slice(0, 400));
+        if (char.setting) bits.push(String(char.setting).slice(0, 200));
+        return bits.join('\n') || '（没有写人设）';
+    }
+    // 把角色关系列表整理成提示词素材（认识的人优先用真名）
+    function pmRelationBrief(char) {
+        var rels = (char.relationships || []).filter(Boolean);
+        if (!rels.length) return '';
+        var chat = pmGetChat(pmState.chatId);
+        var playerId = chat && chat.userId;
+        var lines = rels.filter(function (r) { return r.targetId !== playerId; }).map(function (r) {
+            var t = pmGetChar(r.targetId) || pmGetUser(r.targetId);
+            var nm = (t && t.name) || '';
+            if (!nm) return '';
+            return '- ' + nm + '：' + (r.type || '认识') + (r.desc ? '，' + String(r.desc).slice(0, 60) : '');
+        }).filter(Boolean);
+        return lines.length ? lines.join('\n') : '';
+    }
+
+    function pmRecentTalk() {
+        var msgs = pmMirrorMsgs().slice(-14);
+        if (!msgs.length) return '（还没聊过）';
+        var chat = pmGetChat(pmState.chatId);
+        var user = pmGetUser(chat && chat.userId);
+        var uname = (user && user.name) || '对方';
+        var char = pmGetChar(pmState.charId);
+        return msgs.map(function (m) {
+            var who = (m.sender === 'ai') ? (char && char.name || '我') : uname;
+            // 加上日期时间，让 AI 清楚每条消息是哪天说的
+            var ts = m.timestamp || 0;
+            var d = new Date(ts);
+            var dateTag = ts ? '[' + (d.getMonth()+1) + '月' + d.getDate() + '日 ' +
+                ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2) + '] ' : '';
+            return dateTag + who + '：' + pmMsgText(m).slice(0, 60);
+        }).join('\n');
+    }
+
+    // 专门给 healthLog 用的：只看今天/昨天的消息，明确说明时间距今
+    function pmTodayContext() {
+        var now = new Date();
+        var curHour = now.getHours();
+        var curMin  = now.getMinutes();
+        var curTimeStr = ('0'+curHour).slice(-2) + ':' + ('0'+curMin).slice(-2);
+
+        var today = new Date(now); today.setHours(0, 0, 0, 0);
+        var todayMs = today.getTime();
+        var yesterdayMs = todayMs - 86400000;
+
+        var msgs = pmMirrorMsgs();
+        var todayMsgs  = msgs.filter(function (m) { return (m.timestamp || 0) >= todayMs; });
+        var yestMsgs   = msgs.filter(function (m) { return (m.timestamp || 0) >= yesterdayMs && (m.timestamp || 0) < todayMs; });
+
+        var chat = pmGetChat(pmState.chatId);
+        var user = pmGetUser(chat && chat.userId);
+        var uname = (user && user.name) || '对方';
+        var char = pmGetChar(pmState.charId);
+
+        function fmtLine(m) {
+            var who = (m.sender === 'ai') ? (char && char.name || '我') : uname;
+            var d = new Date(m.timestamp || 0);
+            var t = ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+            return '[' + t + '] ' + who + '：' + pmMsgText(m).slice(0, 50);
+        }
+
+        var result = '【当前时刻】' + curTimeStr + '\n';
+
+        // 决定健康数据应该基于哪一天
+        if (curHour < 7) {
+            // 凌晨未到正常起床时间：生成昨晚的睡眠数据（昨天入睡到今天凌晨的事）
+            result += '现在才凌晨 ' + curTimeStr + '，正常入睡时间还没到，所以健康数据应该生成【昨天晚上到今天凌晨目前为止】发生的事。' +
+                '只生成已经发生过的时间点（在 ' + curTimeStr + ' 之前）的事件，不要编造还没到的时间。\n';
+        } else {
+            result += '现在是 ' + curTimeStr + '，健康数据生成【昨晚入睡到今天目前为止】发生的事。' +
+                '只生成已经发生过（在 ' + curTimeStr + ' 之前）的时间点，不要编造还没到的时间。\n';
+        }
+
+        if (todayMsgs.length) {
+            result += '今天有聊天记录：\n' + todayMsgs.map(fmtLine).join('\n') + '\n';
+        } else {
+            result += '今天（截至 ' + curTimeStr + '）没有和玩家聊过天。\n';
+        }
+        if (yestMsgs.length) {
+            result += '昨天的聊天记录（供参考背景）：\n' + yestMsgs.slice(-6).map(fmtLine).join('\n') + '\n';
+        }
+
+        // 最后一条消息是哪天
+        var lastMsg = msgs[msgs.length - 1];
+        if (lastMsg && lastMsg.timestamp) {
+            var lastD = new Date(lastMsg.timestamp); lastD.setHours(0,0,0,0);
+            var diffDays = Math.floor((todayMs - lastD.getTime()) / 86400000);
+            if (diffDays > 1) {
+                result += '注意：最近一次聊天是 ' + diffDays + ' 天前，今天角色心里对玩家的状态可能已经发生了变化，' +
+                    '健康数据不要基于那些旧的聊天内容来写。\n';
+            }
+        }
+        return result || '从未聊过天。';
+    }
+
+    // 尽最大努力从模型输出里抠出 JSON：
+    // 支持代码围栏、前后废话、尾随逗号，以及被 max_tokens 截断导致括号没闭合的情况。
+    function pmExtractJson(raw) {
+        var t = String(raw || '').trim();
+        if (!t) throw new Error('模型返回了空内容');
+
+        // 去掉 markdown 代码围栏（可能出现在开头/结尾）
+        t = t.replace(/```[a-zA-Z]*\s*/g, '').trim();
+
+        // 掐掉 { 之前的所有废话
+        var a = t.indexOf('{');
+        if (a < 0) throw new Error('返回内容里没有 JSON 对象');
+        t = t.slice(a);
+
+        // 先尝试直接解析（顺利的情况）
+        var cleaned = t.replace(/,\s*([}\]])/g, '$1');
+        try { return JSON.parse(cleaned); } catch (e) {}
+
+        // 再尝试截到最后一个 }
+        var b = cleaned.lastIndexOf('}');
+        if (b > 0) {
+            try { return JSON.parse(cleaned.slice(0, b + 1)); } catch (e) {}
+        }
+
+        // 还不行说明大概率被截断了：扫一遍字符串状态，把没闭合的括号补上
+        var depth = 0, inStr = false, esc = false, lastSafe = -1;
+        var stack = [];
+        for (var i = 0; i < t.length; i++) {
+            var ch = t[i];
+            if (inStr) {
+                if (esc) { esc = false; }
+                else if (ch === '\\') { esc = true; }
+                else if (ch === '"') { inStr = false; }
+                continue;
+            }
+            if (ch === '"') { inStr = true; continue; }
+            if (ch === '{' || ch === '[') { stack.push(ch === '{' ? '}' : ']'); }
+            else if (ch === '}' || ch === ']') { stack.pop(); }
+            // 记录一个「结构上安全」的截断点：某个完整元素刚结束
+            if (!inStr && (ch === '}' || ch === ']')) lastSafe = i;
+        }
+
+        var patch = t;
+        // 截断发生在字符串中间时，先把这个残缺字符串丢掉，回退到上一个安全点
+        if (inStr && lastSafe > 0) {
+            patch = t.slice(0, lastSafe + 1);
+            // 重新算一次待闭合括号
+            stack = [];
+            inStr = false; esc = false;
+            for (var j = 0; j < patch.length; j++) {
+                var c2 = patch[j];
+                if (inStr) {
+                    if (esc) esc = false;
+                    else if (c2 === '\\') esc = true;
+                    else if (c2 === '"') inStr = false;
+                    continue;
+                }
+                if (c2 === '"') { inStr = true; continue; }
+                if (c2 === '{' || c2 === '[') stack.push(c2 === '{' ? '}' : ']');
+                else if (c2 === '}' || c2 === ']') stack.pop();
+            }
+        }
+        patch = patch.replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
+        while (stack.length) patch += stack.pop();
+
+        try { return JSON.parse(patch); } catch (e) {
+            throw new Error('JSON 解析失败（可能被截断）：' + String(e.message || e).slice(0, 80));
+        }
+    }
+
+    async function pmGenerate(char, isRefresh) {
+        if (pmState.loading) return;
+        var api = pmChatApi();
+        if (!api) { pmToast('先在设置里配好聊天 API'); return; }
+        var p = pmData(char);
+        pmState.loading = true;
+        if (pmState.page === 'desk') pmRender();
+
+        var relBrief = pmRelationBrief(char);
+        var chatObj = pmGetChat(pmState.chatId);
+        var playerUser = pmGetUser(chatObj && chatObj.userId);
+        var playerName = (playerUser && playerUser.name) || '对方';
+        var playerGender = (playerUser && playerUser.gender) || '';
+        // 把玩家性别明确写出来，避免模型靠刻板印象猜
+        var playerGenderLine = playerGender
+            ? '玩家「' + playerName + '」的性别是【' + playerGender + '】，这是绑定的真实设定，必须严格遵守，不能凭角色性别或其他线索推断或更改。'
+            : '玩家「' + playerName + '」的性别未设定，生成内容里涉及对方的代词时请用中性表达，不要猜测。';
+
+        var todayStr = (function () {
+            var d = new Date();
+            return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日（' +
+                ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()] + '）';
+        })();
+
+        var prompt =
+            '你现在要生成角色【' + (char.name || '对方') + '】手机里的私人数据。\n' +
+            '【今天的日期是】' + todayStr + '。你生成的所有内容里涉及时间的字段 daysAgo，必须以今天为基准往过去推算，保持语义正确。\n' +
+            '角色人设：\n' + pmPersonaBrief(char) + '\n\n' +
+            '【玩家身份】' + playerGenderLine + '\n' +
+            (relBrief ? ('ta 认识的人（务必优先用这些真实存在的人来生成微信联系人，名字必须一字不差）：\n' + relBrief + '\n\n') : '\n') +
+            '你们最近的聊天（每条都标了日期时间，用来判断关系阶段和语气）：\n' + pmRecentTalk() + '\n\n' +
+            '【今天的聊天情况及时间参考，专门用于生成健康数据】：\n' + pmTodayContext() + '\n\n' +
+            '只返回严格的 JSON，不要任何多余文字、不要 markdown 代码块标记，格式如下：\n' +
+            '{\n' +
+            '  "wechatBalance": 数字,\n' +
+            '  "wechatRecords": [{"type":"in或out","amount":数字,"note":"这笔钱的用途","daysAgo":距今天数}],\n' +
+            '  "contacts": [{"name":"联系人名字","relation":"和ta的关系，如妈妈/哥哥/室友/同事/发小",' +
+            '"messages":[{"from":"them或char","text":"这条消息的内容","textZh":"这条消息的中文翻译（外语角色必填）"}]}],\n' +
+            '  "notes": [{"type":"random或diary","title":"","content":"","isPrivate":布尔,"daysAgo":距今天数,"titleZh":"标题的中文翻译（角色chatLang是外语时必填，中文角色填空）","contentZh":"内容的中文翻译（同上）"}],\n' +
+            '  "album": [{"desc":"对这张照片内容的详细文字描述","isPrivate":布尔,"daysAgo":距今天数}],\n' +
+            '  "browserHistory": [{"keyword":"搜索词","daysAgo":距今天数}],\n' +
+            '  "appUsage": [{"appName":"","durationMinutes":数字}],\n' +
+            '  "albumDeleted": [{"desc":"被删照片的内容描述","isPrivate":布尔,"daysAgo":距今天数}],\n' +
+            '  "mapHistory": [{"from":"出发地","to":"目的地","type":"打车或导航","cost":费用数字或null,"daysAgo":距今天数}],\n' +
+            '  "musicRecent": [{"title":"歌名","artist":"歌手","album":"专辑（可空）","daysAgo":距今天数}],\n' +
+            '  "healthLog": [{"date":"日期如8月14日","time":"时刻如03:22","type":"sleep或wake或open_phone或close_phone","app":"打开的App名（type为open_phone时填）","duration":"使用时长（如17分钟）","note":"补充说明"}]\n' +
+            '}\n\n' +
+            '要求：\n' +
+            '- 【时间语义最重要】daysAgo 必须与内容描述的时间一致：\n' +
+            '  · 亡妻/童年/多年前 → daysAgo 1000~5000\n' +
+            '  · 几个月前 → daysAgo 60~300\n' +
+            '  · 上周 → daysAgo 3~14\n' +
+            '  · 最近1~3天 → daysAgo 0~3\n' +
+            '  · 绝不能把"几年前去世的人的照片"写成 daysAgo=1\n' +
+            '- 【性别禁止刻板印象】所有涉及玩家「' + playerName + '」的内容，代词必须按【玩家身份】写，不能按角色性别猜。\n' +
+            '- wechatBalance 要符合角色经济状况，不要整数。\n' +
+            '- wechatRecords 数量灵活，4~12条，按角色消费习惯决定，daysAgo 自然分布，不要全集中在同一天。\n' +
+            '- contacts 至少4个人，优先用认识的人，不要把玩家「' + playerName + '」放进来；messages 至少6条，口语化透出角色另一面。\n' +
+            '- notes 至少3条，1条是 diary+isPrivate，语气一致；daysAgo 按内容语义。\n' +
+            '- album 恰好5张，2~3张 isPrivate；daysAgo 必须按内容语义（亡妻照片就要几年前）。\n' +
+            '- browserHistory 至少5条，符合角色性格；daysAgo 自然分布。\n' +
+            '- appUsage【按角色人设灵活生成，不要固定5个】：宅男可7~10个，社交型4~6个；要贴角色生活方式，覆盖主要类别（社交/视频/购物/游戏/工具等按性格取舍）。\n' +
+            '- albumDeleted：1~2张，是 ta 删掉但还没彻底清理的照片，要有理由（和前任、私密合影、不想被人看到的截图等），daysAgo 按内容语义。\n' +
+            '- mapHistory：至少5条出行记录，from/to 要具体（小区名、地标、公司等），type 可以是"打车"或"导航"，cost 打车时填金额，导航可填null，daysAgo 按实际时间分布，要能体现角色的日常动线和隐藏行动。\n' +
+            '- musicRecent：6~10首最近播放，歌单要和角色当前情绪/状态吻合，不要全是同一风格，daysAgo 从0到30自然分布。\n' +
+            '- healthLog：至少7条数据，体现今天（' + todayStr + '）的【异常睡眠】——' +
+            '具体规则：①入睡指的是【昨晚】几点睡，date 写"X月X日"，time 用 HH:MM；' +
+            '②如果角色当晚或凌晨有异常，要按时间顺序写出：几点突然醒（wake）、几点打开手机（open_phone，要填 app 字段说明打开了什么）、几点关手机（close_phone）、几点又睡；' +
+            '③今天没有聊天或距上次聊天超过1天，角色的睡眠内容就不要涉及玩家，只写角色自己的焦虑/心事；今天有聊天，才可以体现聊天带来的情绪影响；' +
+            '④date 字段必须准确，不能把昨晚写成几天前，也不能把8天前的聊天当成今天的来写。\n' +
+            '- 全部内容贴着角色人设，不要通用模板。';
+
+        try {
+            // max_tokens 逐级降级：有些模型/通道不接受 8000，被拒就自动退一档重试
+            var budgets = [8000, 4000, 2000];
+            var res = null, lastFail = '';
+            for (var bi = 0; bi < budgets.length; bi++) {
+                res = await fetch(api.url.replace(/\/+$/, '') + '/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.key },
+                    body: JSON.stringify({
+                        model: api.model || 'gpt-3.5-turbo',
+                        // 必须带一条 user 消息：只发 system 时，Gemini 这类通道转出来的
+                        // contents 会是空的，直接报 "contents is not specified"
+                        messages: [
+                            { role: 'system', content: prompt },
+                            { role: 'user', content: '按上面的要求，现在只输出那个 JSON，不要任何多余文字。' }
+                        ],
+                        temperature: 0.95,
+                        max_tokens: budgets[bi]
+                    })
+                });
+                if (res.ok) break;
+                // 400/422 常见于「max_tokens 超过模型上限」这类参数问题，值得降档再试
+                if (res.status === 400 || res.status === 422) {
+                    try { lastFail = (await res.clone().text() || '').slice(0, 200); } catch (e4) {}
+                    if (bi < budgets.length - 1) continue;
+                }
+                break;
+            }
+            if (!res.ok) {
+                // 把服务端返回的错误正文读出来，这才是真正有用的信息
+                var errText = '';
+                try { errText = await res.text(); } catch (e2) {}
+                var detail = '';
+                try {
+                    var ej = JSON.parse(errText);
+                    detail = (ej && ej.error && (ej.error.message || ej.error.type)) || '';
+                } catch (e3) { detail = String(errText || '').slice(0, 160); }
+                throw new Error('接口报错 HTTP ' + res.status + (detail ? '：' + detail : ''));
+            }
+            var data = await res.json();
+            if (data && data.error) {
+                throw new Error('接口报错：' + String((data.error.message || data.error.type || '未知')).slice(0, 160));
+            }
+            var choice = data && data.choices && data.choices[0];
+            var out = (choice && choice.message && choice.message.content) || '';
+            // 有些通道把内容放在 reasoning_content 或 text 里
+            if (!out && choice) out = choice.message && choice.message.reasoning_content || choice.text || '';
+            if (!out) throw new Error('模型没有返回内容（finish_reason=' + ((choice && choice.finish_reason) || '未知') + '）');
+            pmState.lastRaw = out;
+            var obj = pmExtractJson(out);
+            if (!obj || typeof obj !== 'object') throw new Error('解析结果不是对象');
+
+            var now = Date.now();
+            // 逐字段落地，任一字段坏了只标记那一个
+            p.failed = {};
+
+            try {
+                if (typeof obj.wechatBalance === 'number' && isFinite(obj.wechatBalance)) p.wechat.balance = pmRound(obj.wechatBalance);
+                else if (!p.wechat.balance) p.wechat.balance = pmRound(Math.random() * 800 + 60);
+            } catch (e) { p.wechat.balance = p.wechat.balance || 0; }
+
+            try {
+                var keepRecs = (p.wechat.records || []).filter(function (r) { return r.source === 'player'; });
+                var aiRecs = (Array.isArray(obj.wechatRecords) ? obj.wechatRecords : []).map(function (r, i) {
+                    var da = (typeof r.daysAgo === 'number' && r.daysAgo >= 0) ? r.daysAgo : (i + 1) * (1 + Math.random() * 3);
+                    return {
+                        id: pmUid(), type: (r.type === 'in' ? 'in' : 'out'),
+                        amount: pmRound(r.amount), note: String(r.note || '消费'),
+                        time: now - da * 86400000
+                    };
+                }).filter(function (r) { return r.amount > 0; });
+                p.wechat.records = keepRecs.concat(aiRecs);
+            } catch (e) { p.failed.wechatRecords = true; }
+
+            try {
+                var rawContacts = Array.isArray(obj.contacts) ? obj.contacts : [];
+                var aiContacts = rawContacts.map(function (c, ci) {
+                    var nm = String((c && c.name) || '').trim();
+                    if (!nm) return null;
+                    var rawMsgs = Array.isArray(c.messages) ? c.messages : [];
+                    // 越靠后的联系人会话整体越早，相差约 1~5 小时
+                    var base = now - (ci + 1) * 3600000 * (1 + Math.random() * 4);
+                    var msgs = rawMsgs.map(function (m, mi) {
+                        var txt = String((m && (m.text || m.content)) || '').trim();
+                        if (!txt) return null;
+                        return {
+                            from: (m.from === 'char' || m.from === 'me' || m.from === 'self') ? 'char' : 'them',
+                            text: txt,
+                            textZh: String((m && m.textZh) || ''),
+                            time: base + mi * 60000 * (1 + Math.random() * 3)
+                        };
+                    }).filter(Boolean);
+                    if (msgs.length < 2) return null;
+                    // 如果这个名字对得上本机真实存在的角色，就绑定 realCharId，
+                    // 后面「代发消息」才能让对方真的收到、真的有反应
+                    var matched = (S().characters || []).find(function (x) {
+                        return x && x.name && x.name === nm && x.id !== char.id;
+                    });
+                    return {
+                        id: pmUid(),
+                        name: nm,
+                        relation: String((c.relation || '')).trim().slice(0, 12),
+                        avatarText: nm.charAt(0),
+                        realCharId: matched ? matched.id : null,
+                        messages: msgs
+                    };
+                }).filter(Boolean);
+                if (!aiContacts.length) throw new Error('empty');
+                p.contacts = aiContacts;
+            } catch (e) { p.failed.contacts = true; }
+
+            try {
+                var keepNotes = (p.notes || []).filter(function (n) { return n.source === 'player'; });
+                var aiNotes = (Array.isArray(obj.notes) ? obj.notes : []).map(function (n, i) {
+                    var da = (typeof n.daysAgo === 'number' && n.daysAgo >= 0) ? n.daysAgo : (i + 1) * (0.5 + Math.random());
+                    return {
+                        id: pmUid(), type: (n.type === 'diary' ? 'diary' : 'random'),
+                        title: String(n.title || ''), content: String(n.content || ''),
+                        titleZh: String(n.titleZh || ''), contentZh: String(n.contentZh || ''),
+                        isPrivate: !!n.isPrivate, source: 'ai',
+                        time: now - da * 86400000
+                    };
+                }).filter(function (n) { return n.content; });
+                if (!aiNotes.length) throw new Error('empty');
+                p.notes = keepNotes.concat(aiNotes);
+            } catch (e) { p.failed.notes = true; }
+
+            try {
+                var keepPhotos = (p.album || []).filter(function (a) { return a.source === 'player'; });
+                var aiPhotos = (Array.isArray(obj.album) ? obj.album : []).map(function (a, i) {
+                    var da = (typeof a.daysAgo === 'number' && a.daysAgo >= 0) ? a.daysAgo : (i + 1) * (2 + Math.random() * 5);
+                    return {
+                        id: pmUid(), desc: String(a.desc || ''), isPrivate: !!a.isPrivate, source: 'ai',
+                        time: now - da * 86400000
+                    };
+                }).filter(function (a) { return a.desc; });
+                if (!aiPhotos.length) throw new Error('empty');
+                p.album = keepPhotos.concat(aiPhotos);
+            } catch (e) { p.failed.album = true; }
+
+            try {
+                var aiHis = (Array.isArray(obj.browserHistory) ? obj.browserHistory : []).map(function (h, i) {
+                    var da = (typeof h.daysAgo === 'number' && h.daysAgo >= 0) ? h.daysAgo : i * (0.2 + Math.random() * 0.8);
+                    return { id: pmUid(), keyword: String(h.keyword || h || ''), time: now - da * 86400000 };
+                }).filter(function (h) { return h.keyword; });
+                if (!aiHis.length) throw new Error('empty');
+                p.browserHistory = aiHis;
+            } catch (e) { p.failed.browserHistory = true; }
+
+            try {
+                var aiUse = (Array.isArray(obj.appUsage) ? obj.appUsage : []).map(function (u) {
+                    return { id: pmUid(), appName: String(u.appName || ''), durationMinutes: Math.max(1, Math.round(u.durationMinutes || 0)), lastOpened: now };
+                }).filter(function (u) { return u.appName; });
+                if (!aiUse.length) throw new Error('empty');
+                p.appUsage = aiUse;
+            } catch (e) { p.failed.appUsage = true; }
+
+            // ---- 最近删除 ----
+            try {
+                var aiDel = (Array.isArray(obj.albumDeleted) ? obj.albumDeleted : []).map(function (a) {
+                    var da = (typeof a.daysAgo === 'number' && a.daysAgo >= 0) ? a.daysAgo : 3;
+                    return { id: pmUid(), desc: String(a.desc || ''), isPrivate: !!a.isPrivate, daysAgo: da };
+                }).filter(function (a) { return a.desc; }).slice(0, 3);
+                p.albumDeleted = aiDel;
+            } catch (e) {}
+
+            // ---- 打车/地图历史 ----
+            try {
+                var aiMap = (Array.isArray(obj.mapHistory) ? obj.mapHistory : []).map(function (r, i) {
+                    var da = (typeof r.daysAgo === 'number' && r.daysAgo >= 0) ? r.daysAgo : i;
+                    return {
+                        id: pmUid(),
+                        from: String(r.from || '出发地'),
+                        to: String(r.to || '目的地'),
+                        type: String(r.type || '打车'),
+                        cost: (r.cost != null && !isNaN(Number(r.cost))) ? Number(r.cost) : null,
+                        daysAgo: da
+                    };
+                }).filter(function (r) { return r.from || r.to; });
+                if (!aiMap.length) throw new Error('empty');
+                p.mapHistory = aiMap;
+            } catch (e) { p.failed.mapHistory = true; }
+
+            // ---- 音乐最近播放 ----
+            try {
+                var aiMusic = (Array.isArray(obj.musicRecent) ? obj.musicRecent : []).map(function (m) {
+                    var da = (typeof m.daysAgo === 'number' && m.daysAgo >= 0) ? m.daysAgo : 0;
+                    return { id: pmUid(), title: String(m.title || ''), artist: String(m.artist || ''), album: String(m.album || ''), daysAgo: da };
+                }).filter(function (m) { return m.title; });
+                if (!aiMusic.length) throw new Error('empty');
+                p.musicRecent = aiMusic;
+            } catch (e) { p.failed.musicRecent = true; }
+
+            // ---- 健康异常数据 ----
+            try {
+                var aiHealth = (Array.isArray(obj.healthLog) ? obj.healthLog : []).map(function (h) {
+                    return {
+                        id: pmUid(),
+                        date: String(h.date || '某天'),
+                        time: String(h.time || ''),
+                        type: String(h.type || 'wake'),
+                        app: h.app ? String(h.app) : '',
+                        duration: h.duration ? String(h.duration) : '',
+                        note: h.note ? String(h.note) : ''
+                    };
+                });
+                if (!aiHealth.length) throw new Error('empty');
+                p.healthLog = aiHealth;
+            } catch (e) { p.failed.healthLog = true; }
+
+            p.generated = true;
+            pmState.lastError = null;
+            await pmSaveChar(char);
+            pmState.loading = false;
+            pmRender();
+            // 有字段没落地时明确说出来，别让人以为全成了
+            var badKeys = Object.keys(p.failed || {});
+            var NAME_MAP = { contacts: '联系人会话', notes: '备忘录', album: '相册', browserHistory: '浏览记录', appUsage: '使用时长', wechatRecords: '零钱明细' };
+            if (badKeys.length) {
+                pmToast('已生成，但' + badKeys.map(function (k) { return NAME_MAP[k] || k; }).join('、') + '没出来，可再刷新一次');
+            } else if (isRefresh) {
+                pmToast('手机内容已刷新');
+            } else {
+                pmToast('已读出 ' + (char.name || 'ta') + ' 手机里的内容');
+            }
+        } catch (e) {
+            var msg = String((e && e.message) || e || '未知错误');
+            console.warn('[查手机] 生成失败：', msg, e);
+            if (pmState.lastRaw) console.warn('[查手机] 模型原始输出：', pmState.lastRaw);
+            pmState.lastError = msg;
+            pmState.loading = false;
+            pmRender();
+            // 网络层失败（跨域/断网/地址错）message 通常是 Failed to fetch
+            if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+                pmToast('连不上接口，检查一下 API 地址和网络');
+            } else {
+                pmToast(msg.slice(0, 90));
+            }
+        }
+    }
+
+    // 事件委托统一在 pmEnsureRoot 里绑定在手机壳上，这里不再重复挂全局监听
+
+    // ---------- 同步机制：把玩家的操作注入下一轮 system prompt ----------
+    function pmWrapPrompt() {
+        if (window.__pmInspPromptWrapped) return;
+        if (typeof window.buildSystemPrompt !== 'function') { setTimeout(pmWrapPrompt, 500); return; }
+        window.__pmInspPromptWrapped = true;
+        var origBSP = window.buildSystemPrompt;
+        window.buildSystemPrompt = function (char, chat, opts) {
+            var base = origBSP.apply(this, arguments) || '';
+            try {
+                if (!char || !chat || chat.type === 'group') return base;
+                var p = char.phoneInspect;
+                if (!p || !Array.isArray(p.playerActions)) return base;
+                var pending = p.playerActions.filter(function (a) { return !a.consumed; });
+                if (!pending.length) return base;
+
+                var lines = pending.map(function (a) { return '- ' + pmActionText(a); }).join('\n');
+                base += '\n\n## 📱 你翻手机时发现了一些事\n' +
+                    '你在用手机时注意到，有人（就是正在和你聊天的那个人）偷偷动过你的手机，做了这些事：\n' + lines + '\n\n' +
+                    '这不是一个你必须完成的任务，也不是要你逐条汇报。就像现实中的人一样，你可以：\n' +
+                    '- 随口提一句，带着你真实的情绪（惊讶、好笑、吃醋、心软、无语……）\n' +
+                    '- 先装作没发现，等对方提起来你再说\n' +
+                    '- 直接点破其中一件最让你在意的，别的先放着\n' +
+                    '- 如果不在意，也可以完全不提，继续你们正在聊的\n\n' +
+                    '重要：这件事你**只会在这一轮里自然带出来一次**，后续不会反复提起——真实的人发现这件事，处理完了就是处理完了，不会每次开口都翻这件旧账。';
+
+                // 注入后立即标记已消费，确保只通知一次
+                pending.forEach(function (a) { a.consumed = true; });
+                pmSaveChar(char);
+            } catch (e) { console.warn('[查手机] prompt 注入失败', e); }
+            return base;
+        };
+    }
+
+    // 对外留一个手动入口，方便从别处调起
+    window.__pmInspectOpen = pmOpen;
+})();
+</script>
+<!-- ============ 查手机 v1 结束 ============ -->
+
+
+
+
+<!-- ============ 各身份独立钱包：每个玩家身份有单独的微信零钱/支付宝/银行卡，互不共用 ============ -->
+<script id="perUserWalletJs">
+(function () {
+    if (window.__perUserWallet) return;
+
+    function boot() {
+        if (!window.__state || !window.__db) { setTimeout(boot, 400); return; }
+        if (window.__perUserWallet) return;
+        window.__perUserWallet = true;
+
+        var S = function () { return window.__state; };
+        var DB = function () { return window.__db; };
+
+        // ---- 获取当前活跃的 userId ----
+        function activeUid() {
+            var s = S();
+            if (!s) return null;
+            // 优先从当前聊天推断
+            var chatId = s.currentChatId;
+            if (chatId) {
+                var chat = (s.chats || []).find(function (c) { return c.id === chatId; });
+                if (chat && chat.userId) return chat.userId;
+            }
+            // 回退到第一个身份
+            var users = s.users || [];
+            if (users.length) return users[0].id;
+            return '__default';
+        }
+
+        // ---- 拿到或初始化某个 userId 的钱包（不触发 getter 死循环，直接操作 _wallets） ----
+        function getRawWallet(uid, _wallets, firstUserId, legacyWallet) {
+            if (!_wallets[uid]) {
+                if (uid === firstUserId && legacyWallet) {
+                    // 把旧全局钱包迁移给第一个身份
+                    _wallets[uid] = legacyWallet;
+                } else {
+                    _wallets[uid] = { wechat: { balance: 0, records: [] }, alipay: { balance: 0, records: [] }, banks: [] };
+                }
+            }
+            var w = _wallets[uid];
+            if (!w.wechat) w.wechat = { balance: 0, records: [] };
+            if (!w.alipay) w.alipay = { balance: 0, records: [] };
+            if (!w.banks) w.banks = [];
+            if (!w.wechat.records) w.wechat.records = [];
+            if (!w.alipay.records) w.alipay.records = [];
+            return w;
+        }
+
+        // ---- 初始化每个用户的钱包存储 ----
+        var s = S();
+        if (!s || !s.settings) return;
+
+        // 迁移：把旧 settings.wallet 作为第一个身份的钱包
+        var legacyWallet = s.settings.wallet || null;
+        var firstUserId = (s.users && s.users[0] && s.users[0].id) || '__default';
+
+        if (!s.settings.wallets) s.settings.wallets = {};
+        var _wallets = s.settings.wallets;
+
+        // 如果第一个身份还没有独立钱包，用旧数据初始化
+        if (!_wallets[firstUserId] && legacyWallet) {
+            _wallets[firstUserId] = legacyWallet;
+        }
+
+        // ---- 核心：把 settings.wallet 改造成动态属性 ----
+        // 所有现有补丁里的 W() 都读 s.settings.wallet，改成 getter 后自动按身份返回
+        try {
+            Object.defineProperty(s.settings, 'wallet', {
+                get: function () {
+                    var uid = activeUid() || firstUserId;
+                    return getRawWallet(uid, _wallets, firstUserId, legacyWallet);
+                },
+                set: function (v) {
+                    // 兼容旧代码的 s.settings.wallet = {...} 写法：存到当前用户的桶里
+                    var uid = activeUid() || firstUserId;
+                    _wallets[uid] = v;
+                },
+                enumerable: true,
+                configurable: true
+            });
+        } catch (e) {
+            // defineProperty 失败（非常罕见）：静默退出，不破坏现有功能
+            console.warn('[PerUserWallet] defineProperty failed:', e);
+            return;
+        }
+
+        // ---- 钱包持久化：openChat 时把新身份的钱包刷进 state 并保存 ----
+        function saveWallets() {
+            try {
+                DB().settings.put(Object.assign({ id: 'main' }, s.settings));
+            } catch (e) {}
+        }
+
+        if (typeof window.openChat === 'function' && !window.__perUserWalletOpenChat) {
+            window.__perUserWalletOpenChat = true;
+            var origOpen = window.openChat;
+            window.openChat = function (chatId) {
+                var result = origOpen.apply(this, arguments);
+                // 切换聊天时，懒创建新身份的钱包并触发一次保存
+                try {
+                    var chat = (s.chats || []).find(function (c) { return c.id === chatId; });
+                    if (chat && chat.userId && !_wallets[chat.userId]) {
+                        getRawWallet(chat.userId, _wallets, firstUserId, null);
+                        saveWallets();
+                    }
+                } catch (e) {}
+                return result;
+            };
+        }
+
+        // ---- 暴露全局工具：查询指定身份的钱包（供外部诊断） ----
+        // 同时包装 openWallet，确保开钱包时 activeUid 和钱包存在
+        if (typeof window.openWallet === 'function' && !window.__perUserWalletOW) {
+            window.__perUserWalletOW = true;
+            var origOW = window.openWallet;
+            window.openWallet = function (key) {
+                // 确保当前用户的钱包已初始化
+                try {
+                    var uid = activeUid() || firstUserId;
+                    getRawWallet(uid, _wallets, firstUserId, legacyWallet);
+                } catch (e) {}
+                return origOW.apply(this, arguments);
+            };
+        }
+        window.__getWalletForUser = function (userId) {
+            return getRawWallet(userId, _wallets, firstUserId, legacyWallet);
+        };
+        window.__getAllWallets = function () { return _wallets; };
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(boot, 800); });
+    } else {
+        setTimeout(boot, 800);
+    }
+})();
+</script>
+<!-- ============ 各身份独立钱包 结束 ============ -->
