@@ -39393,6 +39393,7 @@ var LZString=(function(){var f=String.fromCharCode;var keyStrBase64="ABCDEFGHIJK
   function renderTide() {
     var v = $('fgViewTide');
     if (!v) return;          // DOM 未建时静默跳过，不要报 null 错
+    var c = cfg();
     var list = posts().slice().sort(function (a, b) { return b.ts - a.ts; });
 
     var head =
@@ -47268,3 +47269,426 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
 })();
 </script>
 <!-- ============ 各身份独立钱包 结束 ============ -->
+<!-- ============ DOCX 与多格式文件智能解析终极修复补丁 ============ -->
+<script id="phoneDocxFixUltimateJs">
+(function () {
+  'use strict';
+
+  // 1. 原生 Deflate 解压内核
+  function miniRawInflate(input) {
+    var bitbuf = 0, bitcnt = 0, inpos = 0;
+    function getBits(n) {
+      while (bitcnt < n) {
+        if (inpos >= input.length) return 0;
+        bitbuf |= (input[inpos++] << bitcnt);
+        bitcnt += 8;
+      }
+      var res = bitbuf & ((1 << n) - 1);
+      bitbuf >>>= n;
+      bitcnt -= n;
+      return res;
+    }
+    function getBit() { return getBits(1); }
+
+    function makeHuffman(lengths) {
+      var count = [], maxLen = 0;
+      for (var i = 0; i < lengths.length; i++) {
+        var l = lengths[i];
+        if (l > 0) {
+          count[l] = (count[l] || 0) + 1;
+          if (l > maxLen) maxLen = l;
+        }
+      }
+      var code = 0, next_code = [];
+      for (var i = 1; i <= maxLen; i++) {
+        code = (code + (count[i - 1] || 0)) << 1;
+        next_code[i] = code;
+      }
+      var tree = {};
+      for (var i = 0; i < lengths.length; i++) {
+        var l = lengths[i];
+        if (l > 0) {
+          var c = next_code[l]++;
+          var rev = 0;
+          for (var b = 0; b < l; b++) {
+            rev = (rev << 1) | ((c >>> b) & 1);
+          }
+          tree[(l << 16) | rev] = i;
+        }
+      }
+      return { tree: tree, maxLen: maxLen };
+    }
+
+    function decodeSymbol(huff) {
+      var code = 0;
+      for (var len = 1; len <= huff.maxLen; len++) {
+        code |= (getBit() << (len - 1));
+        var key = (len << 16) | code;
+        if (key in huff.tree) return huff.tree[key];
+      }
+      return -1;
+    }
+
+    var LEXT = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+    var LBASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+    var DEXT = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+    var DBASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+    var CLEN_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
+    var out = [];
+    var isFinal = 0;
+
+    while (!isFinal) {
+      isFinal = getBit();
+      var btype = getBits(2);
+      if (btype === 0) {
+        bitbuf = 0; bitcnt = 0;
+        if (inpos + 4 > input.length) break;
+        var len = input[inpos] | (input[inpos + 1] << 8);
+        inpos += 4;
+        for (var i = 0; i < len && inpos < input.length; i++) out.push(input[inpos++]);
+      } else if (btype === 1 || btype === 2) {
+        var litTree, distTree;
+        if (btype === 1) {
+          var fixedLens = [];
+          for (var i = 0; i <= 143; i++) fixedLens[i] = 8;
+          for (var i = 144; i <= 255; i++) fixedLens[i] = 9;
+          for (var i = 256; i <= 279; i++) fixedLens[i] = 7;
+          for (var i = 280; i <= 287; i++) fixedLens[i] = 8;
+          litTree = makeHuffman(fixedLens);
+          var fixedDistLens = [];
+          for (var i = 0; i < 32; i++) fixedDistLens[i] = 5;
+          distTree = makeHuffman(fixedDistLens);
+        } else {
+          var hlit = getBits(5) + 257;
+          var hdist = getBits(5) + 1;
+          var hclen = getBits(4) + 4;
+          var codeLengths = [];
+          for (var i = 0; i < 19; i++) codeLengths[i] = 0;
+          for (var i = 0; i < hclen; i++) codeLengths[CLEN_ORDER[i]] = getBits(3);
+          var codeLenTree = makeHuffman(codeLengths);
+
+          var allLens = [];
+          while (allLens.length < (hlit + hdist)) {
+            var sym = decodeSymbol(codeLenTree);
+            if (sym < 16) {
+              allLens.push(sym);
+            } else if (sym === 16) {
+              var repeat = getBits(2) + 3;
+              var lastVal = allLens[allLens.length - 1] || 0;
+              while (repeat--) allLens.push(lastVal);
+            } else if (sym === 17) {
+              var repeat = getBits(3) + 3;
+              while (repeat--) allLens.push(0);
+            } else if (sym === 18) {
+              var repeat = getBits(7) + 11;
+              while (repeat--) allLens.push(0);
+            }
+          }
+          litTree = makeHuffman(allLens.slice(0, hlit));
+          distTree = makeHuffman(allLens.slice(hlit));
+        }
+
+        while (true) {
+          var sym = decodeSymbol(litTree);
+          if (sym < 0 || sym === 256) break;
+          if (sym < 256) {
+            out.push(sym);
+          } else {
+            var length = LBASE[sym - 257] + getBits(LEXT[sym - 257]);
+            var distSym = decodeSymbol(distTree);
+            if (distSym < 0) break;
+            var dist = DBASE[distSym] + getBits(DEXT[distSym]);
+            var outLen = out.length;
+            for (var k = 0; k < length; k++) {
+              out.push(out[outLen - dist + k]);
+            }
+          }
+        }
+      } else {
+        break;
+      }
+    }
+    return new Uint8Array(out);
+  }
+
+  async function decompressDeflate(compBytes) {
+    if (typeof DecompressionStream !== 'undefined') {
+      try {
+        var ds = new DecompressionStream('deflate-raw');
+        var blob = new Blob([compBytes]);
+        var stream = blob.stream().pipeThrough(ds);
+        var ab = await new Response(stream).arrayBuffer();
+        return new Uint8Array(ab);
+      } catch (e) {}
+    }
+    return miniRawInflate(compBytes);
+  }
+
+  // 2. ZIP 目录解析
+  async function unzipArchive(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    var dv = new DataView(arrayBuffer);
+    var entries = {};
+    var dec = new TextDecoder('utf-8');
+
+    var eocdOffset = -1;
+    var maxSearch = Math.min(bytes.length, 65536 + 22);
+    for (var i = bytes.length - 22; i >= Math.max(0, bytes.length - maxSearch); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) {
+        eocdOffset = i;
+        break;
+      }
+    }
+
+    if (eocdOffset >= 0) {
+      var totalEntries = dv.getUint16(eocdOffset + 10, true);
+      var cdOffset = dv.getUint32(eocdOffset + 16, true);
+      var p = cdOffset;
+
+      for (var k = 0; k < totalEntries; k++) {
+        if (p + 46 > bytes.length || dv.getUint32(p, true) !== 0x02014b50) break;
+        var method = dv.getUint16(p + 10, true);
+        var compSize = dv.getUint32(p + 20, true);
+        var nameLen = dv.getUint16(p + 28, true);
+        var extraLen = dv.getUint16(p + 30, true);
+        var commentLen = dv.getUint16(p + 32, true);
+        var localHeaderOffset = dv.getUint32(p + 42, true);
+
+        var nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
+        var fname = dec.decode(nameBytes);
+
+        if (localHeaderOffset + 30 <= bytes.length && dv.getUint32(localHeaderOffset, true) === 0x04034b50) {
+          var locNameLen = dv.getUint16(localHeaderOffset + 26, true);
+          var locExtraLen = dv.getUint16(localHeaderOffset + 28, true);
+          var dataStart = localHeaderOffset + 30 + locNameLen + locExtraLen;
+          var compData = bytes.subarray(dataStart, dataStart + compSize);
+
+          if (method === 0) {
+            entries[fname] = compData;
+          } else if (method === 8) {
+            try {
+              entries[fname] = await decompressDeflate(compData);
+            } catch (err) {}
+          }
+        }
+        p += 46 + nameLen + extraLen + commentLen;
+      }
+    }
+    return entries;
+  }
+
+  // 3. Word XML 文本提取
+  function cleanWordXml(xmlStr) {
+    if (!xmlStr) return '';
+    try {
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(xmlStr, 'text/xml');
+      if (doc && !doc.querySelector('parsererror')) {
+        var paragraphs = doc.getElementsByTagNameNS('*', 'p');
+        if (paragraphs && paragraphs.length > 0) {
+          var lines = [];
+          for (var i = 0; i < paragraphs.length; i++) {
+            var p = paragraphs[i];
+            var pText = '';
+            var all = p.querySelectorAll('*');
+            for (var j = 0; j < all.length; j++) {
+              var tag = all[j].localName;
+              if (tag === 't') pText += all[j].textContent;
+              else if (tag === 'tab') pText += '\t';
+              else if (tag === 'br' || tag === 'cr') pText += '\n';
+            }
+            if (pText.trim()) lines.push(pText);
+          }
+          if (lines.length > 0) return lines.join('\n\n');
+        }
+      }
+    } catch (e) {}
+
+    return xmlStr
+      .replace(/<w:delText\b[^>]*>[\s\S]*?<\/w:delText>/gi, '')
+      .replace(/<w:tab\b[^>]*\/>/gi, '\t')
+      .replace(/<w:br\b[^>]*\/>/gi, '\n')
+      .replace(/<w:cr\b[^>]*\/>/gi, '\n')
+      .replace(/<\/w:p>/gi, '\n\n')
+      .replace(/<\/w:tr>/gi, '\n')
+      .replace(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gi, function (_, t) { return t; })
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // 4. DOCX 解析主函数
+  async function parseDocxFile(buf) {
+    var entries = await unzipArchive(buf);
+    var docBytes = entries['word/document.xml'] || entries['word/document2.xml'];
+    if (!docBytes) {
+      var keys = Object.keys(entries);
+      for (var i = 0; i < keys.length; i++) {
+        if (/^word\/document.*\.xml$/i.test(keys[i])) {
+          docBytes = entries[keys[i]];
+          break;
+        }
+      }
+    }
+    if (!docBytes) throw new Error('未能在 DOCX 压缩包中找到 document.xml');
+    var xmlStr = new TextDecoder('utf-8').decode(docBytes);
+    var text = cleanWordXml(xmlStr);
+    if (!text || text.length === 0) throw new Error('DOCX 正文提取为空');
+    return text;
+  }
+
+  // 5. 编码安全识别
+  function decodeTextSafely(buf) {
+    if (typeof window.__decodeTextBuf === 'function') {
+      return window.__decodeTextBuf(buf);
+    }
+    var bytes = new Uint8Array(buf);
+    if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      return new TextDecoder('utf-8').decode(bytes.subarray(3));
+    }
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch (e) {
+      try { return new TextDecoder('gb18030').decode(bytes); }
+      catch (e2) { return new TextDecoder('utf-8').decode(bytes); }
+    }
+  }
+
+  function formatSize(n) {
+    if (n == null || isNaN(n)) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  // 6. 全格式解析与二进制安全拦截
+  async function parseFileUniversal(file) {
+    var name = file.name || '文件';
+    var ext = (name.match(/\.([^.]+)$/) ? name.match(/\.([^.]+)$/)[1] : '').toLowerCase();
+    var size = file.size;
+    var buf = await file.arrayBuffer();
+    var bytes = new Uint8Array(buf);
+    var isZip = bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+
+    var text = '';
+    try {
+      if (ext === 'docx' || ext === 'docm' || ext === 'dotx' || isZip) {
+        text = await parseDocxFile(buf);
+      } else {
+        text = decodeTextSafely(buf);
+      }
+    } catch (e) {
+      console.warn('[文件解析] 解析提示:', e);
+      text = ''; // 确保二进制不会被当成文字输出
+    }
+
+    return {
+      fileName: name,
+      fileSize: size,
+      fileKind: ext ? ext.toUpperCase() : 'FILE',
+      fileText: text.trim()
+    };
+  }
+
+  // 7. 发送处理
+  async function doSendParsedFile(file) {
+    var S = window.__state;
+    var chatId = S ? S.currentChatId : null;
+    if (!chatId) {
+      if (window.showModal) window.showModal('提示', '请先进入一个聊天', '好的');
+      return;
+    }
+
+    var parsed = await parseFileUniversal(file);
+    var name = parsed.fileName;
+    var size = parsed.fileSize;
+    var kind = parsed.fileKind;
+    var text = parsed.fileText;
+    var truncated = false;
+
+    if (text.length > 50000) {
+      text = text.slice(0, 50000);
+      truncated = true;
+    }
+
+    var readable;
+    if (text && text.trim()) {
+      readable = '[对方发来一个文件「' + name + '」（' + kind + (size != null ? '，' + formatSize(size) : '') + '）'
+        + '，你可以阅读它的内容，并针对内容自然地回应对方。'
+        + (truncated ? '（文件较大，以下为前一部分内容）' : '')
+        + ']\n文件内容如下：\n' + text;
+    } else {
+      readable = '[对方发来一个文件「' + name + '」（' + kind + (size != null ? '，' + formatSize(size) : '') + '）'
+        + '，这是一个非纯文本格式的文件，你能看到文件名和类型，请就此文件自然进行互动与回应。]';
+    }
+
+    if (typeof window.sendMessage === 'function') {
+      window.sendMessage(readable, 'file', {
+        fileName: name,
+        fileSize: size,
+        fileKind: kind,
+        fileText: text || '',
+        fileTruncated: !!truncated
+      });
+    }
+  }
+
+  // 8. 拦截与重构文件按钮点击（顶层捕获阻断旧逻辑）
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.popup-item[data-tool="file"]');
+    if (!btn) return;
+
+    e.stopImmediatePropagation();
+    e.preventDefault();
+
+    var tp = document.getElementById('toolPopup');
+    if (tp) tp.classList.remove('visible');
+
+    var S = window.__state;
+    if (!S || !S.currentChatId) {
+      if (window.showModal) window.showModal('提示', '请先进入一个聊天', '好的');
+      return;
+    }
+
+    var input = document.getElementById('chatFileInput');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.id = 'chatFileInput';
+      input.style.display = 'none';
+      input.accept = '*/*';
+      document.body.appendChild(input);
+    }
+
+    input.onchange = function (ev) {
+      var f = ev.target.files && ev.target.files[0];
+      if (f) doSendParsedFile(f);
+      input.value = '';
+    };
+
+    input.value = '';
+    input.click();
+  }, true);
+
+  // 9. 历史消息弹窗中乱码过滤
+  var origShowModal = window.showModal;
+  if (origShowModal) {
+    window.showModal = function (title, body, confirmText, onConfirm, showCancel) {
+      if (typeof body === 'string' && body.includes('id="fileViewBody"')) {
+        if (body.includes('PK\x03\x04') || body.includes('word/document.xml')) {
+          body = body.replace(/<div id="fileViewBody">[\s\S]*?<\/div>/, '<div id="fileViewBody" style="color:var(--text-secondary);text-align:center;padding:20px;">（该文件为旧版本发送，重新发送此文件即可正常查看全部段落正文）</div>');
+        }
+      }
+      return origShowModal.call(this, title, body, confirmText, onConfirm, showCancel);
+    };
+  }
+
+})();
+</script>
+<!-- ============ 补丁结束 ============ -->
