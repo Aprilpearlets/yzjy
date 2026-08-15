@@ -12772,6 +12772,40 @@ ${groupTimeInfo}
             }
         }
 
+        // 2-ext. PC 端鼠标拖拽滑动桌面（触屏不受影响）
+        function bindPagerMouseDrag() {
+            var pager = document.getElementById('deskPager');
+            if (!pager || pager.__dragBound) return;
+            pager.__dragBound = true;
+            var isDown = false, startX = 0, scrollLeft = 0;
+            pager.addEventListener('mousedown', function (e) {
+                isDown = true;
+                startX = e.pageX - pager.offsetLeft;
+                scrollLeft = pager.scrollLeft;
+                pager.style.cursor = 'grabbing';
+                pager.style.userSelect = 'none';
+                pager.style.webkitUserSelect = 'none';
+            });
+            pager.addEventListener('mouseleave', function () {
+                isDown = false;
+                pager.style.cursor = '';
+                pager.style.userSelect = '';
+                pager.style.webkitUserSelect = '';
+            });
+            document.addEventListener('mouseup', function () {
+                isDown = false;
+                pager.style.cursor = '';
+                pager.style.userSelect = '';
+                pager.style.webkitUserSelect = '';
+            });
+            pager.addEventListener('mousemove', function (e) {
+                if (!isDown) return;
+                e.preventDefault();
+                var x = e.pageX - pager.offsetLeft;
+                pager.scrollLeft = scrollLeft - (x - startX);
+            });
+        }
+
         // 2. 把钱包/支付宝/银行卡从第1页搬到第2页
         function moveWalletIcons() {
             var pager = document.getElementById('homePager');
@@ -12793,6 +12827,7 @@ ${groupTimeInfo}
         var tries = 0;
         var iv = setInterval(function () {
             bindClockPager();
+            bindPagerMouseDrag();
             moveWalletIcons();
             if (++tries > 60) clearInterval(iv);
         }, 400);
@@ -30199,11 +30234,33 @@ html.phone-dark .empty-state,html.phone-dark .forum-empty,html.phone-dark .text-
     }
     function closeApp() { var app = document.getElementById('lt-app'); if (app) app.classList.remove('show'); }
     window.openListenTogether = openApp;
-    // 暴露给查手机等外部模块调用
+    // 暴露给查手机：先搜索歌曲，找到第一条真实结果再播放
     window.__ltPlaySong = function (title, artist) {
-        var song = { id: 'pm_' + Date.now(), source: 'netease', name: title || '未知歌曲', artist: artist || '' };
-        if (!document.getElementById('lt-app')) { openApp(); }
-        playSong(song);
+        var kw = (title || '') + (artist ? ' ' + artist : '');
+        if (!kw.trim()) return;
+        // 先打开一起听界面
+        openApp();
+        // 用歌名在默认音源里搜索，取第一条真实结果播放
+        var src = state.source || 'netease';
+        fetchJson(API + '?types=search&source=' + src + '&name=' + encodeURIComponent(kw) + '&count=5').then(function (data) {
+            var list = Array.isArray(data) ? data : [];
+            if (!list.length) {
+                // 尝试备选音源
+                var alt = ['kuwo', 'kugou', 'tencent'].filter(function (s) { return s !== src; });
+                function tryAlt(i) {
+                    if (i >= alt.length) return;
+                    fetchJson(API + '?types=search&source=' + alt[i] + '&name=' + encodeURIComponent(kw) + '&count=5').then(function (d2) {
+                        var l2 = Array.isArray(d2) ? d2 : [];
+                        if (l2.length) { playSong(l2[0]); }
+                        else { tryAlt(i + 1); }
+                    });
+                }
+                tryAlt(0);
+                return;
+            }
+            // 拿到真实结果，播第一条
+            playSong(list[0]);
+        });
     };
 
     // ---------- 供聊天里的「一起听邀请」调用：角色同意后，在一起听应用里开始一起听 + 记录时长 ----------
