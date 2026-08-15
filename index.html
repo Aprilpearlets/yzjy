@@ -8123,7 +8123,22 @@ ${groupTimeInfo}
         position: absolute; top: 8px; right: 8px; cursor: pointer; color: #ff6b6b;
         font-size: 14px; background: none; border: none; padding: 0;
     }
+    .memory-item .mem-edit {
+        position: absolute; top: 8px; right: 30px; cursor: pointer; color: var(--text-secondary);
+        font-size: 13px; background: none; border: none; padding: 0; opacity: 0.7;
+        transition: opacity .15s;
+    }
+    .memory-item .mem-edit:hover { opacity: 1; color: var(--accent, #6ec6f5); }
+    .memory-item .mem-content { padding-right: 48px; }
+    .mem-add-btn {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px dashed rgba(0,0,0,0.15);
+        background: rgba(255,255,255,0.4); color: var(--text-secondary); font-size: 13px;
+        cursor: pointer; transition: background .2s, border-color .2s;
+    }
+    .mem-add-btn:hover { background: rgba(255,255,255,0.7); border-color: var(--accent, #6ec6f5); color: var(--text-primary); }
     .memory-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 24px 0; }
+    .mem-edit-area { width: 100%; min-height: 100px; box-sizing: border-box; padding: 10px; font-size: 13.5px; line-height: 1.65; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.8); resize: vertical; font-family: var(--font); }
 
     /* ---------- 11. 红包 ---------- */
     .msg-bubble.bubble-rp { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
@@ -8742,9 +8757,9 @@ ${groupTimeInfo}
             ? '<div class="memory-list">' + mems.map(function (m) {
                 var d = new Date(m.time);
                 var t = d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-                return '<div class="memory-item"><div class="mem-time">' + t + (m.auto ? ' \u00b7 \u81ea\u52a8\u603b\u7ed3' : ' \u00b7 \u624b\u52a8') + '</div>' + escapeHtmlLite(m.content) + '<button class="mem-del" data-mid="' + m.id + '">\u2715</button></div>';
-            }).join('') + '</div>'
-            : '<div class="memory-empty">\u8fd8\u6ca1\u6709\u8bb0\u5fc6\u603b\u7ed3\u3002<br>\u804a\u5230\u8bbe\u5b9a\u7684\u6761\u6570\u4f1a\u81ea\u52a8\u603b\u7ed3\uff0c\u4e5f\u53ef\u4ee5\u70b9\u4e0b\u65b9\u300c\u7acb\u5373\u603b\u7ed3\u300d\u3002</div>';
+                return '<div class="memory-item"><div class="mem-time">' + t + (m.auto ? ' \u00b7 \u81ea\u52a8\u603b\u7ed3' : ' \u00b7 \u624b\u52a8') + '</div><div class="mem-content">' + escapeHtmlLite(m.content) + '</div><button class="mem-edit" data-mid="' + m.id + '" title="\u7f16\u8f91">\u270f\ufe0f</button><button class="mem-del" data-mid="' + m.id + '">\u2715</button></div>';
+            }).join('') + '</div><button class="mem-add-btn" id="memAddBtn">\u271a \u65b0\u589e\u4e00\u6761\u8bb0\u5fc6</button>'
+            : '<div class="memory-empty">\u8fd8\u6ca1\u6709\u8bb0\u5fc6\u603b\u7ed3\u3002<br>\u804a\u5230\u8bbe\u5b9a\u7684\u6761\u6570\u4f1a\u81ea\u52a8\u603b\u7ed3\uff0c\u4e5f\u53ef\u4ee5\u70b9\u4e0b\u65b9\u300c\u7acb\u5373\u603b\u7ed3\u300d\u3002</div><button class="mem-add-btn" id="memAddBtn">\u271a \u65b0\u589e\u4e00\u6761\u8bb0\u5fc6</button>';
         var body =
             '<div class="setting-row"><label>\u6bcf\u591a\u5c11\u6761\u804a\u5929\u81ea\u52a8\u603b\u7ed3\u4e00\u6b21</label>' +
             '<input type="number" id="memEveryInput" min="4" max="200" value="' + memEvery() + '"></div>' +
@@ -8801,6 +8816,7 @@ ${groupTimeInfo}
             window.showModal('\u6210\u529f', '\u5df2\u5173\u95ed\u79c1\u804a\u6d88\u606f\u8fdb\u7fa4', '\u597d\u7684');
         });
         setTimeout(function () {
+            // 删除按钮
             document.querySelectorAll('#genericModalBody .mem-del').forEach(function (b) {
                 b.addEventListener('click', function () {
                     var mid = b.getAttribute('data-mid');
@@ -8809,6 +8825,46 @@ ${groupTimeInfo}
                     openMemoryPanel();
                 });
             });
+            // 编辑按钮
+            document.querySelectorAll('#genericModalBody .mem-edit').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var mid = b.getAttribute('data-mid');
+                    var arr = memGet(charId);
+                    var item = arr.find(function (m) { return m.id === mid; });
+                    if (!item) return;
+                    window.showModal('\u7f16\u8f91\u8bb0\u5fc6',
+                        '<textarea class="mem-edit-area" id="memEditTa">' + escapeHtmlLite(item.content) + '</textarea>',
+                        '\u4fdd\u5b58',
+                        function () {
+                            var ta = document.getElementById('memEditTa');
+                            var val = (ta ? ta.value : '').trim();
+                            if (!val) return;
+                            var arr2 = memGet(charId);
+                            var idx = arr2.findIndex(function (m) { return m.id === mid; });
+                            if (idx >= 0) { arr2[idx].content = val; arr2[idx].auto = false; }
+                            memSave(charId, arr2);
+                            openMemoryPanel();
+                        }, true);
+                });
+            });
+            // 新增按钮
+            var addBtn = document.getElementById('memAddBtn');
+            if (addBtn) {
+                addBtn.addEventListener('click', function () {
+                    window.showModal('\u65b0\u589e\u8bb0\u5fc6',
+                        '<textarea class="mem-edit-area" id="memNewTa" placeholder="\u8f93\u5165\u60f3\u8bb0\u5f55\u7684\u5185\u5bb9\u2026"></textarea>',
+                        '\u6dfb\u52a0',
+                        function () {
+                            var ta = document.getElementById('memNewTa');
+                            var val = (ta ? ta.value : '').trim();
+                            if (!val) return;
+                            var arr2 = memGet(charId);
+                            arr2.push({ id: Date.now().toString(36), time: Date.now(), content: val, auto: false });
+                            memSave(charId, arr2);
+                            openMemoryPanel();
+                        }, true);
+                });
+            }
         }, 50);
     }
 
