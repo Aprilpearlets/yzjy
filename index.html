@@ -47692,3 +47692,166 @@ html.phone-night .msg-wrapper .lt-switch-tip{background:rgba(140,212,240,0.10) !
 })();
 </script>
 <!-- ============ 补丁结束 ============ -->
+<!-- ============ 应用商店/工作区二次修改定位修复补丁 ============ -->
+<script id="phoneAppStoreFixPatchJs">
+(function () {
+  'use strict';
+
+  function cleanAnchor(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/^\s*\d+\s*[│|]\s*/gm, '') // 清理行号如 "12│" 或 "12|"
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+  }
+
+  // 多层级智能模糊锚点查找器
+  function smartFindAnchor(html, rawAnchor) {
+    if (!html || !rawAnchor) return null;
+    var anchor = cleanAnchor(rawAnchor);
+    if (!anchor.trim()) return null;
+
+    // 1. 精确匹配
+    var p1 = html.indexOf(anchor);
+    if (p1 >= 0 && html.indexOf(anchor, p1 + 1) < 0) {
+      return { start: p1, end: p1 + anchor.length, matchedText: anchor };
+    }
+
+    // 2. 去除首尾空白精准匹配
+    var trimmedAnchor = anchor.trim();
+    var p2 = html.indexOf(trimmedAnchor);
+    if (p2 >= 0 && html.indexOf(trimmedAnchor, p2 + 1) < 0) {
+      return { start: p2, end: p2 + trimmedAnchor.length, matchedText: trimmedAnchor };
+    }
+
+    // 3. 忽略行首缩进与空白差异的行级序列匹配
+    var htmlLines = html.split('\n');
+    var anchorLines = anchor.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    if (anchorLines.length > 0) {
+      var matches = [];
+      for (var i = 0; i <= htmlLines.length - anchorLines.length; i++) {
+        var allMatch = true;
+        for (var j = 0; j < anchorLines.length; j++) {
+          if (htmlLines[i + j].trim() !== anchorLines[j]) {
+            allMatch = false;
+            break;
+          }
+        }
+        if (allMatch) matches.push(i);
+      }
+      if (matches.length === 1) {
+        var startLine = matches[0];
+        var endLine = startLine + anchorLines.length - 1;
+        var startChar = htmlLines.slice(0, startLine).join('\n').length + (startLine > 0 ? 1 : 0);
+        var matchedLinesStr = htmlLines.slice(startLine, endLine + 1).join('\n');
+        return { start: startChar, end: startChar + matchedLinesStr.length, matchedText: matchedLinesStr };
+      }
+    }
+
+    // 4. 首尾跨度模糊匹配（应对 AI 局部改动或缩略）
+    if (anchorLines.length >= 3) {
+      var firstLine = anchorLines[0];
+      var lastLine = anchorLines[anchorLines.length - 1];
+      var spanMatches = [];
+      for (var i = 0; i < htmlLines.length; i++) {
+        if (htmlLines[i].trim() === firstLine) {
+          for (var k = i + 1; k < Math.min(htmlLines.length, i + anchorLines.length + 8); k++) {
+            if (htmlLines[k].trim() === lastLine) {
+              spanMatches.push({ startLine: i, endLine: k });
+            }
+          }
+        }
+      }
+      if (spanMatches.length === 1) {
+        var m = spanMatches[0];
+        var startChar = htmlLines.slice(0, m.startLine).join('\n').length + (m.startLine > 0 ? 1 : 0);
+        var matchedLinesStr = htmlLines.slice(m.startLine, m.endLine + 1).join('\n');
+        return { start: startChar, end: startChar + matchedLinesStr.length, matchedText: matchedLinesStr };
+      }
+    }
+
+    return null;
+  }
+
+  // 补丁有效性校验
+  function checkPatchSmart(html, p) {
+    if (p.op === 'rewrite') {
+      if (!p.code || !p.code.trim()) return { ok: false, msg: '缺少新代码' };
+      return { ok: true, msg: '整份重写', count: 1 };
+    }
+    var match = smartFindAnchor(html, p.anchor);
+    if (!match) {
+      return { ok: false, msg: '锚点未匹配' };
+    }
+    var lineNo = html.slice(0, match.start).split('\n').length;
+    return { ok: true, msg: '第 ' + lineNo + ' 行', count: 1, line: lineNo, range: match };
+  }
+
+  // 智能补丁合并应用器
+  function applyPatchesSmart(html, list) {
+    var out = html, done = 0, skipped = [];
+
+    // 优先检查整份重写
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].on && list[i].op === 'rewrite' && list[i].code && list[i].code.trim()) {
+        return { html: list[i].code.trim(), done: 1, skipped: [] };
+      }
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      if (!p.on) { skipped.push(p.why || p.op); continue; }
+      var c = checkPatchSmart(out, p);
+      if (!c.ok || !c.range) { skipped.push((p.why || p.op) + '（' + c.msg + '）'); continue; }
+
+      var r = c.range;
+      var beforeStr = out.slice(0, r.start);
+      var afterStr = out.slice(r.end);
+
+      if (p.op === 'replace') {
+        out = beforeStr + p.code + afterStr;
+      } else if (p.op === 'delete') {
+        out = beforeStr + afterStr;
+      } else if (p.op === 'insertAfter') {
+        out = beforeStr + r.matchedText + '\n' + p.code + afterStr;
+      } else if (p.op === 'insertBefore') {
+        out = beforeStr + p.code + '\n' + r.matchedText + afterStr;
+      }
+      done++;
+    }
+    return { html: out, done: done, skipped: skipped };
+  }
+
+  // 挂载到工作区与商城的运行时
+  function patchWorkspace() {
+    var bridge = window.__asBridge;
+    if (!bridge) return false;
+
+    // 增强商城的代码拆分器：智能识别完整的 HTML 块
+    if (typeof bridge.splitOut === 'function') {
+      var oldSplit = bridge.splitOut;
+      bridge.splitOut = function (raw) {
+        var res = oldSplit(raw);
+        if (!res.html || res.html.length < 100) {
+          var htmlMatch = String(raw || '').match(/<!DOCTYPE html>[\s\S]*?<\/html>/i) || String(raw || '').match(/<html\b[\s\S]*?<\/html>/i);
+          if (htmlMatch) res.html = htmlMatch[0];
+        }
+        return res;
+      };
+    }
+
+    // 暴露核心查找与合并算法
+    window.__smartFindAnchor = smartFindAnchor;
+    window.__checkPatchSmart = checkPatchSmart;
+    window.__applyPatchesSmart = applyPatchesSmart;
+    return true;
+  }
+
+  var count = 0;
+  var timer = setInterval(function () {
+    if (patchWorkspace() || ++count > 25) clearInterval(timer);
+  }, 400);
+
+})();
+</script>
+<!-- ============ 补丁结束 ============ -->
